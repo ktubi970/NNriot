@@ -3,6 +3,7 @@
 #include "player.h"
 #include "resources.h"
 #include "asset_metadata.h"
+#include "collision.h"
 #include <math.h>
 
 #define SCREEN_WIDTH 800
@@ -10,20 +11,7 @@
 #define WORLD_SIZE 3000
 #define MAX_OBJECTS 1000
 
-typedef enum {
-    OBJ_PALM,
-    OBJ_ROCK,
-    OBJ_HUT,
-    OBJ_TOWER,
-    OBJ_HOTEL,
-    OBJ_CLUTTER_ROCK, // Small scatter
-    OBJ_FACTORY,
-    OBJ_SILO,
-    OBJ_REFINERY,
-    OBJ_DOME,
-    OBJ_RADAR,
-    OBJ_SOLDIER
-} ObjectType;
+#include "game_types.h"
 
 typedef struct {
     Vector2 position; // World Top-down (X, Y)
@@ -162,6 +150,18 @@ int main(void) {
         
         Player_Update(&player, deltaTime);
 
+        // Resolve collisions
+        {
+            Vector2 positions[MAX_OBJECTS];
+            ObjectType types[MAX_OBJECTS];
+            for (int i = 0; i < objCount; i++) {
+                positions[i] = objects[i].position;
+                types[i] = objects[i].type;
+            }
+            Collision_ResolvePlayerVsObjects(&player, positions, types, objCount);
+            Collision_ClampToWorld(&player, WORLD_SIZE);
+        }
+
         Vector2 isoPlayer = GetIsometricPos(player.position);
         camera.target.x += (isoPlayer.x - camera.target.x) * 0.1f;
         camera.target.y += (isoPlayer.y - camera.target.y) * 0.1f;
@@ -269,8 +269,15 @@ int main(void) {
                         if (debugMode) {
                             DrawRectangleLinesEx((Rectangle){ isoPos.x - meta.pivot.x * obj->scale, isoPos.y - meta.pivot.y * obj->scale, dest.width, dest.height }, 1, GREEN);
                             DrawCircleV(isoPos, 2, RED);
+                            
+                            float collR = GetObjectCollisionRadius(obj->type);
+                            if (collR > 0) DrawCircleLines(isoPos.x, isoPos.y, collR, YELLOW);
                         }
                     }
+                }
+
+                if (debugMode) {
+                    DrawCircleLines(isoPlayer.x, isoPlayer.y, PLAYER_COLLISION_RADIUS, YELLOW);
                 }
 
             EndMode2D();

@@ -15,7 +15,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 BIN_DIR = bin
 
-SOURCES = src/main.c src/player.c src/resources.c src/asset_metadata.c
+SOURCES = src/main.c src/player.c src/resources.c src/asset_metadata.c src/collision.c
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 TARGET  = $(BIN_DIR)/desert_strike.exe
 
