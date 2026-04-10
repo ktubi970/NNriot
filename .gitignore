@@ -1,0 +1,32 @@
+# Compiler outputs
+bin/
+obj/
+*.exe
+*.o
+*.a
+
+# Raylib binaries (if downloaded separately, but often part of project)
+include/raylib.h
+lib/libraylib.a
+
+# Tools and builds
+tools/w64devkit/
+tools/vision_scanner.exe
+
+# Reference files
+*.sfc
+*.bmp
+screen_references/
+
+# Temporary files or large assets that shouldn't be in Git
+# Note: assets/ contains PNGs that ARE required, so we don't ignore all PNGs.
+# We only ignore non-project pictures.
+*.jpg
+*.jpeg
+*.gif
+
+# VS Code
+.vscode/
+.history/
+.clangd
+compile_flags.txt

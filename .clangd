@@ -1,0 +1,12 @@
+CompileFlags:
+  Add: [-Iinclude, -Isrc, -std=c99, -Wall]
+  CompilationDatabase: .
+  # This tells clangd to query the compiler for the system include paths
+  # This is critical when using a custom toolchain like w64devkit
+  # QueryDriver is not supported in .clangd for security reasons.
+  # It must be passed as a command-line argument to clangd.
+
+
+Index:
+  Background: Build
+

@@ -1,0 +1,5 @@
+{
+    "clangd.arguments": [
+        "--query-driver=**/tools/w64devkit/bin/gcc.exe,**/gcc.exe,**/g++.exe,C:/MSYS64/mingw64/bin/gcc.exe"
+    ]
+}
