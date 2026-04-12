@@ -30,3 +30,6 @@ screen_references/
 .history/
 .clangd
 compile_flags.txt
+
+# Superpowers Worktrees
+.worktrees/
