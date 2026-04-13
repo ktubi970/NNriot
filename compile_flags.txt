@@ -1,4 +1,0 @@
--Iinclude
--Isrc
--std=c99
--Wall

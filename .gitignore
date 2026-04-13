@@ -33,3 +33,4 @@ compile_flags.txt
 
 # Superpowers Worktrees
 .worktrees/
+tools/venv/
