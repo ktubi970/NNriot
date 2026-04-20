@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>System Monitor — NNriot</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:        #070b12;
+            --surface:   #0f1620;
+            --surface2:  #141e2e;
+            --border:    rgba(255,255,255,0.07);
+            --accent:    #00ff88;
+            --accent2:   #00c8ff;
+            --blue:      #3d7eff;
+            --red:       #ff4d6d;
+            --gold:      #ffc93c;
+            --text:      #e8edf5;
+            --muted:     #6b7a96;
+            --glow:      rgba(0,255,136,0.18);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
+
+        /* ── NAVBAR ── */
+        .navbar {
+            position: sticky; top: 0; z-index: 999;
+            background: rgba(7,11,18,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 40px;
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem; font-weight: 900;
+            color: #fff; text-decoration: none;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .nav-logo em { color: var(--accent); font-style: normal; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link {
+            color: var(--muted); text-decoration: none;
+            font-size: 0.9rem; font-weight: 600;
+            transition: color 0.2s;
+            position: relative; padding-bottom: 2px;
+        }
+        .nav-link:hover { color: #fff; }
+        .nav-link.active { color: var(--accent); }
+        .nav-link.active::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+            height: 2px; background: var(--accent); border-radius: 2px;
+        }
+        .nav-cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #070b12; font-family: 'Outfit', sans-serif;
+            font-weight: 800; font-size: 0.85rem;
+            padding: 8px 20px; border-radius: 8px;
+            text-decoration: none; letter-spacing: 0.5px;
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        /* ── HEADER ── */
+        .header {
+            padding: 60px 24px 40px;
+            text-align: center;
+            max-width: 1200px; margin: 0 auto;
+        }
+        .header h1 {
+            font-size: 3rem; font-weight: 900; margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff, var(--gold));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .header p { color: var(--muted); font-size: 1.1rem; }
+
+        /* ── CONTAINER ── */
+        .container { max-width: 1300px; margin: 0 auto; padding: 0 24px 80px; }
+
+        /* ── STATUS BANNER ── */
+        .status-banner {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 24px; padding: 32px;
+            margin-bottom: 48px;
+            display: flex; justify-content: space-between; align-items: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.3);
+            position: relative; overflow: hidden;
+        }
+        .status-banner::before {
+            content: ''; position: absolute; top:0; left:0; width:6px; height:100%;
+            background: linear-gradient(to bottom, var(--accent), var(--accent2));
+        }
+        .status-info h2 { font-size: 1.5rem; font-weight: 800; margin-bottom: 6px; }
+        .status-info p { color: var(--muted); font-size: 0.95rem; }
+        
+        .btn-refresh {
+            background: var(--surface2); color: #fff; border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 24px; font-weight: 700;
+            cursor: pointer; transition: all 0.2s; font-family: 'Outfit';
+        }
+        .btn-refresh:hover { border-color: var(--accent); color: var(--accent); transform: translateY(-2px); }
+
+        /* ── METRICS GRID ── */
+        .metrics-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;
+            margin-bottom: 48px;
+        }
+        .metric-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 20px; padding: 24px;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .metric-card:hover { transform: translateY(-5px); border-color: rgba(255,255,255,0.15); }
+        .m-label { font-size: 0.75rem; color: var(--muted); font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; display: block; }
+        .m-value { font-family: 'Outfit', sans-serif; font-size: 2.2rem; font-weight: 900; color: #fff; line-height: 1.2; }
+        .m-sub { font-size: 0.8rem; color: var(--muted); margin-top: 8px; font-weight: 600; }
+
+        /* ── PANELS ── */
+        .panels-row { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 48px; }
+        .panel {
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 24px; padding: 28px;
+        }
+        .panel-title { font-size: 1.15rem; font-weight: 800; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .panel-title .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent2); box-shadow: 0 0 8px var(--accent2); }
+
+        .list-item {
+            background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+            border-radius: 12px; padding: 12px 16px; margin-bottom: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .item-label { font-weight: 600; font-size: 0.9rem; }
+        .item-val { font-family: 'Outfit'; font-weight: 800; color: var(--accent2); }
+
+        .config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .config-card { background: rgba(0,0,0,0.2); padding: 14px; border-radius: 12px; border-left: 3px solid var(--accent); }
+        .c-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; font-weight: 700; }
+        .c-val { font-size: 0.9rem; font-weight: 800; margin-top: 4px; color: #fff; }
+
+        /* ── RATE LIMITS ── */
+        .limits-panel {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 24px; padding: 32px; margin-bottom: 48px;
+        }
+        .limits-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+        .limit-card {
+            background: rgba(240, 201, 60, 0.04); border: 1px solid rgba(240, 201, 60, 0.15);
+            border-radius: 16px; padding: 18px; position: relative;
+        }
+        .limit-card::before { content:''; position:absolute; top:0; left:0; width:3px; height:100%; background: var(--gold); border-radius:4px; }
+        .l-reg { font-size: 0.7rem; font-weight: 800; color: var(--gold); text-transform: uppercase; margin-bottom: 10px; }
+        .l-stat { font-family: monospace; font-size: 0.85rem; color: #fff; margin-bottom: 4px; }
+        .l-time { font-size: 0.72rem; color: var(--muted); margin-top: 8px; }
+
+        /* ── ANIMATIONS ── */
+        .loading-pulse { animation: pulse 1.5s infinite; text-align: center; color: var(--muted); padding: 40px; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+        @media (max-width: 900px) {
+            .metrics-grid, .panels-row { grid-template-columns: 1fr; }
+            .status-banner { flex-direction: column; gap: 20px; align-items: flex-start; }
+            .config-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<nav class="navbar">
+    <a href="/" class="nav-logo">NN<em>RIOT</em></a>
+    <div class="nav-links">
+        <a href="/" class="nav-link">Dashboard</a>
+        <a href="/explorer" class="nav-link">Explorer</a>
+        <a href="/predictor" class="nav-link">Predictor</a>
+        <a href="/live" class="nav-link">Live</a>
+        <a href="/smurfs" class="nav-link">Smurfs</a>
+        <a href="/monitor" class="nav-link active">Monitor</a>
+        <a href="/predictor" class="nav-cta">⚡ Predict</a>
+    </div>
+</nav>
+
+<header class="header">
+    <h1>System Monitor</h1>
+    <p>Real-time telemetry and database health monitoring for the NNriot infrastructure.</p>
+</header>
+
+<div class="container">
+    <!-- Status Banner -->
+    <div class="status-banner">
+        <div class="status-info">
+            <h2 id="status-title">Core Services: Operational</h2>
+            <p id="status-desc">System heartbeat active. Continuous training module is in idle state.</p>
+        </div>
+        <button class="btn-refresh" onclick="loadMetrics()">↺ Refresh Telemetry</button>
+    </div>
+
+    <!-- Metrics Grid -->
+    <div class="metrics-grid">
+        <div class="metric-card">
+            <span class="m-label">Training Pool</span>
+            <div class="m-value" id="training-records">--</div>
+            <div class="m-sub">Records Available</div>
+        </div>
+        <div class="metric-card">
+            <span class="m-label">Identity Store</span>
+            <div class="m-value" id="total-players">--</div>
+            <div class="m-sub">Players Monitored</div>
+        </div>
+        <div class="metric-card">
+            <span class="m-label">Match Volume</span>
+            <div class="m-value" id="total-matches">--</div>
+            <div class="m-sub">Historical Matches</div>
+        </div>
+        <div class="metric-card" style="border-color: var(--gold)">
+            <span class="m-label" style="color:var(--gold)">API Throughput</span>
+            <div class="m-value" style="color:var(--gold)" id="riot-calls">--</div>
+            <div class="m-sub">Successful Requests</div>
+        </div>
+    </div>
+
+    <!-- Data Panels -->
+    <div class="panels-row">
+        <div class="panel">
+            <div class="panel-title"><span class="dot"></span> Regional Distribution</div>
+            <div id="regions-container">
+                <div class="loading-pulse">Acquiring distribution data...</div>
+            </div>
+        </div>
+        <div class="panel">
+            <div class="panel-title"><span class="dot" style="background:var(--accent); box-shadow:0 0 8px var(--accent)"></span> Model Checkpoint</div>
+            <div id="checkpoint-container">
+                <div class="loading-pulse">Fetching latest weights...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Full Width -->
+    <div class="panel" style="margin-bottom: 48px;">
+        <div class="panel-title"><span class="dot" style="background:var(--gold); box-shadow:0 0 8px var(--gold)"></span> Session Training Configuration</div>
+        <div class="config-grid" id="config-container">
+            <div class="loading-pulse">Reading training_config.json...</div>
+        </div>
+    </div>
+
+    <!-- Rate Limits Full Width -->
+    <div class="limits-panel">
+        <div class="panel-title"><span class="dot" style="background:var(--red); box-shadow:0 0 8px var(--red)"></span> Riot API Rate Limits (Regional Buckets)</div>
+        <div id="limits-container" class="limits-grid">
+            <div style="color: var(--muted); font-size: 0.9rem; padding: 20px;">No regional activity recorded this session.</div>
+        </div>
+    </div>
+
+    <div id="error-container"></div>
+</div>
+
+<script>
+    async function loadMetrics() {
+        try {
+            const errorContainer = document.getElementById('error-container');
+            errorContainer.innerHTML = '';
+
+            const response = await fetch('/api/monitor/metrics');
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            
+            const data = await response.json();
+
+            // Update Metrics
+            document.getElementById('training-records').textContent = data.training_records.toLocaleString();
+            document.getElementById('total-players').textContent = data.players.toLocaleString();
+            document.getElementById('total-matches').textContent = data.matches.toLocaleString();
+
+            // Regions
+            const regionsHtml = Object.entries(data.regions || {})
+                .sort((a, b) => b[1] - a[1])
+                .map(([region, count]) => `
+                    <div class="list-item">
+                        <span class="item-label">${region} Server</span>
+                        <span class="item-val">${count.toLocaleString()}</span>
+                    </div>
+                `).join('');
+            document.getElementById('regions-container').innerHTML = regionsHtml || '<div class="loading-pulse">No data available</div>';
+
+            // Checkpoint
+            if (data.model_checkpoint) {
+                const cp = data.model_checkpoint;
+                document.getElementById('checkpoint-container').innerHTML = `
+                    <div style="background:rgba(0,255,136,0.05); border:1px solid rgba(0,255,136,0.2); border-radius:16px; padding:20px;">
+                        <div class="c-label">Active Head</div>
+                        <div class="c-val" style="color:var(--accent)">model_checkpoint-${cp.latest_version}</div>
+                        <div style="display:flex; gap:20px; margin-top:16px; padding-top:16px; border-top:1px solid rgba(255,255,255,0.05);">
+                            <div>
+                                <div class="c-label">History</div>
+                                <div class="c-val">${cp.total_versions} snapshots</div>
+                            </div>
+                            <div>
+                                <div class="c-label">Type</div>
+                                <div class="c-val">Keras H5/SavedModel</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                document.getElementById('checkpoint-container').innerHTML = `<div style="padding:20px; color:var(--red); font-weight:600; text-align:center;">⚠️ No active weights found in /models</div>`;
+            }
+
+            // Config
+            if (data.training_config) {
+                const cfg = data.training_config;
+                const configHtml = `
+                    <div class="config-card">
+                        <div class="c-label">Neural Architecture</div>
+                        <div class="c-val">${cfg.model_type}</div>
+                    </div>
+                    <div class="config-card">
+                        <div class="c-label">Optimization Batch</div>
+                        <div class="c-val">${cfg.batch_size} samples</div>
+                    </div>
+                    <div class="config-card">
+                        <div class="c-label">Training Epochs</div>
+                        <div class="c-val">${cfg.epochs} cycles</div>
+                    </div>
+                    <div class="config-card">
+                        <div class="c-label">Temporal Lookback</div>
+                        <div class="m-sub" style="margin:0; font-size:0.9rem; color:#fff; font-weight:800;">${cfg.lookback_days} active days</div>
+                    </div>
+                    <div class="config-card" style="grid-column: 1 / -1; border-color:var(--accent2)">
+                        <div class="c-label">Active Data Nodes</div>
+                        <div class="c-val" style="font-size:0.75rem; letter-spacing:0.5px; opacity:0.8;">${cfg.regions.join(' • ')}</div>
+                    </div>
+                `;
+                document.getElementById('config-container').innerHTML = configHtml;
+            }
+
+            // Riot API
+            if (data.riot_api) {
+                document.getElementById('riot-calls').textContent = data.riot_api.total_calls.toLocaleString();
+                const limits = data.riot_api.limits;
+                const regions = Object.keys(limits);
+                if (regions.length > 0) {
+                    const limitsHtml = regions.map(reg => {
+                        const l = limits[reg];
+                        return `
+                            <div class="limit-card">
+                                <div class="l-reg">${reg} Endpoint</div>
+                                <div class="l-stat">APP: ${l.app_count} / ${l.app_limit}</div>
+                                <div class="l-stat" style="opacity:0.6; font-size:0.75rem">METHOD: ${l.method_count || 'N/A'}</div>
+                                <div class="l-time">Uptime Sync: ${new Date(l.timestamp * 1000).toLocaleTimeString()}</div>
+                            </div>
+                        `;
+                    }).join('');
+                    document.getElementById('limits-container').innerHTML = limitsHtml;
+                }
+            }
+        } catch (error) {
+            console.error('Monitor Sync Error:', error);
+            document.getElementById('error-container').innerHTML = `<div style="background:var(--red); color:#fff; padding:16px; border-radius:12px; margin-top:24px; font-weight:700;">Critical Telemetry Failure: ${error.message}</div>`;
+        }
+    }
+
+    // Mount
+    window.addEventListener('load', loadMetrics);
+    setInterval(loadMetrics, 15000);
+</script>
+</body>
+</html>

@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NNriot | Smurf Manager</title>
+  <meta name="description" content="Discover and link smurf accounts via lolpros.gg intelligence or manual search.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #070b12;
+      --surface:   #0f1620;
+      --surface2:  #141e2e;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #00ff88;
+      --accent2:   #00c8ff;
+      --blue:      #3d7eff;
+      --red:       #ff4d6d;
+      --gold:      #ffc93c;
+      --text:      #e8edf5;
+      --muted:     #6b7a96;
+      --glow:      rgba(0,255,136,0.18);
+      
+      /* Smurf Manager specifics & Aliases */
+      --bg2:       var(--surface);
+      --card:      var(--surface);
+      --card2:     var(--surface2);
+      --dim:       var(--muted);
+      --glass:     rgba(255,255,255,0.04);
+    }
+    *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
+
+    .navbar {
+      position: sticky; top: 0; z-index: 999;
+      background: rgba(7,11,18,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem; font-weight: 900;
+      color: #fff; text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .nav-logo em { color: var(--accent); font-style: normal; }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-link {
+      color: var(--muted); text-decoration: none;
+      font-size: 0.9rem; font-weight: 600;
+      transition: color 0.2s;
+      position: relative; padding-bottom: 2px;
+    }
+    .nav-link:hover { color: white; }
+    .nav-link.active { color: var(--accent); }
+    .nav-link.active::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+      height: 2px; background: var(--accent); border-radius: 2px;
+    }
+    .nav-cta {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #070b12; font-family: 'Outfit', sans-serif;
+      font-weight: 800; font-size: 0.85rem;
+      padding: 8px 20px; border-radius: 8px;
+      text-decoration: none; letter-spacing: 0.5px;
+      box-shadow: 0 0 20px var(--glow);
+    }
+
+    /* ── Page header ─────────────────────────────────────────── */
+    .page-header {
+      text-align: center; padding: 56px 24px 36px;
+    }
+    .page-header h1 {
+      font-size: 3rem; font-weight: 800;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+      -webkit-background-clip: text; background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 10px;
+    }
+    .page-header p { color: var(--dim); font-size: 1.05rem; }
+
+    /* ── Tabs ────────────────────────────────────────────────── */
+    .tabs {
+      max-width: 900px; margin: 0 auto 32px;
+      display: flex; gap: 0;
+      background: var(--card); border-radius: 16px; padding: 6px;
+      border: 1px solid var(--border);
+    }
+    .tab-btn {
+      flex: 1; padding: 12px 20px; background: none; border: none;
+      border-radius: 12px; color: var(--dim); font-family: 'Outfit', sans-serif;
+      font-size: 0.95rem; font-weight: 600; cursor: pointer;
+      transition: all .25s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .tab-btn.active {
+      background: linear-gradient(135deg, rgba(0,255,136,.18), rgba(0,212,255,.12));
+      color: var(--accent);
+      box-shadow: 0 0 20px rgba(0,255,136,.1);
+    }
+    .tab-btn:hover:not(.active) { color: white; background: var(--glass); }
+    .tab-icon { font-size: 1.1rem; }
+
+    /* ── Panels ──────────────────────────────────────────────── */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* ── Container ───────────────────────────────────────────── */
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 24px 80px; }
+
+    /* ── Collection Banner ───────────────────────────────────── */
+    #collection-banner {
+      display: none;
+      background: linear-gradient(90deg, rgba(0,255,136,.12), rgba(0,212,255,.08));
+      border: 1px solid rgba(0,255,136,.25);
+      border-radius: 14px; padding: 14px 20px; margin-bottom: 24px;
+      display: flex; align-items: center; gap: 14px; font-size: 0.9rem;
+    }
+    #collection-banner.hidden { display: none !important; }
+    .pulse-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0;
+      animation: pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.75)} }
+
+    /* ── Discover Panel ──────────────────────────────────────── */
+    .discover-controls {
+      display: grid; grid-template-columns: 1fr auto; gap: 14px; margin-bottom: 20px;
+    }
+    .search-bar {
+      display: flex; gap: 10px; align-items: center;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 4px 4px 4px 20px;
+      transition: border-color .2s;
+    }
+    .search-bar:focus-within { border-color: var(--accent); }
+    .search-bar input {
+      flex: 1; background: none; border: none; color: white;
+      font-family: inherit; font-size: 1rem; outline: none; min-width: 0;
+    }
+    .search-bar input::placeholder { color: var(--dim); }
+    .server-select {
+      background: var(--card2); border: 1px solid var(--border); border-radius: 10px;
+      color: var(--dim); font-family: 'Outfit', sans-serif; font-weight: 600;
+      font-size: 0.85rem; padding: 12px 14px; cursor: pointer; outline: none;
+      transition: all .2s; white-space: nowrap;
+    }
+    .server-select:hover, .server-select:focus { border-color: var(--accent); color: white; }
+    .server-select option { background: var(--card2); color: white; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #080b11; border: none; padding: 13px 26px; border-radius: 12px;
+      font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 0.9rem;
+      cursor: pointer; text-transform: uppercase; letter-spacing: .5px;
+      transition: all .25s; white-space: nowrap;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(0,255,136,.3); }
+    .btn-primary:disabled { opacity: .4; cursor: not-allowed; transform: none; box-shadow: none; }
+
+    .btn-sm {
+      padding: 7px 16px; font-size: 0.78rem; border-radius: 8px;
+    }
+
+    /* ── Source Toggle ───────────────────────────────────────── */
+    .source-toggle {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 18px;
+    }
+    .toggle-btn {
+      background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+      color: var(--dim); font-size: 0.8rem; font-weight: 600; padding: 7px 16px;
+      cursor: pointer; transition: all .2s; font-family: 'Outfit', sans-serif;
+    }
+    .toggle-btn.active {
+      background: rgba(0,255,136,.12); border-color: var(--accent); color: var(--accent);
+    }
+
+    /* ── Pro Player Cards ────────────────────────────────────── */
+    #results-grid {
+      display: grid; grid-template-columns: 1fr; gap: 16px;
+    }
+    .pro-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 18px; overflow: hidden;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .pro-card:hover { border-color: rgba(0,255,136,.3); box-shadow: var(--glow); }
+
+    .pro-header {
+      display: flex; align-items: center; gap: 16px;
+      padding: 20px 24px 16px; cursor: pointer;
+      user-select: none;
+    }
+    .pro-avatar {
+      width: 52px; height: 52px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.3rem; color: #080b11;
+    }
+    .pro-meta { flex: 1; min-width: 0; }
+    .pro-name { font-family: 'Outfit', sans-serif; font-weight: 800; font-size: 1.1rem; }
+    .pro-sub { color: var(--dim); font-size: 0.82rem; margin-top: 2px; }
+    .pro-badge {
+      padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;
+      letter-spacing: .3px; font-family: 'Outfit', sans-serif;
+      background: rgba(0,212,255,.12); color: var(--accent2);
+    }
+    .chevron {
+      color: var(--dim); font-size: 1.2rem; transition: transform .25s; flex-shrink: 0;
+    }
+    .pro-card.expanded .chevron { transform: rotate(180deg); }
+
+    .accounts-list {
+      display: none; padding: 0 20px 20px;
+      border-top: 1px solid var(--border);
+    }
+    .pro-card.expanded .accounts-list { display: block; }
+
+    .accounts-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 14px 4px 12px;
+    }
+    .accounts-header span { color: var(--dim); font-size: 0.82rem; font-weight: 600; }
+
+    .account-row {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--bg2); border: 1px solid var(--border);
+      border-radius: 12px; padding: 12px 16px; margin-bottom: 8px;
+      transition: border-color .2s;
+    }
+    .account-row.is-canonical { border-color: rgba(0,255,136,.35); }
+    .server-tag {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 8px; border-radius: 5px;
+      font-family: 'Outfit', sans-serif; flex-shrink: 0;
+      background: rgba(0,212,255,.12); color: var(--accent2);
+    }
+    .acc-name { flex: 1; min-width: 0; }
+    .acc-name .name { font-weight: 600; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .acc-name .hist { font-size: 0.75rem; color: var(--dim); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .tier-badge {
+      font-size: 0.72rem; font-weight: 700; padding: 3px 9px; border-radius: 6px;
+      font-family: 'Outfit', sans-serif; flex-shrink: 0; letter-spacing: .3px;
+    }
+    .tier-badge.challenger  { background: rgba(240,180,41,.18); color: #f0b429; }
+    .tier-badge.grandmaster { background: rgba(255,100,50,.18); color: #ff6432; }
+    .tier-badge.master      { background: rgba(200,100,255,.18); color: #c864ff; }
+    .tier-badge.diamond     { background: rgba(100,180,255,.18); color: #64b4ff; }
+    .tier-badge.emerald     { background: rgba(0,230,100,.18);   color: #00e664; }
+    .tier-badge.platinum    { background: rgba(0,200,180,.18);   color: #00c8b4; }
+    .tier-badge.unranked    { background: rgba(136,146,176,.15); color: var(--dim); }
+    .crown { color: var(--accent); font-size: 0.8rem; margin-left: 4px; }
+
+    /* ── Empty / Loading states ──────────────────────────────── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+      color: var(--dim); background: var(--glass);
+      border: 1px dashed var(--border); border-radius: 20px;
+    }
+    .empty-state .icon { font-size: 3rem; margin-bottom: 16px; opacity: .5; }
+    .spinner-ring {
+      width: 22px; height: 22px; border: 2px solid rgba(255,255,255,.1);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin .8s linear infinite; display: inline-block;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Toast ───────────────────────────────────────────────── */
+    #toast {
+      position: fixed; bottom: 28px; right: 28px; z-index: 9999;
+      background: var(--card2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 14px 20px;
+      font-size: 0.9rem; max-width: 360px;
+      transform: translateY(80px); opacity: 0;
+      transition: all .3s cubic-bezier(.34,1.56,.64,1);
+      pointer-events: none;
+    }
+    #toast.show { transform: translateY(0); opacity: 1; }
+    #toast.success { border-color: rgba(0,255,136,.4); }
+    #toast.error   { border-color: rgba(255,77,109,.4); }
+
+    /* ── Manual Link (existing) ──────────────────────────────── */
+    .link-section {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 36px;
+    }
+    .link-card {
+      background: var(--card); border-radius: 18px; padding: 28px;
+      border: 1px solid var(--border);
+    }
+    .link-card h2 { font-size: 1rem; color: var(--accent); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 18px; }
+
+    .search-container { position: relative; }
+    .search-input {
+      width: 100%; background: rgba(0,0,0,.25); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; color: white; font-family: inherit;
+      font-size: 1rem; outline: none; transition: border-color .2s;
+    }
+    .search-input:focus { border-color: var(--accent); }
+    .dropdown {
+      position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+      background: #1a2332; border: 1px solid var(--border); border-radius: 10px;
+      max-height: 240px; overflow-y: auto; z-index: 100; display: none;
+      box-shadow: 0 12px 28px rgba(0,0,0,.6);
+    }
+    .dropdown-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid var(--border); transition: background .15s; }
+    .dropdown-item:hover { background: var(--glass); }
+    .dropdown-item .name { font-weight: 600; }
+    .dropdown-item .meta { font-size: 0.78rem; color: var(--dim); margin-top: 2px; }
+    .selected-player {
+      display: none; background: var(--glass); border: 1px solid var(--border);
+      border-radius: 12px; padding: 14px 16px; align-items: center; justify-content: space-between;
+    }
+    .player-info { display: flex; align-items: center; gap: 14px; }
+    .player-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: var(--accent); color: #000;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-family: 'Outfit'; font-size: 1rem;
+    }
+    .remove-btn { background: none; border: none; color: var(--dim); cursor: pointer; font-size: 1.4rem; transition: color .2s; }
+    .remove-btn:hover { color: var(--red); }
+    .btn-container { grid-column: span 2; text-align: center; margin-top: 8px; }
+    .action-btn {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #080b11; border: none; padding: 14px 40px; border-radius: 50px;
+      font-weight: 800; font-family: 'Outfit'; cursor: pointer;
+      text-transform: uppercase; letter-spacing: 1px; transition: all .3s;
+    }
+    .action-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .action-btn:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,255,136,.3); }
+
+    .aliases-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; margin-top: 24px; }
+    .aliases-table th { text-align: left; padding: 8px 18px; color: var(--dim); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+    .alias-row { background: var(--glass); border: 1px solid var(--border); border-radius: 12px; transition: transform .2s; }
+    .alias-row td { padding: 18px; vertical-align: middle; }
+    .alias-row td:first-child { border-radius: 12px 0 0 12px; }
+    .alias-row td:last-child  { border-radius: 0 12px 12px 0; }
+    .player-tag { color: var(--dim); font-size: 0.85rem; margin-left: 4px; }
+    .arrow { color: var(--accent); font-size: 1.2rem; }
+    .unlink-btn {
+      background: rgba(255,77,109,.1); color: var(--red);
+      border: 1px solid rgba(255,77,109,.2); padding: 7px 14px;
+      border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 0.82rem; transition: all .2s;
+    }
+    .unlink-btn:hover { background: var(--red); color: white; }
+    .empty-aliases { text-align: center; padding: 50px; color: var(--dim); background: var(--glass); border-radius: 18px; border: 1px dashed var(--border); margin-top: 24px; }
+
+    @media(max-width: 680px) {
+      .link-section { grid-template-columns: 1fr; }
+      .btn-container { grid-column: auto; }
+      .discover-controls { grid-template-columns: 1fr; }
+      .page-header h1 { font-size: 2.2rem; }
+      .tabs { flex-direction: column; }
+    }
+  </style>
+</head>
+
+<body>
+  <nav class="navbar">
+    <a href="/" class="nav-logo">NN<em>RIOT</em></a>
+    <div class="nav-links">
+      <a href="/" class="nav-link">Dashboard</a>
+      <a href="/explorer" class="nav-link">Explorer</a>
+      <a href="/predictor" class="nav-link">Predictor</a>
+      <a href="/live" class="nav-link">Live</a>
+      <a href="/smurfs" class="nav-link active">Smurfs</a>
+      <a href="/monitor" class="nav-link">Monitor</a>
+      <a href="/predictor" class="nav-cta">⚡ Predict</a>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <h1>SMURF MANAGER</h1>
+    <p>Discover known pro smurfs via lolpros.gg intelligence or link accounts manually.</p>
+  </div>
+
+  <div class="container">
+
+    <!-- Collection banner -->
+    <div id="collection-banner" class="hidden">
+      <div class="pulse-dot"></div>
+      <span id="banner-msg">Collecting match history…</span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-discover" onclick="switchTab('discover')">
+        <span class="tab-icon">🔍</span> Market Discovery
+      </button>
+      <button class="tab-btn" id="tab-manual" onclick="switchTab('manual')">
+        <span class="tab-icon">🔗</span> Smurf Linking
+      </button>
+      <button class="tab-btn" id="tab-collect" onclick="switchTab('collect')">
+        <span class="tab-icon">📥</span> Manual Import
+      </button>
+      <button class="tab-btn" id="tab-train" onclick="switchTab('train')">
+        <span class="tab-icon">🧠</span> Model Training
+      </button>
+    </div>
+
+    <!-- Stats strip -->
+    <div id="stats-strip" style="
+      display:flex; gap:24px; align-items:center; justify-content:center;
+      padding:10px 0 24px; font-size:0.82rem; color:var(--dim);
+    ">
+      <span>Linked aliases: <strong id="stat-aliases" style="color:var(--accent)">–</strong></span>
+      <span style="opacity:.3">|</span>
+      <span>Players in DB: <strong id="stat-players" style="color:var(--accent2)">–</strong></span>
+      <span style="opacity:.3">|</span>
+      <span id="stat-collect-status" style="display:none">
+        <span class="pulse-dot" style="display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.2s ease-in-out infinite;vertical-align:middle;margin-right:5px"></span>
+        Collecting…
+      </span>
+    </div>
+
+    <!-- ═══════════ DISCOVER PANEL ═══════════ -->
+    <div class="panel active" id="panel-discover">
+
+      <div class="discover-controls">
+        <div class="search-bar">
+          <input type="text" id="pro-search-input" placeholder="Search a pro player (e.g. Cabochard, bicas, Faker…)"
+                 oninput="onProSearchInput(this.value)">
+          <select class="server-select" id="server-select" title="Server filter for ladder">
+            <option value="EUW">🌍 EUW</option>
+            <option value="NA">🌎 NA</option>
+            <option value="KR">🌏 KR</option>
+            <option value="EUNE">EUNE</option>
+            <option value="BR">BR</option>
+            <option value="LAN">LAN</option>
+            <option value="LAS">LAS</option>
+            <option value="OCE">OCE</option>
+            <option value="JP">JP</option>
+            <option value="TR">TR</option>
+            <option value="RU">RU</option>
+          </select>
+        </div>
+        <button class="btn-primary" id="ladder-btn" onclick="loadLadder()">⚡ Top Ladder</button>
+      </div>
+
+      <div class="source-toggle" id="source-toggle" style="display:none">
+        <span style="color:var(--dim);font-size:.8rem;font-weight:600;">Showing:</span>
+        <button class="toggle-btn active" id="tgl-search" onclick="showSource('search')">Search results</button>
+        <button class="toggle-btn" id="tgl-ladder" onclick="showSource('ladder')">Ladder</button>
+      </div>
+
+      <div id="results-grid">
+        <div class="empty-state">
+          <div class="icon">🎯</div>
+          <p>Search a pro player name or load the top ladder to discover smurfs.</p>
+        </div>
+      </div>
+
+    </div><!-- /discover -->
+
+    <!-- ═══════════ MANUAL PANEL ═══════════ -->
+    <div class="panel" id="panel-manual">
+
+      <div class="link-section">
+        <!-- Main account -->
+        <div class="link-card">
+          <h2>1. Main Account</h2>
+          <div class="search-container" id="search-cont-canon">
+            <input type="text" class="search-input" placeholder="Search main account…" oninput="handleSearch('canon', this.value)">
+            <div class="dropdown" id="dropdown-canon"></div>
+          </div>
+          <div class="selected-player" id="selected-canon">
+            <div class="player-info">
+              <div class="player-avatar" id="avatar-canon">?</div>
+              <div>
+                <div style="font-weight:700" id="name-canon">-</div>
+                <div class="player-tag" id="tag-canon">#TAG</div>
+              </div>
+            </div>
+            <button class="remove-btn" onclick="clearPlayer('canon')">&times;</button>
+          </div>
+        </div>
+        <!-- Smurf account -->
+        <div class="link-card">
+          <h2>2. Smurf Account (Alias)</h2>
+          <div class="search-container" id="search-cont-alias">
+            <input type="text" class="search-input" placeholder="Search smurf account…" oninput="handleSearch('alias', this.value)">
+            <div class="dropdown" id="dropdown-alias"></div>
+          </div>
+          <div class="selected-player" id="selected-alias">
+            <div class="player-info">
+              <div class="player-avatar" id="avatar-alias">?</div>
+              <div>
+                <div style="font-weight:700" id="name-alias">-</div>
+                <div class="player-tag" id="tag-alias">#TAG</div>
+              </div>
+            </div>
+            <button class="remove-btn" onclick="clearPlayer('alias')">&times;</button>
+          </div>
+        </div>
+
+        <div class="btn-container">
+          <button id="link-btn" class="action-btn" disabled onclick="linkAccounts()">Link Accounts</button>
+        </div>
+      </div>
+
+      <h3 style="color:var(--dim);font-size:.85rem;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Active Aliases</h3>
+      <table class="aliases-table" id="aliases-table" style="display:none">
+        <thead>
+          <tr>
+            <th>Smurf / Alias</th><th></th><th>Main Account</th><th style="text-align:right">Action</th>
+          </tr>
+        </thead>
+        <tbody id="aliases-body"></tbody>
+      </table>
+      <div id="empty-aliases" class="empty-aliases">No linked accounts yet.</div>
+
+    </div><!-- /manual -->
+
+    <!-- PANEL: COLLECT -->
+    <div id="panel-collect" class="panel">
+      <div class="link-grid">
+        <div class="link-card">
+          <h2>Player History Collector</h2>
+          <p style="color:var(--dim); font-size: 0.9rem; margin-bottom: 20px;">Fetch recent match data for any specific player into the database.</p>
+          
+          <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+            <input type="text" id="collect-name" class="search-input" placeholder="Game Name (e.g. Faker)">
+            <input type="text" id="collect-tag" class="search-input" placeholder="Tag (e.g. KR1)" style="max-width: 100px;">
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <label style="display:block; font-size: 0.8rem; color: var(--dim); margin-bottom: 6px;">Match count (1-100)</label>
+            <input type="number" id="collect-count" class="search-input" value="15" min="1" max="100">
+          </div>
+          
+          <button class="action-btn" onclick="triggerManualCollect()">⚡ Start Collection</button>
+        </div>
+        
+        <div class="link-card">
+          <h2>Collector Logs</h2>
+          <div id="collect-logs" style="
+            background: rgba(0,0,0,0.3); 
+            border: 1px solid var(--border); 
+            border-radius: 8px; 
+            padding: 12px; 
+            font-family: monospace; 
+            font-size: 0.8rem; 
+            min-height: 200px; 
+            overflow-y: auto;
+            color: var(--dim);
+          ">Ready. Select a player to begin...</div>
+        </div>
+      </div>
+    </div><!-- /collect -->
+
+    <!-- PANEL: TRAIN -->
+    <div id="panel-train" class="panel">
+      <div style="text-align: center; max-width: 600px; margin: 40px auto;">
+        <div style="font-size: 4rem; margin-bottom: 24px;">🧠</div>
+        <h2>Manual Model Training</h2>
+        <p style="color:var(--dim); margin: 16px 0 32px;">NNriot trains automatically in the background, but you can force an immediate update cycle here to incorporate your latest imports.</p>
+        
+        <div style="display: flex; flex-direction: column; gap: 16px;">
+          <button id="train-btn-manual" class="action-btn" style="height: 60px; font-size: 1.1rem;" onclick="triggerManualTrain()">🚀 Start Training Cycle</button>
+          <div id="train-status-msg" style="display: none; padding: 12px; border-radius: 8px; font-weight: 600;"></div>
+        </div>
+      </div>
+    </div><!-- /train -->
+
+  </div><!-- .container -->
+
+  <!-- Toast -->
+  <div id="toast"></div>
+
+  <script>
+    /* ═══════════════════════════════════════════════════════
+       TABS
+    ═══════════════════════════════════════════════════════ */
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      document.getElementById('tab-' + name).classList.add('active');
+      document.getElementById('panel-' + name).classList.add('active');
+      if (name === 'manual') fetchAliases();
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TOAST
+    ═══════════════════════════════════════════════════════ */
+    let _toastTimer;
+    function toast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.textContent = msg;
+      el.className = `show ${type}`;
+      clearTimeout(_toastTimer);
+      _toastTimer = setTimeout(() => el.className = '', 3500);
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       COLLECTION BANNER (poll /api/history/status)
+    ═══════════════════════════════════════════════════════ */
+    function startBannerPoll() {
+      const banner     = document.getElementById('collection-banner');
+      const msg        = document.getElementById('banner-msg');
+      const stripChip  = document.getElementById('stat-collect-status');
+      const check  = async () => {
+        try {
+          const r = await fetch('/api/history/status');
+          const s = await r.json();
+          if (s.status === 'collecting') {
+            msg.textContent = `⚡ Collecting: ${s.game_name} — history in progress…`;
+            banner.classList.remove('hidden');
+            if (stripChip) stripChip.style.display = '';
+          } else {
+            banner.classList.add('hidden');
+            if (stripChip) stripChip.style.display = 'none';
+            // Refresh counts once collection finishes
+            if (s.status === 'completed') updateStats();
+          }
+        } catch {}
+      };
+      setInterval(check, 3000);
+      check();
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       TIER HELPERS
+    ═══════════════════════════════════════════════════════ */
+    const TIERS = {
+      '00_challenger':  ['challenger',  'CHAL'],
+      '10_grandmaster': ['grandmaster', 'GM'],
+      '20_master':      ['master',      'MASTER'],
+      '30_diamond':     ['diamond',     'DIA'],
+      '35_emerald':     ['emerald',     'EME'],
+      '40_platinum':    ['platinum',    'PLAT'],
+      '90_unranked':    ['unranked',    'UNRANKED'],
+    };
+    function tierBadge(rank) {
+      if (!rank || !rank.tier || rank.tier === '90_unranked') {
+        return '<span class="tier-badge unranked">Unranked</span>';
+      }
+      const [cls, lbl] = TIERS[rank.tier] || ['unranked', rank.tier];
+      const lp = rank.league_points != null ? ` ${rank.league_points} LP` : '';
+      return `<span class="tier-badge ${cls}">${lbl}${lp}</span>`;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       DISCOVER — search
+    ═══════════════════════════════════════════════════════ */
+    let _searchTimer;
+    let _lastSearch  = [];
+    let _lastLadder  = [];
+    let _activeSource = 'search';
+
+    function onProSearchInput(v) {
+      clearTimeout(_searchTimer);
+      const q = v.trim();
+      if (q.length < 2) return;
+      _searchTimer = setTimeout(() => doProSearch(q), 350);
+    }
+
+    async function doProSearch(q) {
+      setLoading(true);
+      try {
+        const r = await fetch(`/api/lolpros/search?q=${encodeURIComponent(q)}`);
+        const data = await r.json();
+        _lastSearch = Array.isArray(data) ? data : [];
+        _activeSource = 'search';
+        renderResults(_lastSearch);
+        const tog = document.getElementById('source-toggle');
+        if (_lastLadder.length) { tog.style.display = 'flex'; updateToggles(); }
+      } catch(e) { toast('Search failed: ' + e.message, 'error'); }
+      finally { setLoading(false); }
+    }
+
+    async function loadLadder() {
+      setLoading(true);
+      const server = document.getElementById('server-select').value;
+      try {
+        const r = await fetch(`/api/lolpros/ladder?page=1&page_size=30&server=${server}`);
+        const data = await r.json();
+        // Ladder returns different shape — adapt to search shape
+        _lastLadder = Array.isArray(data) ? data.map(adaptLadderPlayer) : [];
+        _activeSource = 'ladder';
+        renderResults(_lastLadder);
+        document.getElementById('source-toggle').style.display = 'flex';
+        updateToggles();
+      } catch(e) { toast('Ladder failed: ' + e.message, 'error'); }
+      finally { setLoading(false); }
+    }
+
+    function adaptLadderPlayer(p) {
+      // Ladder returns a single `account` object; wrap it in the league_player shape
+      return {
+        uuid:   p.uuid,
+        name:   p.name,
+        slug:   p.slug,
+        country: p.country,
+        leagues: p.leagues || [],
+        league_player: {
+          position: p.position,
+          accounts: p.account ? [{ ...p.account, rank: { tier: p.account.tier, league_points: p.account.league_points, score: p.score } }] : []
+        }
+      };
+    }
+
+    function showSource(src) {
+      _activeSource = src;
+      updateToggles();
+      renderResults(src === 'search' ? _lastSearch : _lastLadder);
+    }
+    function updateToggles() {
+      document.getElementById('tgl-search').classList.toggle('active', _activeSource === 'search');
+      document.getElementById('tgl-ladder').classList.toggle('active', _activeSource === 'ladder');
+    }
+
+    function setLoading(on) {
+      const grid = document.getElementById('results-grid');
+      if (on) grid.innerHTML = '<div class="empty-state"><div class="spinner-ring"></div><p style="margin-top:16px">Loading…</p></div>';
+      document.getElementById('ladder-btn').disabled = on;
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       RENDER results
+    ═══════════════════════════════════════════════════════ */
+    function renderResults(players) {
+      const grid = document.getElementById('results-grid');
+      if (!players.length) {
+        grid.innerHTML = '<div class="empty-state"><div class="icon">😕</div><p>No results found.</p></div>';
+        return;
+      }
+      grid.innerHTML = players.map(renderProCard).join('');
+    }
+
+    function renderProCard(p) {
+      const accounts = (p.league_player || {}).accounts || [];
+      const leagues  = (p.leagues || []).map(l => l.shorthand || l.name).join(', ');
+      const pos      = positionLabel((p.league_player || {}).position);
+      const initials = (p.name || '?')[0].toUpperCase();
+      const encodedP = encodeURIComponent(JSON.stringify(p));
+
+      const accsHtml = accounts.map((acc, i) => {
+        const isCanon = i === 0; // first = highest ranked
+        const name    = acc.gamename || acc.summoner_name || '?';
+        const tag     = acc.tagline  || acc.server || '';
+        const hist    = (acc.summoner_names || []).slice(1).map(n => n.name).join(' → ');
+        return `
+          <div class="account-row ${isCanon ? 'is-canonical' : ''}">
+            <span class="server-tag">${acc.server || tag}</span>
+            <div class="acc-name">
+              <div class="name">${escHtml(name)}${tag ? '<span style="color:var(--dim);font-weight:400"> #' + escHtml(tag) + '</span>' : ''}${isCanon ? '<span class="crown">♔</span>' : ''}</div>
+              ${hist ? `<div class="hist">was: ${escHtml(hist)}</div>` : ''}
+            </div>
+            ${tierBadge(acc.rank)}
+          </div>`;
+      }).join('');
+
+      return `
+        <div class="pro-card" id="card-${p.uuid}">
+          <div class="pro-header" onclick="toggleCard('${p.uuid}')">
+            <div class="pro-avatar">${initials}</div>
+            <div class="pro-meta">
+              <div class="pro-name">${escHtml(p.name)}
+                ${p.country ? `<span style="font-size:.8rem;margin-left:6px;color:var(--dim)">${p.country}</span>` : ''}
+              </div>
+              <div class="pro-sub">${pos}${leagues ? ' · ' + leagues : ''} · ${accounts.length} account${accounts.length !== 1 ? 's' : ''}</div>
+            </div>
+            ${leagues ? `<span class="pro-badge">${leagues}</span>` : ''}
+            <span class="chevron">⌄</span>
+          </div>
+          <div class="accounts-list">
+            <div class="accounts-header">
+              <span>♔ = canonical (highest ranked)</span>
+              <button class="btn-primary btn-sm" id="import-btn-${p.uuid}"
+                onclick="importPlayer(event, '${p.uuid}', '${encodedP}')">
+                ⬇ Import All
+              </button>
+            </div>
+            ${accsHtml}
+          </div>
+        </div>`;
+    }
+
+    function toggleCard(uuid) {
+      document.getElementById('card-' + uuid).classList.toggle('expanded');
+    }
+
+    function positionLabel(pos) {
+      const MAP = {'10_top':'Top','20_jungle':'Jungle','30_mid':'Mid','40_adc':'ADC','50_support':'Support'};
+      return MAP[pos] || pos || '';
+    }
+
+    function escHtml(s) {
+      return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       IMPORT
+    ═══════════════════════════════════════════════════════ */
+    async function importPlayer(evt, uuid, encodedP) {
+      evt.stopPropagation();
+      const btn = document.getElementById('import-btn-' + uuid);
+      btn.disabled = true;
+      btn.textContent = '⌛ Importing…';
+      try {
+        const player = JSON.parse(decodeURIComponent(encodedP));
+        const r = await fetch('/api/lolpros/import', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ player })
+        });
+        const data = await r.json();
+        if (data.success) {
+          btn.textContent = '✓ Imported';
+          btn.style.background = 'rgba(0,255,136,.15)';
+          btn.style.color = 'var(--accent)';
+          toast(`✅ ${data.pro_player}: ${data.total_accounts} accounts imported. ${data.collection}`, 'success');
+        } else {
+          btn.textContent = '✗ Error';
+          toast('Import error: ' + (data.error || 'unknown'), 'error');
+          btn.disabled = false;
+        }
+      } catch(e) {
+        toast('Import failed: ' + e.message, 'error');
+        btn.textContent = '⬇ Import All';
+        btn.disabled = false;
+      }
+    }
+
+    /* ═══════════════════════════════════════════════════════
+       MANUAL LINK (existing logic)
+    ═══════════════════════════════════════════════════════ */
+    let selectedCanon = null, selectedAlias = null;
+    let searchTimers = {};
+
+    async function handleSearch(type, query) {
+      const drop = document.getElementById('dropdown-' + type);
+      clearTimeout(searchTimers[type]);
+      if (query.trim().length < 2) { drop.style.display = 'none'; return; }
+      searchTimers[type] = setTimeout(async () => {
+        try {
+          const r = await fetch(`/api/players/search?q=${encodeURIComponent(query.trim())}&limit=5`);
+          const players = await r.json();
+          drop.innerHTML = players.length
+            ? players.map(p => `
+              <div class="dropdown-item" onclick="selectPlayer('${type}','${p.puuid}','${escHtml(p.game_name)}','${p.tag_line}')">
+                <div class="name">${escHtml(p.game_name)} <span style="color:var(--dim);font-weight:400">#${p.tag_line}</span></div>
+                <div class="meta">${p.total_matches} matches</div>
+              </div>`).join('')
+            : '<div class="dropdown-item" style="color:var(--dim)">No results</div>';
+          drop.style.display = 'block';
+        } catch {}
+      }, 300);
+    }
+
+    function selectPlayer(type, puuid, name, tag) {
+      if (type === 'canon') selectedCanon = { puuid, name, tag };
+      else selectedAlias = { puuid, name, tag };
+      document.getElementById('dropdown-' + type).style.display = 'none';
+      document.getElementById('search-cont-' + type).style.display = 'none';
+      document.getElementById('selected-' + type).style.display = 'flex';
+      document.getElementById('name-' + type).textContent = name;
+      document.getElementById('tag-' + type).textContent  = '#' + tag;
+      document.getElementById('avatar-' + type).textContent = name.charAt(0).toUpperCase();
+      updateLinkBtn();
+    }
+
+    function clearPlayer(type) {
+      if (type === 'canon') selectedCanon = null;
+      else selectedAlias = null;
+      document.getElementById('search-cont-' + type).style.display = 'block';
+      document.getElementById('selected-' + type).style.display    = 'none';
+      document.getElementById('search-cont-' + type).querySelector('input').value = '';
+      updateLinkBtn();
+    }
+
+    function updateLinkBtn() {
+      document.getElementById('link-btn').disabled =
+        !(selectedCanon && selectedAlias && selectedCanon.puuid !== selectedAlias.puuid);
+    }
+
+    async function linkAccounts() {
+      if (!selectedCanon || !selectedAlias) return;
+      const btn = document.getElementById('link-btn');
+      btn.disabled = true; btn.textContent = 'Linking…';
+      try {
+        const r = await fetch('/api/players/link', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ canonical_puuid: selectedCanon.puuid, alias_puuid: selectedAlias.puuid })
+        });
+        const data = await r.json();
+        if (data.success) { clearPlayer('canon'); clearPlayer('alias'); fetchAliases(); toast('✅ Accounts linked!'); }
+        else toast('Error: ' + (data.error || 'failed'), 'error');
+      } catch { toast('Connection error', 'error'); }
+      finally { btn.textContent = 'Link Accounts'; }
+    }
+
+    async function fetchAliases() {
+      try {
+        const r = await fetch('/api/players/aliases');
+        const aliases = await r.json();
+        const table   = document.getElementById('aliases-table');
+        const body    = document.getElementById('aliases-body');
+        const empty   = document.getElementById('empty-aliases');
+        if (aliases.length) {
+          table.style.display = 'table'; empty.style.display = 'none';
+          body.innerHTML = aliases.map(a => `
+            <tr class="alias-row">
+              <td><strong>${escHtml(a.alias_name)}</strong><span class="player-tag">#${a.alias_tag}</span></td>
+              <td class="arrow">→</td>
+              <td><strong>${escHtml(a.canon_name)}</strong><span class="player-tag">#${a.canon_tag}</span></td>
+              <td style="text-align:right">
+                <button class="unlink-btn" onclick="unlinkAccount('${a.alias_puuid}')">Unlink</button>
+              </td>
+            </tr>`).join('');
+        } else {
+          table.style.display = 'none'; empty.style.display = 'block';
+        }
+      } catch {}
+    }
+
+    async function unlinkAccount(puuid) {
+      if (!confirm('Unlink these accounts?')) return;
+      try {
+        const r = await fetch(`/api/players/unlink?alias_puuid=${puuid}`, { method: 'DELETE' });
+        const d = await r.json();
+        if (d.success) { fetchAliases(); toast('Unlinked.'); }
+      } catch { toast('Connection error', 'error'); }
+    }
+
+    /* ── Stats strip ── */
+    async function updateStats() {
+      try {
+        const [aliasR, healthR] = await Promise.all([
+          fetch('/api/players/aliases'),
+          fetch('/api/db-health')
+        ]);
+        const aliases = await aliasR.json();
+        const health  = await healthR.json();
+        document.getElementById('stat-aliases').textContent = Array.isArray(aliases) ? aliases.length : '?';
+        document.getElementById('stat-players').textContent = health.players ?? '?';
+      } catch {}
+    }
+
+    /* ── Init ── */
+    startBannerPoll();
+    updateStats();
+    setInterval(updateStats, 10000);
+  </script>
+</body>
+</html>

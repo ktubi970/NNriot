@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NNriot | Custom Match Predictor</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;700&display=swap"
+        rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:        #070b12;
+            --surface:   #0f1620;
+            --surface2:  #141e2e;
+            --border:    rgba(255,255,255,0.07);
+            --accent:    #00ff88;
+            --accent2:   #00c8ff;
+            --blue:      #3d7eff;
+            --red:       #ff4d6d;
+            --gold:      #ffc93c;
+            --text:      #e8edf5;
+            --muted:     #6b7a96;
+            --glow:      rgba(0,255,136,0.18);
+            
+            /* Legacy mappings for predictor compatibility */
+            --bg-color: var(--bg);
+            --card-bg: var(--surface);
+            --blue-side: var(--blue);
+            --red-side: var(--red);
+            --text-main: var(--text);
+            --text-dim: var(--muted);
+            --glass: rgba(255, 255, 255, 0.05);
+            --glass-border: var(--border);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
+
+        .navbar {
+            position: sticky; top: 0; z-index: 999;
+            background: rgba(7,11,18,0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+            padding: 0 40px;
+            height: 64px;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .nav-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem; font-weight: 900;
+            color: #fff; text-decoration: none;
+            display: flex; align-items: center; gap: 4px;
+        }
+        .nav-logo em { color: var(--accent); font-style: normal; }
+        .nav-links { display: flex; gap: 32px; align-items: center; }
+        .nav-link {
+            color: var(--muted); text-decoration: none;
+            font-size: 0.9rem; font-weight: 600;
+            transition: color 0.2s;
+            position: relative; padding-bottom: 2px;
+        }
+        .nav-link:hover { color: #fff; }
+        .nav-link.active { color: var(--accent); }
+        .nav-link.active::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+            height: 2px; background: var(--accent); border-radius: 2px;
+        }
+        .nav-cta {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #070b12; font-family: 'Outfit', sans-serif;
+            font-weight: 800; font-size: 0.85rem;
+            padding: 8px 20px; border-radius: 8px;
+            text-decoration: none; letter-spacing: 0.5px;
+            box-shadow: 0 0 20px var(--glow);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 40px 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        header h1 {
+            font-size: 3rem;
+            font-weight: 800;
+            background: linear-gradient(135deg, #fff 0%, #00ff88 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        header p {
+            color: var(--text-dim);
+            font-size: 1.1rem;
+        }
+
+        .predictor-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 40px;
+            margin-bottom: 60px;
+            position: relative;
+        }
+
+        .predictor-grid::after {
+            content: "VS";
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-family: 'Outfit', sans-serif;
+            font-size: 4rem;
+            font-weight: 900;
+            color: rgba(255, 255, 255, 0.03);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .team-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 30px;
+            border: 1px solid var(--glass-border);
+            position: relative;
+            z-index: 1;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .team-card.blue {
+            border-top: 5px solid var(--blue-side);
+            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.1);
+        }
+
+        .team-card.red {
+            border-top: 5px solid var(--red-side);
+            box-shadow: 0 10px 30px rgba(255, 77, 77, 0.1);
+        }
+
+        .team-header {
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .team-header h2 {
+            font-size: 1.8rem;
+        }
+
+        .player-slots {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .player-slot {
+            position: relative;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: border-color 0.2s;
+        }
+
+        .player-slot:focus-within {
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+
+        .label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-dim);
+            font-weight: 700;
+        }
+
+        .search-container {
+            position: relative;
+        }
+
+        .search-input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: white;
+            font-family: inherit;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #1a2332;
+            border: 1px solid var(--glass-border);
+            border-radius: 8px;
+            margin-top: 5px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid var(--glass-border);
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:hover,
+        .dropdown-item.keyboard-active {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .dropdown-item.keyboard-active {
+            outline: 1px solid rgba(0,255,136,0.3);
+        }
+
+        .dropdown-item .name {
+            font-weight: 600;
+            display: block;
+        }
+
+        .dropdown-item .meta {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .selected-player {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .selected-player .info {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .player-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--glass);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-family: 'Outfit';
+            border: 1px solid var(--glass-border);
+        }
+
+        .remove-btn {
+            background: none;
+            border: none;
+            color: var(--text-dim);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            transition: color 0.2s;
+        }
+
+        .remove-btn:hover {
+            color: #ff4d4d;
+        }
+
+        .actions {
+            text-align: center;
+            margin-top: 40px;
+        }
+
+        .predict-btn {
+            background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
+            color: #0a0e14;
+            border: none;
+            padding: 18px 60px;
+            font-size: 1.3rem;
+            font-weight: 800;
+            font-family: 'Outfit';
+            border-radius: 50px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .predict-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.4);
+        }
+
+        .predict-btn:active {
+            transform: translateY(1px);
+        }
+
+        .predict-btn:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+            box-shadow: none;
+        }
+
+        #results-container {
+            margin-top: 60px;
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .result-card {
+            background: var(--card-bg);
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid var(--glass-border);
+            text-align: center;
+        }
+
+        .winner-display {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 20px;
+            font-family: 'Outfit';
+        }
+
+        .blue-win {
+            color: var(--blue-side);
+        }
+
+        .red-win {
+            color: var(--red-side);
+        }
+
+        .prob-bar-container {
+            height: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 30px 0;
+            display: flex;
+            border: 1px solid var(--glass-border);
+        }
+
+        .prob-bar-blue {
+            height: 100%;
+            background: var(--blue-side);
+            transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+            position: relative;
+        }
+
+        .prob-bar-red {
+            height: 100%;
+            background: var(--red-side);
+            transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+            position: relative;
+        }
+
+        .prob-labels {
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+            font-family: 'Outfit';
+            font-size: 1.2rem;
+        }
+
+        .confidence-chip {
+            display: inline-block;
+            padding: 5px 15px;
+            border-radius: 20px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            font-size: 0.9rem;
+            color: var(--accent);
+            margin-top: 20px;
+        }
+
+        .reasoning-container {
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 12px;
+            border-left: 4px solid var(--accent);
+            text-align: left;
+            font-size: 0.95rem;
+            line-height: 1.6;
+            color: #d1d8e0;
+            display: none;
+        }
+
+        .reasoning-container h3 {
+            margin-bottom: 15px;
+            color: white;
+            font-size: 1.1rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .reasoning-container h3::before {
+            content: "✨";
+        }
+
+        nav {
+            margin-bottom: 30px;
+        }
+
+        .back-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            transition: color 0.2s;
+        }
+
+        .back-link:hover {
+            color: white;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            display: none;
+            width: 40px;
+            height: 40px;
+            margin: 20px auto;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Navigation Bar Styles */
+        .navbar {
+            position: sticky;
+            top: 0;
+            width: 100%;
+            background: rgba(10, 14, 20, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--glass-border);
+            z-index: 1000;
+            padding: 15px 0;
+        }
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-logo {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: white;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-logo span {
+            color: var(--accent);
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 30px;
+        }
+
+        .nav-link {
+            color: var(--text-dim);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: color 0.2s, transform 0.2s;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        .nav-link.active {
+            color: var(--accent);
+        }
+
+        .nav-link.active::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: var(--accent);
+            border-radius: 2px;
+        }
+
+        .quick-btn {
+            background: linear-gradient(135deg, #1a4d8f 0%, #0a2e5c 100%);
+            color: white;
+            border: 1px solid var(--glass-border);
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .quick-btn:hover {
+            background: linear-gradient(135deg, #2561a8 0%, #1a3d7a 100%);
+            border-color: rgba(0, 255, 136, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .quick-select {
+            background: var(--card-bg);
+            color: white;
+            border: 1px solid var(--glass-border);
+            padding: 10px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.95rem;
+            font-family: inherit;
+            transition: all 0.2s;
+            appearance: none;
+            padding-right: 30px;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 8px center;
+            background-size: 18px;
+            padding-right: 35px;
+        }
+
+        .quick-select:hover {
+            border-color: rgba(0, 255, 136, 0.3);
+        }
+
+        @media (max-width: 900px) {
+            .predictor-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .predictor-grid::after {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar">
+        <a href="/" class="nav-logo">NN<em>RIOT</em></a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">Dashboard</a>
+            <a href="/explorer" class="nav-link">Explorer</a>
+            <a href="/predictor" class="nav-link active">Predictor</a>
+            <a href="/live" class="nav-link">Live</a>
+            <a href="/smurfs" class="nav-link">Smurfs</a>
+            <a href="/monitor" class="nav-link">Monitor</a>
+            <a href="/predictor" class="nav-cta">⚡ Predict</a>
+        </div>
+    </nav>
+
+    <div class="container">
+
+        <header>
+            <h1>CUSTOM MATCH PREDICTOR</h1>
+            <p>Assemble your dream 5v5 matchup and discover the model's win probability.</p>
+        </header>
+
+        <!-- Quick Actions Bar -->
+        <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-wrap: wrap;">
+            <button class="quick-btn" onclick="fillRandomTeams()">🎲 Random Teams</button>
+            <button class="quick-btn" onclick="swapTeams()">⇄ Swap Teams</button>
+            <button class="quick-btn" onclick="clearAllSlots()">🗑️ Clear All</button>
+            <button class="quick-btn" onclick="fillFFvsG2N()" style="background: linear-gradient(135deg, #4b134f 0%, #c94b4b 100%);">⚔️ FF vs G2N</button>
+            <button class="quick-btn" onclick="fillBIGvsKCB()" style="background: linear-gradient(135deg, #09203f 0%, #537895 100%);">⚔️ BIG vs KCB</button>
+            <button id="add-history-btn" class="quick-btn" onclick="addSelectedPlayersHistory()" style="background: linear-gradient(135deg, #a83279 0%, #d38312 100%);">📅 Add History</button>
+            <button id="import-live-btn" class="quick-btn" onclick="importLiveMatch()" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);">📡 Import Live</button>
+            <select id="hot-players-select" class="quick-select" onchange="fillFromHot()">
+                <option value="">⭐ Popular Players</option>
+            </select>
+        </div>
+
+        <div class="predictor-grid">
+            <!-- Blue Team -->
+            <div class="team-card blue">
+                <div class="team-header">
+                    <h2 style="color: var(--blue-side);">BLUE TEAM</h2>
+                </div>
+                <div class="player-slots" id="blue-slots">
+                    <!-- 5 Slots will be rendered here by JS -->
+                </div>
+            </div>
+
+            <!-- Red Team -->
+            <div class="team-card red">
+                <div class="team-header">
+                    <h2 style="color: var(--red-side);">RED TEAM</h2>
+                </div>
+                <div class="player-slots" id="red-slots">
+                    <!-- 5 Slots will be rendered here by JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="predict-btn" class="predict-btn" disabled>PREDICT OUTCOME</button>
+            <div id="loader" class="spinner"></div>
+        </div>
+
+        <div id="results-container">
+            <div class="result-card">
+                <div id="winner-text" class="winner-display">BLUE SIDE VICTORY</div>
+
+                <div class="prob-labels">
+                    <span id="label-blue">0%</span>
+                    <span id="label-red">0%</span>
+                </div>
+
+                <div class="prob-bar-container">
+                    <div id="bar-blue" class="prob-bar-blue" style="width: 50%;"></div>
+                    <div id="bar-red" class="prob-bar-red" style="width: 50%;"></div>
+                </div>
+
+                <div id="confidence-val" class="confidence-chip">MODEL CONFIDENCE: 85%</div>
+                
+                <div id="reasoning-cont" class="reasoning-container">
+                    <h3>Prediction Report</h3>
+                    <div id="reasoning-text">Prediction complete.</div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            const bluePuuids = [null, null, null, null, null];
+            const redPuuids = [null, null, null, null, null];
+
+            // Removed fetchChampions
+
+            function renderSlots() {
+                function createSlotHTML(team, index) {
+                    return `
+                    <div class="player-slot" id="slot-${team}-${index}">
+                        <div class="label">Slot ${index + 1}</div>
+                        
+                        <!-- Player Selection -->
+                        <div class="search-container" id="search-cont-${team}-${index}">
+                            <input type="text" class="search-input" placeholder="Search player name…"
+                            oninput="handleSearch('${team}', ${index}, this.value)"
+                            onkeydown="handleSearchKeydown('${team}', ${index}, event)"
+                            autocomplete="off" spellcheck="false">
+                            <div class="dropdown" id="dropdown-${team}-${index}"></div>
+                        </div>
+
+                        <div class="selected-player" id="selected-${team}-${index}">
+                            <div class="info">
+                                <div class="player-avatar" id="avatar-${team}-${index}">?</div>
+                                <div>
+                                    <div style="font-weight:700" id="name-${team}-${index}">-</div>
+                                    <div style="font-size:0.8rem; color:var(--text-dim)" id="tag-${team}-${index}">#TAG</div>
+                                </div>
+                            </div>
+                            <button class="remove-btn" onclick="clearSlot('${team}', ${index})">&times;</button>
+                        </div>
+                    </div>
+                `;
+                }
+
+                const blueContainer = document.getElementById('blue-slots');
+                const redContainer = document.getElementById('red-slots');
+
+                blueContainer.innerHTML = Array.from({ length: 5 }, (_, i) => createSlotHTML('blue', i)).join('');
+                redContainer.innerHTML = Array.from({ length: 5 }, (_, i) => createSlotHTML('red', i)).join('');
+            }
+
+
+            function clearSlot(team, index) {
+                if (team === 'blue') bluePuuids[index] = null;
+                else redPuuids[index] = null;
+
+                document.getElementById(`search-cont-${team}-${index}`).style.display = 'block';
+                document.getElementById(`selected-${team}-${index}`).style.display    = 'none';
+                document.getElementById(`dropdown-${team}-${index}`).style.display    = 'none';
+                const inp = document.querySelector(`#search-cont-${team}-${index} .search-input`);
+                if (inp) { inp.value = ''; inp.focus(); }
+                checkValidity();
+            }
+
+            // Fetch hot players on load
+            async function loadHotPlayers() {
+                try {
+                    const response = await fetch('/api/players/top?limit=10');
+                    if (!response.ok) throw new Error('Failed to fetch top players');
+                    const players = await response.json();
+                    
+                    const select = document.getElementById('hot-players-select');
+                    players.forEach(p => {
+                        const opt = document.createElement('option');
+                        opt.value = JSON.stringify({puuid: p.puuid, name: p.game_name, tag: p.tag_line});
+                        opt.textContent = `${p.game_name}#${p.tag_line} (${p.total_matches} matches)`;
+                        select.appendChild(opt);
+                    });
+                } catch (e) {
+                    console.warn("Could not load hot players:", e);
+                }
+            }
+
+            async function fillFromHot() {
+                const select = document.getElementById('hot-players-select');
+                if (!select.value) return;
+                
+                const playerData = JSON.parse(select.value);
+                // Try to fill next empty slot on blue team first, then red
+                let filled = false;
+                for (let i = 0; i < 5; i++) {
+                    if (!bluePuuids[i]) {
+                        selectPlayer('blue', i, playerData.puuid, playerData.name, playerData.tag);
+                        filled = true;
+                        break;
+                    }
+                }
+                
+                if (!filled) {
+                    for (let i = 0; i < 5; i++) {
+                        if (!redPuuids[i]) {
+                            selectPlayer('red', i, playerData.puuid, playerData.name, playerData.tag);
+                            filled = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!filled) {
+                    alert('All 10 slots are already filled. Clear a slot first.');
+                }
+                select.value = '';
+            }
+
+            async function fillRandomTeams() {
+                const btn = event.target.closest('.quick-btn');
+                const originalText = btn.innerHTML;
+                
+                try {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
+                    
+                    const response = await fetch('/api/players/random?limit=10');
+                    if (!response.ok) throw new Error('API Error');
+                    const players = await response.json();
+                    
+                    if (players.length >= 10) {
+                        clearAllSlots();
+                        for (let i = 0; i < 5; i++) {
+                            selectPlayer('blue', i, players[i].puuid, players[i].game_name, players[i].tag_line);
+                        }
+                        for (let i = 5; i < 10; i++) {
+                            selectPlayer('red', i - 5, players[i].puuid, players[i].game_name, players[i].tag_line);
+                        }
+                    } else {
+                        alert(`Only found ${players.length} players in the database. You need at least 10 for random teams.`);
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Failed to load random teams. Is the data collector running?');
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            function swapTeams() {
+                const tempPuuids = [...bluePuuids];
+                bluePuuids.splice(0, 5, ...redPuuids);
+                redPuuids.splice(0, 5, ...tempPuuids);
+                
+                // Re-render all slots
+                for (let i = 0; i < 5; i++) {
+                    updateSlotDisplay('blue', i);
+                    updateSlotDisplay('red', i);
+                }
+            }
+
+            async function fillFFvsG2N() {
+                const btn = event.target.closest('.quick-btn');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
+                
+                const ffPlayers = [
+                    {name: "Adam", tag: "EUW"},
+                    {name: "NattyNatt", tag: "EUW"},
+                    {name: "Saken", tag: "EUW"},
+                    {name: "3XA", tag: "EUW"},
+                    {name: "Targamas", tag: "EUW"}
+                ];
+                const g2nPlayers = [
+                    {name: "Shelfmade", tag: "EUW"},
+                    {name: "Markoon", tag: "EUW"},
+                    {name: "Toasty", tag: "EUW"},
+                    {name: "Rin", tag: "EUW"},
+                    {name: "Tockimo", tag: "EUW"}
+                ];
+                
+                clearAllSlots();
+                
+                async function lookupPlayer(p) {
+                    try {
+                        const res = await fetch(`/api/players/search?q=${encodeURIComponent(p.name)}&limit=1`);
+                        const data = await res.json();
+                        if (data && data.length > 0) return data[0].puuid;
+                    } catch(e) {}
+                    return 'NEW_PLAYER';
+                }
+                
+                for(let i=0; i<5; i++) {
+                    let puuid1 = await lookupPlayer(ffPlayers[i]);
+                    let puuid2 = await lookupPlayer(g2nPlayers[i]);
+                    
+                    selectPlayer('blue', i, puuid1, ffPlayers[i].name, ffPlayers[i].tag);
+                    selectPlayer('red', i, puuid2, g2nPlayers[i].name, g2nPlayers[i].tag);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                // Show a brief logic summary popup
+                alert("⚔️ Les joueurs de FF vs G2N ont été pré-remplis !\n\nSi certains joueurs n'ont pas encore de match dans la base de données, cliquez sur le bouton '📅 Add History' pour les télécharger avant de prédire.");
+            }
+
+            async function fillBIGvsKCB() {
+                const btn = event.target.closest('.quick-btn');
+                const originalText = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
+                
+                const bigPlayers = [
+                    {name: "Irrelevant", tag: "EUW"},
+                    {name: "Habubu", tag: "EUW"},
+                    {name: "Reeker", tag: "EUW"},
+                    {name: "Patrik", tag: "EUW"},
+                    {name: "Kaiser", tag: "EUW"}
+                ];
+                const kcbPlayers = [
+                    {name: "Tao", tag: "EUW"},
+                    {name: "Yukino", tag: "EUW"},
+                    {name: "Kamiloo", tag: "EUW"},
+                    {name: "Hazel", tag: "EUW"},
+                    {name: "Prime", tag: "EUW"}
+                ];
+                
+                clearAllSlots();
+                
+                async function lookupPlayer(p) {
+                    try {
+                        const res = await fetch(`/api/players/search?q=${encodeURIComponent(p.name)}&limit=1`);
+                        const data = await res.json();
+                        if (data && data.length > 0) return data[0].puuid;
+                    } catch(e) {}
+                    return 'NEW_PLAYER';
+                }
+                
+                for(let i=0; i<5; i++) {
+                    let puuid1 = await lookupPlayer(bigPlayers[i]);
+                    let puuid2 = await lookupPlayer(kcbPlayers[i]);
+                    
+                    selectPlayer('blue', i, puuid1, bigPlayers[i].name, bigPlayers[i].tag);
+                    selectPlayer('red', i, puuid2, kcbPlayers[i].name, kcbPlayers[i].tag);
+                }
+                
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+                
+                alert("⚔️ Les équipes BIG et KCB ont été chargées ! Pensez à utiliser le bouton 'Add History' s'ils n'ont pas encore de match enregistré.");
+            }
+
+            async function addSelectedPlayersHistory() {
+                const btn = document.getElementById('add-history-btn');
+                const originalText = btn.innerHTML;
+                
+                let playersToFetch = [];
+                for (let i = 0; i < 5; i++) {
+                    if (bluePuuids[i]) {
+                        const name = document.getElementById(`name-blue-${i}`).textContent;
+                        const tag = document.getElementById(`tag-blue-${i}`).textContent.replace('#', '');
+                        playersToFetch.push({game_name: name, tag_line: tag});
+                    }
+                    if (redPuuids[i]) {
+                        const name = document.getElementById(`name-red-${i}`).textContent;
+                        const tag = document.getElementById(`tag-red-${i}`).textContent.replace('#', '');
+                        playersToFetch.push({game_name: name, tag_line: tag});
+                    }
+                }
+                
+                if (playersToFetch.length === 0) {
+                    alert("Please select at least one player first.");
+                    return;
+                }
+                
+                try {
+                    btn.disabled = true;
+                    btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading...';
+                    
+                    const response = await fetch('/api/history/collect_batch', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ players: playersToFetch })
+                    });
+                    
+                    const result = await response.json();
+                    if (result.success) {
+                        alert("History collection started in the background for " + playersToFetch.length + " players!");
+                    } else {
+                        alert(result.error || "Failed to start collection");
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert("Failed to connect to API");
+                } finally {
+                    btn.disabled = false;
+                    btn.innerHTML = originalText;
+                }
+            }
+
+            function clearAllSlots() {
+                for (let i = 0; i < 5; i++) {
+                    bluePuuids[i] = null;
+                    redPuuids[i] = null;
+                    
+                    document.getElementById(`search-cont-blue-${i}`).style.display = 'block';
+                    document.getElementById(`selected-blue-${i}`).style.display = 'none';
+                    document.getElementById(`search-cont-blue-${i}`).querySelector('input').value = '';
+                    
+                    document.getElementById(`search-cont-red-${i}`).style.display = 'block';
+                    document.getElementById(`selected-red-${i}`).style.display = 'none';
+                    document.getElementById(`search-cont-red-${i}`).querySelector('input').value = '';
+                }
+                checkValidity();
+            }
+
+            function updateSlotDisplay(team, index) {
+                const puuids = team === 'blue' ? bluePuuids : redPuuids;
+                const puuid = puuids[index];
+                
+                if (puuid) {
+                    // Find player name from DOM or re-fetch
+                    const nameEl = document.getElementById(`name-${team}-${index}`);
+                    const tagEl = document.getElementById(`tag-${team}-${index}`);
+                    if (nameEl && tagEl) {
+                        document.getElementById(`search-cont-${team}-${index}`).style.display = 'none';
+                        document.getElementById(`selected-${team}-${index}`).style.display = 'flex';
+                    }
+                } else {
+                    document.getElementById(`search-cont-${team}-${index}`).style.display = 'block';
+                    document.getElementById(`selected-${team}-${index}`).style.display = 'none';
+                }
+            }
+
+            // ── Player search state ──────────────────────────────────────────────
+            const searchTimers  = {};
+            const searchFocused = {};
+
+            function esc(str) {
+                return String(str)
+                    .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+                    .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            }
+
+            async function handleSearch(team, index, query) {
+                const dropdown = document.getElementById(`dropdown-${team}-${index}`);
+                const key = `${team}-${index}`;
+
+                clearTimeout(searchTimers[key]);
+
+                if (query.trim().length < 2) {
+                    dropdown.style.display = 'none';
+                    return;
+                }
+
+                // Show spinner while waiting for debounce
+                dropdown.innerHTML = `
+                    <div class="dropdown-item" style="color:var(--text-dim);pointer-events:none;display:flex;align-items:center;gap:10px;">
+                        <span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.12);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;flex-shrink:0;"></span>
+                        Searching…
+                    </div>`;
+                dropdown.style.display = 'block';
+
+                searchTimers[key] = setTimeout(async () => {
+                    try {
+                        const res     = await fetch(`/api/players/search?q=${encodeURIComponent(query.trim())}&limit=8`);
+                        const players = await res.json();
+
+                        if (!Array.isArray(players) || players.length === 0) {
+                            dropdown.innerHTML = `<div class="dropdown-item" style="color:var(--text-dim);pointer-events:none;">No results for <strong>${esc(query)}</strong></div>`;
+                            dropdown.style.display = 'block';
+                            return;
+                        }
+
+                        dropdown.innerHTML = players.map(p => `
+                            <div class="dropdown-item" role="option"
+                                data-puuid="${esc(p.puuid)}"
+                                data-name="${esc(p.game_name)}"
+                                data-tag="${esc(p.tag_line)}"
+                                data-team="${esc(team)}"
+                                data-index="${index}">
+                                <span class="name">${esc(p.game_name)}<span style="color:var(--text-dim);font-weight:400"> #${esc(p.tag_line)}</span></span>
+                                <span class="meta">${p.total_matches} matches tracked</span>
+                            </div>
+                        `).join('');
+                        dropdown.style.display = 'block';
+                        searchFocused[key] = -1;
+                    } catch (e) {
+                        console.error('Search error:', e);
+                        dropdown.innerHTML = `<div class="dropdown-item" style="color:#ff4d6d;pointer-events:none;">Error — could not reach API</div>`;
+                    }
+                }, 250);
+            }
+
+            // ── Keyboard navigation inside each search input ─────────────────────
+            function handleSearchKeydown(team, index, event) {
+                const key      = `${team}-${index}`;
+                const dropdown = document.getElementById(`dropdown-${team}-${index}`);
+                const items    = Array.from(dropdown.querySelectorAll('.dropdown-item[data-puuid]'));
+
+                if (!items.length) {
+                    if (event.key === 'Escape') dropdown.style.display = 'none';
+                    return;
+                }
+
+                let cur = searchFocused[key] ?? -1;
+
+                if (event.key === 'ArrowDown') {
+                    event.preventDefault();
+                    cur = (cur + 1) % items.length;
+                } else if (event.key === 'ArrowUp') {
+                    event.preventDefault();
+                    cur = (cur - 1 + items.length) % items.length;
+                } else if (event.key === 'Enter') {
+                    event.preventDefault();
+                    if (cur >= 0) pickItem(items[cur]);
+                    return;
+                } else if (event.key === 'Escape') {
+                    dropdown.style.display = 'none';
+                    return;
+                } else { return; }
+
+                searchFocused[key] = cur;
+                items.forEach((el, i) => el.classList.toggle('keyboard-active', i === cur));
+                items[cur].scrollIntoView({ block: 'nearest' });
+            }
+
+            function pickItem(el) {
+                selectPlayer(el.dataset.team, parseInt(el.dataset.index),
+                             el.dataset.puuid, el.dataset.name, el.dataset.tag);
+            }
+
+            function selectPlayer(team, index, puuid, name, tag) {
+                if (team === 'blue') bluePuuids[index] = puuid;
+                else redPuuids[index] = puuid;
+
+                document.getElementById(`dropdown-${team}-${index}`).style.display    = 'none';
+                document.getElementById(`search-cont-${team}-${index}`).style.display = 'none';
+                document.getElementById(`selected-${team}-${index}`).style.display    = 'flex';
+                document.getElementById(`name-${team}-${index}`).textContent          = name;
+                document.getElementById(`tag-${team}-${index}`).textContent           = `#${tag}`;
+                document.getElementById(`avatar-${team}-${index}`).textContent        = name.charAt(0).toUpperCase();
+
+                checkValidity();
+            }
+
+            function clearSlot(team, index) {
+                if (team === 'blue') bluePuuids[index] = null;
+                else redPuuids[index] = null;
+
+                document.getElementById(`search-cont-${team}-${index}`).style.display = 'block';
+                document.getElementById(`selected-${team}-${index}`).style.display    = 'none';
+                document.getElementById(`dropdown-${team}-${index}`).style.display    = 'none';
+                const inp = document.querySelector(`#search-cont-${team}-${index} .search-input`);
+                if (inp) { inp.value = ''; inp.focus(); }
+                checkValidity();
+            }
+
+            function checkValidity() {
+                const ok = bluePuuids.every(p => p !== null) && redPuuids.every(p => p !== null);
+                document.getElementById('predict-btn').disabled = !ok;
+            }
+
+            // ── Event delegation — avoids blur-before-click race condition ────────
+            document.addEventListener('mousedown', e => {
+                const item = e.target.closest('.dropdown-item[data-puuid]');
+                if (item) {
+                    e.preventDefault();  // stop blur firing before we read the item
+                    pickItem(item);
+                    return;
+                }
+                if (!e.target.closest('.search-container')) {
+                    document.querySelectorAll('.dropdown').forEach(d => d.style.display = 'none');
+                }
+            });
+
+            // ── Predict button ───────────────────────────────────────────────────
+            document.getElementById('predict-btn').onclick = async () => {
+                const resultsCont = document.getElementById('results-container');
+                const loader      = document.getElementById('loader');
+                const btn         = document.getElementById('predict-btn');
+
+                resultsCont.style.display = 'none';
+                loader.style.display      = 'block';
+                btn.disabled              = true;
+
+                const blueTeam = bluePuuids.map((puuid, i) => ({ 
+                    puuid, 
+                    champion_name: document.getElementById(`slot-blue-${i}`).dataset.champion 
+                }));
+                const redTeam  = redPuuids.map((puuid, i) => ({ 
+                    puuid, 
+                    champion_name: document.getElementById(`slot-red-${i}`).dataset.champion 
+                }));
+
+                try {
+                    const response = await fetch('/api/predict/custom', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ blue_team: blueTeam, red_team: redTeam })
+                    });
+                    const result = await response.json();
+
+                    if (result.success) {
+                        const bp = result.blue_win_probability * 100;
+                        const rp = result.red_win_probability  * 100;
+                        document.getElementById('bar-blue').style.width   = `${bp}%`;
+                        document.getElementById('bar-red').style.width    = `${rp}%`;
+                        document.getElementById('label-blue').textContent = `${bp.toFixed(1)}%`;
+                        document.getElementById('label-red').textContent  = `${rp.toFixed(1)}%`;
+
+                        const winText = document.getElementById('winner-text');
+                        winText.textContent = result.predicted_winner === 'BLUE' ? 'BLUE SIDE VICTORY' : 'RED SIDE VICTORY';
+                        winText.className   = `winner-display ${result.predicted_winner === 'BLUE' ? 'blue' : 'red'}-win`;
+                        document.getElementById('confidence-val').textContent =
+                            `MODEL CONFIDENCE: ${(result.confidence * 100).toFixed(0)}%`;
+
+                        // Show baseline response
+                        const reasoningCont = document.getElementById('reasoning-cont');
+                        const reasoningText = document.getElementById('reasoning-text');
+                        if (result.explanation) {
+                            reasoningText.textContent = result.explanation;
+                            reasoningCont.style.display = 'block';
+                        } else {
+                            reasoningCont.style.display = 'none';
+                        }
+
+                        resultsCont.style.display = 'block';
+                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                    } else {
+                        alert(result.error || 'An error occurred');
+                    }
+                } catch (e) {
+                    console.error(e);
+                    alert('Failed to connect to API');
+                } finally {
+                    loader.style.display = 'none';
+                    btn.disabled         = false;
+                }
+            };
+
+            function updateSlotDisplay(team, i) {
+                const puuid = (team === 'blue' ? bluePuuids : redPuuids)[i];
+                if (!puuid) {
+                    clearSlot(team, i);
+                    return;
+                }
+                // Try to find full name/tag from some source or just use puuid prefix for now
+                // Ideally pickItem would have saved this. For imports, we have it.
+                // For simplicity, we assume pickItem correctly sets the UI.
+            }
+
+            function selectPlayerFromData(team, index, puuid, name, tag, champion) {
+                if (team === 'blue') bluePuuids[index] = puuid;
+                else redPuuids[index] = puuid;
+
+                const searchCont = document.getElementById(`search-cont-${team}-${index}`);
+                const selected   = document.getElementById(`selected-${team}-${index}`);
+                searchCont.style.display = 'none';
+                selected.style.display   = 'flex';
+
+                document.getElementById(`name-${team}-${index}`).textContent = name || 'Unknown';
+                document.getElementById(`tag-${team}-${index}`).textContent  = tag ? `#${tag}` : '';
+                document.getElementById(`avatar-${team}-${index}`).textContent = (name || '?').charAt(0).toUpperCase();
+                
+                // Store champion name in data attribute for the predict-btn click handler
+                document.getElementById(`slot-${team}-${index}`).dataset.champion = champion || "";
+
+                checkValidity();
+            }
+
+            function importLiveMatch() {
+                const raw = sessionStorage.getItem('live_match_data');
+                if (!raw) {
+                    const name = prompt("Enter summoner name to track:");
+                    const tag = prompt("Enter tag (e.g. KR1):", "EUW1");
+                    if (name && tag) {
+                        window.location.href = `/live?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
+                    }
+                    return;
+                }
+
+                const data = JSON.parse(raw);
+                const blue = data.participants.filter(p => p.teamId === 100);
+                const red  = data.participants.filter(p => p.teamId === 200);
+
+                clearAllSlots();
+                blue.forEach((p, i) => {
+                    if (i < 5) selectPlayerFromData('blue', i, p.puuid, p.summonerName, "", p.championName);
+                });
+                red.forEach((p, i) => {
+                    if (i < 5) selectPlayerFromData('red', i, p.puuid, p.summonerName, "", p.championName);
+                });
+
+                // Clear after import to avoid re-triggering
+                sessionStorage.removeItem('live_match_data');
+                alert("Successfully imported live match participants.");
+            }
+
+            // check for session data
+            if (sessionStorage.getItem('live_match_data')) {
+                setTimeout(() => {
+                    if (confirm("Found a live match from the tracker. Import it now?")) {
+                        importLiveMatch();
+                    }
+                }, 500);
+            }
+
+            renderSlots();
+            loadHotPlayers();
+        </script>
+    </div>
+</body>
+
+</html>

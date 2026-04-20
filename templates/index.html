@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NNriot — LoL Match Outcome Prediction</title>
+  <meta name="description" content="NNriot — real-time League of Legends match outcome prediction powered by a trained neural network.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #070b12;
+      --surface:   #0f1620;
+      --surface2:  #141e2e;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #00ff88;
+      --accent2:   #00c8ff;
+      --blue:      #3d7eff;
+      --red:       #ff4d6d;
+      --gold:      #ffc93c;
+      --text:      #e8edf5;
+      --muted:     #6b7a96;
+      --glow:      rgba(0,255,136,0.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 999;
+      background: rgba(7,11,18,0.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.5rem; font-weight: 900;
+      color: #fff; text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .nav-logo em { color: var(--accent); font-style: normal; }
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-link {
+      color: var(--muted); text-decoration: none;
+      font-size: 0.9rem; font-weight: 600;
+      transition: color 0.2s;
+      position: relative; padding-bottom: 2px;
+    }
+    .nav-link:hover { color: #fff; }
+    .nav-link.active { color: var(--accent); }
+    .nav-link.active::after {
+      content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
+      height: 2px; background: var(--accent); border-radius: 2px;
+    }
+    .nav-cta {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #070b12; font-family: 'Outfit', sans-serif;
+      font-weight: 800; font-size: 0.85rem;
+      padding: 8px 20px; border-radius: 8px;
+      text-decoration: none; letter-spacing: 0.5px;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 0 20px var(--glow);
+    }
+    .nav-cta:hover { transform: translateY(-2px); box-shadow: 0 0 30px var(--glow); }
+
+    /* ── HERO ── */
+    .hero {
+      position: relative;
+      min-height: 480px;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      text-align: center; padding: 80px 24px 60px;
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, rgba(0,255,136,0.12) 0%, transparent 70%),
+        radial-gradient(ellipse 60% 40% at 80% 80%, rgba(61,126,255,0.1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 40% at 10% 80%, rgba(255,77,109,0.08) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    /* Animated grid overlay */
+    .hero-bg::after {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: linear-gradient(var(--border) 1px, transparent 1px),
+                        linear-gradient(90deg, var(--border) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 30%, transparent 100%);
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(0,255,136,0.08);
+      border: 1px solid rgba(0,255,136,0.25);
+      border-radius: 20px; padding: 6px 16px;
+      font-size: 0.8rem; color: var(--accent); font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: 24px;
+      animation: fadeDown 0.6s ease both;
+    }
+    .hero-badge::before { content: '●'; font-size: 0.6rem; animation: pulse-dot 1.5s ease infinite; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:0.3} }
+    .hero h1 {
+      font-size: clamp(2.8rem, 7vw, 5.5rem);
+      font-weight: 900; line-height: 1.05;
+      letter-spacing: -2px;
+      background: linear-gradient(135deg, #fff 0%, var(--accent) 60%, var(--accent2) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 20px;
+      animation: fadeDown 0.7s ease 0.1s both;
+    }
+    .hero p {
+      font-size: 1.15rem; color: var(--muted); max-width: 560px;
+      line-height: 1.7; margin-bottom: 40px;
+      animation: fadeDown 0.7s ease 0.2s both;
+    }
+    .hero-actions {
+      display: flex; gap: 16px; flex-wrap: wrap; justify-content: center;
+      animation: fadeDown 0.7s ease 0.3s both;
+    }
+    @keyframes fadeDown {
+      from { opacity:0; transform: translateY(-16px); }
+      to   { opacity:1; transform: translateY(0); }
+    }
+    .btn-hero {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 14px 32px; border-radius: 12px;
+      font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 800;
+      text-decoration: none; cursor: pointer; border: none;
+      transition: transform 0.2s, box-shadow 0.2s;
+      letter-spacing: 0.5px;
+    }
+    .btn-hero.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #070b12;
+      box-shadow: 0 8px 32px rgba(0,255,136,0.3);
+    }
+    .btn-hero.primary:hover { transform: translateY(-3px); box-shadow: 0 14px 40px rgba(0,255,136,0.4); }
+    .btn-hero.secondary {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    .btn-hero.secondary:hover { transform: translateY(-3px); border-color: rgba(255,255,255,0.2); }
+
+    /* ── STAT STRIP ── */
+    .stats-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      max-width: 1200px; margin: 0 auto 64px; padding: 0 24px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s;
+    }
+    .stat-card:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.14); }
+    .stat-card::before {
+      content: ''; position: absolute;
+      top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.green::before  { background: linear-gradient(90deg, var(--accent), transparent); }
+    .stat-card.blue::before   { background: linear-gradient(90deg, var(--blue), transparent); }
+    .stat-card.gold::before   { background: linear-gradient(90deg, var(--gold), transparent); }
+    .stat-card.red2::before   { background: linear-gradient(90deg, var(--red), transparent); }
+    .stat-icon {
+      font-size: 1.8rem; margin-bottom: 12px; display: block;
+    }
+    .stat-value {
+      font-family: 'Outfit', sans-serif;
+      font-size: 2.2rem; font-weight: 900; color: #fff;
+      line-height: 1; margin-bottom: 4px;
+    }
+    .stat-label { font-size: 0.8rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .stat-sub { font-size: 0.78rem; color: var(--muted); margin-top: 6px; }
+
+    /* ── SECTION ── */
+    .section { max-width: 1200px; margin: 0 auto 64px; padding: 0 24px; }
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .section-title {
+      font-size: 1.4rem; font-weight: 800; color: #fff;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .section-title .dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
+    }
+    .section-link {
+      font-size: 0.85rem; color: var(--muted); text-decoration: none;
+      font-weight: 600; transition: color 0.2s;
+    }
+    .section-link:hover { color: var(--accent); }
+
+    /* ── QUICK NAV CARDS ── */
+    .nav-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+    .nav-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px; padding: 32px;
+      text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 16px;
+      position: relative; overflow: hidden;
+      transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+    }
+    .nav-card:hover { transform: translateY(-6px); border-color: rgba(255,255,255,0.15); }
+    .nav-card.explorer:hover { box-shadow: 0 16px 48px rgba(61,126,255,0.15); border-color: rgba(61,126,255,0.4); }
+    .nav-card.predictor:hover { box-shadow: 0 16px 48px rgba(0,255,136,0.15); border-color: rgba(0,255,136,0.4); }
+    .nav-card.monitor:hover { box-shadow: 0 16px 48px rgba(255,201,60,0.12); border-color: rgba(255,201,60,0.4); }
+    .nav-card-icon {
+      font-size: 2.4rem; width: 64px; height: 64px;
+      border-radius: 16px; display: flex; align-items: center; justify-content: center;
+    }
+    .explorer .nav-card-icon  { background: rgba(61,126,255,0.12); }
+    .predictor .nav-card-icon { background: rgba(0,255,136,0.1); }
+    .monitor .nav-card-icon   { background: rgba(255,201,60,0.1); }
+    .nav-card h3 { font-size: 1.3rem; font-weight: 800; }
+    .nav-card p  { font-size: 0.9rem; color: var(--muted); line-height: 1.6; }
+    .nav-card-arrow {
+      margin-top: auto; font-size: 1.4rem;
+      color: var(--muted); transition: transform 0.2s, color 0.2s;
+    }
+    .nav-card:hover .nav-card-arrow { transform: translateX(6px); color: #fff; }
+
+    /* ── MATCHES FEED ── */
+    .matches-feed { display: flex; flex-direction: column; gap: 12px; }
+    .match-row {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 24px;
+      display: flex; align-items: center; gap: 20px;
+      transition: border-color 0.2s, background 0.2s;
+      cursor: default;
+    }
+    .match-row:hover { background: var(--surface2); border-color: rgba(255,255,255,0.12); }
+    .match-id-badge {
+      font-family: 'Outfit', sans-serif;
+      font-size: 0.7rem; font-weight: 700;
+      color: var(--muted); letter-spacing: 1px;
+      text-transform: uppercase;
+      min-width: 80px;
+    }
+    .match-teams { flex: 1; }
+    .match-teams-label { font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+    .match-teams-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .champ-chip {
+      background: var(--surface2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 2px 8px;
+      font-size: 0.75rem; color: var(--text); font-weight: 600;
+    }
+    .win-badge {
+      padding: 4px 14px; border-radius: 20px;
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 1px;
+      font-family: 'Outfit', sans-serif;
+    }
+    .win-badge.blue { background: rgba(61,126,255,0.15); color: var(--blue); border: 1px solid rgba(61,126,255,0.3); }
+    .win-badge.red  { background: rgba(255,77,109,0.15); color: var(--red);  border: 1px solid rgba(255,77,109,0.3); }
+    .match-id-text { font-size: 0.75rem; color: var(--muted); font-family: monospace; }
+
+    /* ── MODEL HEALTH ── */
+    .health-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .health-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 14px; padding: 20px 24px;
+    }
+    .health-card-label { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 8px; }
+    .health-card-value { font-family: 'Outfit', sans-serif; font-size: 1.6rem; font-weight: 900; color: #fff; }
+    .health-card-value.online { color: var(--accent); }
+    .health-card-value.offline { color: var(--red); }
+    .progress-bar-wrap { margin-top: 12px; }
+    .progress-bar-track {
+      height: 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.06);
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%; border-radius: 4px;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      transition: width 1s ease;
+      width: 0%;
+    }
+    .progress-legend { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.75rem; color: var(--muted); }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 40px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.85rem; line-height: 1.8;
+    }
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── SKELETON ── */
+    .skel {
+      background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+      border-radius: 8px; color: transparent !important;
+      pointer-events: none;
+    }
+    @keyframes shimmer { from{background-position:200% 0} to{background-position:-200% 0} }
+
+    @media (max-width: 900px) {
+      .stats-strip { grid-template-columns: 1fr 1fr; }
+      .nav-grid { grid-template-columns: 1fr; }
+      .health-grid { grid-template-columns: 1fr; }
+      .navbar { padding: 0 20px; }
+      .nav-links { gap: 16px; }
+    }
+    @media (max-width: 520px) {
+      .stats-strip { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2.6rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <a href="/" class="nav-logo">NN<em>RIOT</em></a>
+  <div class="nav-links">
+    <a href="/" class="nav-link active">Dashboard</a>
+    <a href="/explorer" class="nav-link">Explorer</a>
+    <a href="/predictor" class="nav-link">Predictor</a>
+    <a href="/live" class="nav-link">Live</a>
+    <a href="/smurfs" class="nav-link">Smurfs</a>
+    <a href="/monitor" class="nav-link">Monitor</a>
+    <a href="/predictor" class="nav-cta">⚡ Predict</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-badge" id="hero-badge">Neural Network Active</div>
+  <h1>Predict the Next<br>League Match</h1>
+  <p>NNriot trains continuously on ranked match data to predict win probabilities in real-time — powered by a residual MLP and experience replay.</p>
+  <div class="hero-actions">
+    <a href="/predictor" class="btn-hero primary">⚡ Predict a Match</a>
+    <a href="/explorer" class="btn-hero secondary">🔍 Explore Data</a>
+  </div>
+</section>
+
+<!-- LIVE STATS -->
+<div class="stats-strip">
+  <div class="stat-card green">
+    <span class="stat-icon">🎮</span>
+    <div class="stat-value skel" id="stat-matches">—</div>
+    <div class="stat-label">Total Matches</div>
+    <div class="stat-sub" id="stat-matches-sub">Loading...</div>
+  </div>
+  <div class="stat-card blue">
+    <span class="stat-icon">👤</span>
+    <div class="stat-value skel" id="stat-players">—</div>
+    <div class="stat-label">Players Tracked</div>
+    <div class="stat-sub">In database</div>
+  </div>
+  <div class="stat-card gold">
+    <span class="stat-icon">🧠</span>
+    <div class="stat-value skel" id="stat-trained">—</div>
+    <div class="stat-label">Trained Records</div>
+    <div class="stat-sub" id="stat-untrained">Fetching...</div>
+  </div>
+  <div class="stat-card red2">
+    <span class="stat-icon">🤖</span>
+    <div class="stat-value skel" id="stat-model">—</div>
+    <div class="stat-label">Model Status</div>
+    <div class="stat-sub" id="stat-ckpt">Checking...</div>
+  </div>
+</div>
+
+<!-- QUICK NAV -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title"><span class="dot"></span> Tools</h2>
+  </div>
+  <div class="nav-grid">
+    <a href="/explorer" class="nav-card explorer">
+      <div class="nav-card-icon">🔍</div>
+      <h3>Match Explorer</h3>
+      <p>Browse the full match database, inspect raw game data, and filter by region, champion, or outcome.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+    <a href="/predictor" class="nav-card predictor">
+      <div class="nav-card-icon">⚡</div>
+      <h3>Custom Predictor</h3>
+      <p>Assemble any 5v5 matchup from tracked players and get the model's win-probability prediction instantly.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+    <a href="/live" class="nav-card monitor" style="--accent: var(--blue)">
+      <div class="nav-card-icon" style="background:rgba(61,126,255,0.1)">📡</div>
+      <h3>Live Tracking</h3>
+      <p>Follow Challenger matches in real-time. Predict outcomes as games load and track specific players' live status.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+    <a href="/monitor" class="nav-card monitor">
+      <div class="nav-card-icon">📊</div>
+      <h3>Training Monitor</h3>
+      <p>Watch the model train in real-time. View checkpoint history, region distribution, and dataset growth.</p>
+      <div class="nav-card-arrow">→</div>
+    </a>
+  </div>
+</section>
+
+<!-- RECENT MATCHES -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title"><span class="dot"></span> Recent Matches</h2>
+    <a href="/explorer" class="section-link">View all →</a>
+  </div>
+  <div class="matches-feed" id="matches-feed">
+    <!-- skeleton rows -->
+    <div class="match-row"><div class="match-id-badge skel">Loading</div><div class="match-teams" style="flex:1"><div class="skel" style="height:40px;border-radius:8px"></div></div></div>
+    <div class="match-row"><div class="match-id-badge skel">Loading</div><div class="match-teams" style="flex:1"><div class="skel" style="height:40px;border-radius:8px"></div></div></div>
+    <div class="match-row"><div class="match-id-badge skel">Loading</div><div class="match-teams" style="flex:1"><div class="skel" style="height:40px;border-radius:8px"></div></div></div>
+  </div>
+</section>
+
+<!-- MODEL HEALTH -->
+<section class="section">
+  <div class="section-header">
+    <h2 class="section-title"><span class="dot"></span> Model Health</h2>
+    <a href="/monitor" class="section-link">Full monitor →</a>
+  </div>
+  <div class="health-grid">
+    <div class="health-card">
+      <div class="health-card-label">Training Progress</div>
+      <div class="health-card-value" id="h-trained-pct">—%</div>
+      <div class="progress-bar-wrap">
+        <div class="progress-bar-track">
+          <div class="progress-bar-fill" id="h-progress-fill"></div>
+        </div>
+        <div class="progress-legend">
+          <span id="h-trained-count">Trained: —</span>
+          <span id="h-untrained-count">Remaining: —</span>
+        </div>
+      </div>
+    </div>
+    <div class="health-card">
+      <div class="health-card-label">Neural Network</div>
+      <div class="health-card-value" id="h-nn-status">—</div>
+      <div style="margin-top:12px; font-size:0.85rem; color:var(--muted);" id="h-nn-detail">Checking model...</div>
+    </div>
+    <div class="health-card">
+      <div class="health-card-label">Latest Checkpoint</div>
+      <div class="health-card-value" id="h-ckpt-step">—</div>
+      <div style="margin-top:8px; font-size:0.8rem; color:var(--muted);" id="h-ckpt-total">Loading...</div>
+    </div>
+    <div class="health-card">
+      <div class="health-card-label">Dataset Size</div>
+      <div class="health-card-value" id="h-dataset">—</div>
+      <div style="margin-top:8px; font-size:0.8rem; color:var(--muted);" id="h-dataset-sub">matches in database</div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <p>NNriot · League of Legends Match Prediction · Powered by TensorFlow &amp; the Riot API</p>
+  <p style="margin-top:6px"><a href="/explorer">Explorer</a> · <a href="/predictor">Predictor</a> · <a href="/monitor">Monitor</a></p>
+</footer>
+
+<script>
+  // Format large numbers
+  const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
+  const removeSkel = el => el.classList.remove('skel');
+
+  async function loadStats() {
+    try {
+      const res = await fetch('/api/db-health');
+      const d   = await res.json();
+      if (!d.ok) return;
+
+      const matchesEl = document.getElementById('stat-matches');
+      matchesEl.textContent = fmt(d.matches);
+      removeSkel(matchesEl);
+      document.getElementById('stat-matches-sub').textContent = `${fmt(d.training_records)} training records`;
+
+      const playersEl = document.getElementById('stat-players');
+      playersEl.textContent = fmt(d.players);
+      removeSkel(playersEl);
+
+      const trainedEl = document.getElementById('stat-trained');
+      trainedEl.textContent = fmt(d.trained_records);
+      removeSkel(trainedEl);
+      document.getElementById('stat-untrained').textContent = `${fmt(d.untrained_records)} untrained remaining`;
+
+      const pct = Math.round(d.trained_ratio * 100);
+      document.getElementById('h-trained-pct').textContent = pct + '%';
+      setTimeout(() => { document.getElementById('h-progress-fill').style.width = pct + '%'; }, 100);
+      document.getElementById('h-trained-count').textContent = 'Trained: ' + fmt(d.trained_records);
+      document.getElementById('h-untrained-count').textContent = 'Remaining: ' + fmt(d.untrained_records);
+      document.getElementById('h-dataset').textContent = fmt(d.matches);
+    } catch(e) { console.warn('Stats error:', e); }
+  }
+
+  async function loadModelStatus() {
+    try {
+      const res  = await fetch('/api/status');
+      const data = await res.json();
+      const modelEl = document.getElementById('stat-model');
+
+      if (data.model_loaded) {
+        modelEl.textContent = 'ONLINE';
+        modelEl.style.color = 'var(--accent)';
+        document.getElementById('stat-ckpt').textContent = 'TF ' + data.tensorflow_version;
+        document.getElementById('h-nn-status').textContent = 'ONLINE';
+        document.getElementById('h-nn-status').classList.add('online');
+        document.getElementById('h-nn-detail').textContent =
+          `TensorFlow ${data.tensorflow_version} · Input dim: ${data.input_dimension}`;
+        document.getElementById('hero-badge').style.background = 'rgba(0,255,136,0.1)';
+      } else {
+        modelEl.textContent = 'OFFLINE';
+        modelEl.style.color = 'var(--red)';
+        document.getElementById('stat-ckpt').textContent = 'Model unavailable';
+        document.getElementById('h-nn-status').textContent = 'OFFLINE';
+        document.getElementById('h-nn-status').classList.add('offline');
+        document.getElementById('h-nn-detail').textContent = 'Model failed to load — check logs';
+        document.getElementById('hero-badge').textContent = 'Model Offline';
+        document.getElementById('hero-badge').style.borderColor = 'rgba(255,77,109,0.4)';
+        document.getElementById('hero-badge').style.color = 'var(--red)';
+      }
+      removeSkel(modelEl);
+    } catch(e) { console.warn('Status error:', e); }
+  }
+
+  async function loadMonitorMetrics() {
+    try {
+      const res  = await fetch('/api/monitor/metrics');
+      const data = await res.json();
+      if (data.model_checkpoint) {
+        const ckpt = data.model_checkpoint;
+        document.getElementById('h-ckpt-step').textContent = '#' + fmt(ckpt.latest_version);
+        document.getElementById('h-ckpt-total').textContent = ckpt.total_versions + ' checkpoint versions saved';
+      } else {
+        document.getElementById('h-ckpt-step').textContent = 'None';
+        document.getElementById('h-ckpt-total').textContent = 'No checkpoints found yet';
+      }
+    } catch(e) { console.warn('Metrics error:', e); }
+  }
+
+  async function loadRecentMatches() {
+    try {
+      const res  = await fetch('/api/explorer/matches?limit=5&page=1');
+      const data = await res.json();
+      const feed = document.getElementById('matches-feed');
+      if (!data.records || data.records.length === 0) {
+        feed.innerHTML = '<div class="match-row" style="justify-content:center;color:var(--muted)">No matches in database yet.</div>';
+        return;
+      }
+      feed.innerHTML = data.records.map(r => {
+        const features  = r.features || {};
+        const teamA     = features.team_a || [];
+        const teamB     = features.team_b || [];
+        const winnerSide = r.winner_label === 0 ? 'blue' : 'red';
+        const winnerText = r.winner_label === 0 ? 'TEAM A WIN' : 'TEAM B WIN';
+        const champAHtml = teamA.slice(0,3).map(p=>`<span class="champ-chip">${p.champion||'?'}</span>`).join('');
+        const champBHtml = teamB.slice(0,3).map(p=>`<span class="champ-chip">${p.champion||'?'}</span>`).join('');
+        const short = (r.match_id||'UNKNOWN').split('_')[0];
+        return `<div class="match-row">
+          <div class="match-id-badge">${short}</div>
+          <div class="match-teams">
+            <div class="match-teams-label" style="color:var(--blue)">Team A</div>
+            <div class="match-teams-row">${champAHtml}</div>
+          </div>
+          <div class="match-teams">
+            <div class="match-teams-label" style="color:var(--red)">Team B</div>
+            <div class="match-teams-row">${champBHtml}</div>
+          </div>
+          <span class="win-badge ${winnerSide}">${winnerText}</span>
+          <div class="match-id-text">${(r.match_id||'').substring(0,20)}</div>
+        </div>`;
+      }).join('');
+    } catch(e) { console.warn('Matches error:', e); }
+  }
+
+  // Load everything on mount
+  document.addEventListener('DOMContentLoaded', () => {
+    loadStats();
+    loadModelStatus();
+    loadMonitorMetrics();
+    loadRecentMatches();
+  });
+</script>
+</body>
+</html>

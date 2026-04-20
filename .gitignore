@@ -1,0 +1,53 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.venv/
+venv/
+ENV/
+
+# Rust
+/target/
+**/*.rs.bk
+Cargo.lock
+
+# TensorFlow
+*.pb
+*.pbtxt
+*.ckpt*
+checkpoint
+*.tflite
+*.meta
+
+# IDE
+.idea/
+.vscode/
+
+# Project specific
+build_maturin.log
+build.log
+*.db
+*.data-00000-of-00001
+*.index
+.env
+loss_plot.html
+build_maturin_utf8.log
