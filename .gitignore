@@ -51,3 +51,4 @@ build.log
 .env
 loss_plot.html
 build_maturin_utf8.log
+.worktrees/
