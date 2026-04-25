@@ -549,6 +549,50 @@ def api_history_status():
         return jsonify(collection_status)
 
 
+@app.route("/api/batch/collect", methods=["POST"])
+def api_batch_collect():
+    try:
+        data = request.get_json()
+        players_raw = data.get("players", "")
+        sources = data.get("sources", ["lolpros"])
+        count = data.get("count", 50)
+        
+        # Parse players into (name, tag) tuples
+        player_list = []
+        for line in players_raw.split("\n"):
+            line = line.strip()
+            if not line: continue
+            if "#" in line:
+                name, tag = line.split("#", 1)
+                player_list.append((name.strip(), tag.strip()))
+        
+        if not player_list:
+            return jsonify({"error": "No valid players found"}), 400
+            
+        import data_collector
+        with data_collector.batch_lock:
+            if data_collector.batch_status["status"] == "running":
+                return jsonify({"error": "A batch job is already running"}), 409
+                
+        thread = threading.Thread(target=data_collector.collect_batch_with_smurfs, args=(player_list, sources, count), daemon=True)
+        thread.start()
+        
+        return jsonify({"success": True, "message": "Batch started", "players_count": len(player_list)})
+    except Exception as e:
+        logger.error(f"Batch collect error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/batch/status", methods=["GET"])
+def api_batch_status():
+    import data_collector
+    with data_collector.batch_lock:
+        # Create a copy to send
+        status_copy = dict(data_collector.batch_status)
+        # Clear logs after sending them to save bandwidth
+        data_collector.batch_status["logs"] = []
+    return jsonify(status_copy)
+
+
 @app.route("/api/train/manual", methods=["POST"])
 def api_train_manual():
     """API endpoint to trigger a single training step manually."""

@@ -186,21 +186,26 @@ class RiotAPI:
             return response.json()
         return None
 
-    def get_match_details_batch(self, match_ids, max_workers=5):
+    def get_match_details_batch(self, match_ids, max_workers=5, verbose=False):
         """Fetch multiple matches in parallel using a thread pool."""
         results = {}
+        total = len(match_ids)
+        completed = 0
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             future_to_mid = {
                 executor.submit(self.get_match_details, mid): mid for mid in match_ids
             }
             for future in as_completed(future_to_mid):
                 mid = future_to_mid[future]
+                completed += 1
                 try:
                     data = future.result()
                     if data:
                         results[mid] = data
+                        if verbose:
+                            print(f"      [{completed}/{total}] Téléchargement : {mid}")
                 except Exception as e:
-                    print(f"Error fetching match {mid}: {e}")
+                    print(f"      Error fetching match {mid}: {e}")
         return results
 
     def get_featured_games(self) -> list:

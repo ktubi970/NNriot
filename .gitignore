@@ -52,3 +52,5 @@ build.log
 loss_plot.html
 build_maturin_utf8.log
 .worktrees/
+.superpowers/
+model.keras

@@ -3,6 +3,9 @@ import database
 import json
 import time
 import json_utils
+import threading
+import import_liquipedia
+import requests
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.
@@ -33,15 +36,13 @@ _TAG_TO_REGION = {
 def _resolve_region(tag: str) -> str:
     """
     Convert a Riot tag/platform suffix to the canonical region code
-    used by RiotAPI (e.g. 'KR1' -> 'KR', 'LA1' -> 'LA1').
-    Raises ValueError if the tag is unrecognised.
+    used by RiotAPI (e.g. 'KR1' -> 'KR').
+    If the tag is numeric or unrecognised, defaults to EUW.
     """
     region = _TAG_TO_REGION.get(tag.upper())
     if region is None:
-        raise ValueError(
-            f"Unrecognised tag/region '{tag}'. "
-            f"Supported: {sorted(_TAG_TO_REGION.keys())}"
-        )
+        # Fallback to EUW for numeric/custom tags (like #3327)
+        return "EUW"
     return region
 
 
@@ -340,6 +341,95 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
             stats["errors"] += 1
 
     return stats
+
+
+batch_status = {
+    "status": "idle",
+    "total": 0,
+    "current": 0,
+    "player": "",
+    "logs": []
+}
+batch_lock = threading.Lock()
+
+def add_batch_log(msg):
+    with batch_lock:
+        batch_status["logs"].append(msg)
+        print(f"[BATCH] {msg}")
+
+def collect_batch_with_smurfs(player_list, sources, count=50):
+    with batch_lock:
+        batch_status["status"] = "running"
+        batch_status["total"] = len(player_list)
+        batch_status["current"] = 0
+        batch_status["logs"] = []
+    
+    database.init_db()
+    
+    for name, tag in player_list:
+        with batch_lock:
+            batch_status["current"] += 1
+            batch_status["player"] = f"{name}#{tag}"
+        
+        add_batch_log(f"Processing {name}#{tag}...")
+        try:
+            region = _resolve_region(tag)
+            api = riot_api.RiotAPI(region)
+            main_puuid = api.get_puuid(name, tag)
+            
+            if not main_puuid:
+                add_batch_log(f"  [!] Could not resolve PUUID for {name}#{tag}")
+                continue
+                
+            database.save_player(main_puuid, name, tag)
+            accounts_to_collect = [{"puuid": main_puuid, "server": region, "gamename": name, "tagline": tag}]
+            
+            # Smurf Discovery
+            if "liquipedia" in sources:
+                add_batch_log("  Searching Liquipedia for smurfs...")
+                add_batch_log("  (Liquipedia specific search placeholder)")
+                
+            if "lolpros" in sources:
+                add_batch_log("  Lolpros discovery is currently disabled.")
+
+            # Collection for all accounts
+            for acc in accounts_to_collect:
+                p_name = f"{acc['gamename']}#{acc['tagline']}"
+                add_batch_log(f"  Fetching history for {p_name}...")
+                
+                p_api = riot_api.RiotAPI(acc["server"])
+                matches = p_api.get_match_ids(acc["puuid"], count=count)
+                
+                if len(matches) <= 5:
+                    add_batch_log(f"    Skipping {p_name} (only {len(matches)} matches played)")
+                    continue
+                
+                new_mids = [mid for mid in matches if not database.match_exists(mid)]
+                add_batch_log(f"    Found {len(new_mids)} new matches to download")
+                
+                if new_mids:
+                    details_map = p_api.get_match_details_batch(new_mids, max_workers=3, verbose=True)
+                    matches_batch = []
+                    training_batch = []
+                    for mid, details in details_map.items():
+                        matches_batch.append((mid, details))
+                        record = _build_training_record(mid, details, region=acc["server"])
+                        if record:
+                            training_batch.append(record)
+
+                    if matches_batch:
+                        database.save_matches_batch(matches_batch)
+                    if training_batch:
+                        database.save_training_records_batch(training_batch)
+                        database.increment_player_matches(acc["puuid"], len(training_batch))
+                        add_batch_log(f"    ✓ Saved {len(training_batch)} records.")
+                        
+        except Exception as e:
+            add_batch_log(f"  [ERROR] {e}")
+
+    with batch_lock:
+        batch_status["status"] = "completed"
+        add_batch_log("Batch collection finished.")
 
 
 if __name__ == "__main__":
