@@ -13,6 +13,74 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
+# Output head name -> loss function (Keras strings).
+# Keys must match feature_labels.LABEL_KEYS exactly.
+LOSS_PER_HEAD: dict[str, str] = {
+    "winner":               "categorical_crossentropy",
+    "winner_kills":         "categorical_crossentropy",
+    "first_blood":          "categorical_crossentropy",
+    "first_baron":          "categorical_crossentropy",
+    "first_inhibitor":      "categorical_crossentropy",
+    "first_tower":          "categorical_crossentropy",
+    "kills_odd":            "binary_crossentropy",
+    "both_baron":           "binary_crossentropy",
+    "both_inhibitor":       "binary_crossentropy",
+    "both_dragon":          "binary_crossentropy",
+    "elder_dragon":         "binary_crossentropy",
+    "kill_handicap":        "mse",
+    "total_kills":          "mse",
+    "team_a_kills":         "mse",
+    "team_b_kills":         "mse",
+    "total_barons":         "mse",
+    "total_dragons":        "mse",
+    "total_towers":         "mse",
+}
+
+# Output head name -> loss weight (starting point per MULTI_OUTPUT_MODEL_PLAN.md §5).
+LOSS_WEIGHTS: dict[str, float] = {
+    "winner":            1.0,
+    "winner_kills":      1.0,
+    "kills_odd":         0.5,
+    "first_blood":       0.7,
+    "first_baron":       0.7,
+    "first_inhibitor":   0.7,
+    "first_tower":       0.5,
+    "both_baron":        0.4,
+    "both_inhibitor":    0.4,
+    "both_dragon":       0.4,
+    "elder_dragon":      0.3,
+    "total_kills":       0.05,
+    "total_barons":      0.5,
+    "total_dragons":     0.3,
+    "total_towers":      0.05,
+    "team_a_kills":      0.05,
+    "team_b_kills":      0.05,
+    "kill_handicap":     0.05,
+}
+
+# Output head name -> list of Keras metric strings (for logging during training).
+METRICS_PER_HEAD: dict[str, list[str]] = {
+    "winner":               ["accuracy"],
+    "winner_kills":         ["accuracy"],
+    "first_blood":          ["accuracy"],
+    "first_baron":          ["accuracy"],
+    "first_inhibitor":      ["accuracy"],
+    "first_tower":          ["accuracy"],
+    "kills_odd":            ["accuracy"],
+    "both_baron":           ["accuracy"],
+    "both_inhibitor":       ["accuracy"],
+    "both_dragon":          ["accuracy"],
+    "elder_dragon":         ["accuracy"],
+    "kill_handicap":        ["mae"],
+    "total_kills":          ["mae"],
+    "team_a_kills":         ["mae"],
+    "team_b_kills":         ["mae"],
+    "total_barons":         ["mae"],
+    "total_dragons":        ["mae"],
+    "total_towers":         ["mae"],
+}
+
+
 def build_keras_model(input_dim=100000):
     inputs = tf.keras.Input(shape=(input_dim,), name="Input")
 
@@ -46,6 +114,68 @@ def build_keras_model(input_dim=100000):
         metrics=["accuracy"],
     )
 
+    return model
+
+
+def build_multi_output_model(input_dim: int = 100000) -> tf.keras.Model:
+    """
+    Build the 18-output multi-task model.
+
+    Shared trunk (identical to build_keras_model):
+      Input -> Dense 1024 -> ResBlock x 2 -> Dense 512 -> Dense 128 (embedding)
+
+    Per-task heads off the 128-dim embedding (18 named outputs).
+    See MULTI_OUTPUT_MODEL_PLAN.md section 4 for the head spec.
+    """
+    import feature_labels
+    assert set(LOSS_PER_HEAD) == set(LOSS_WEIGHTS) == set(METRICS_PER_HEAD) == set(feature_labels.LABEL_KEYS), \
+        "LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly LABEL_KEYS"
+
+    inputs = tf.keras.Input(shape=(input_dim,), name="Input")
+
+    # Projection (1024)
+    x = tf.keras.layers.Dense(1024, activation="relu", name="Projection_Dense")(inputs)
+
+    # ResBlock 1
+    res1 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock1_layer1")(x)
+    res1 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock1_layer2")(res1)
+    x = tf.keras.layers.Add(name="ResBlock1_add")([x, res1])
+    x = tf.keras.layers.Activation("relu", name="ResBlock1_relu")(x)
+
+    # ResBlock 2
+    res2 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock2_layer1")(x)
+    res2 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock2_layer2")(res2)
+    x = tf.keras.layers.Add(name="ResBlock2_add")([x, res2])
+    x = tf.keras.layers.Activation("relu", name="ResBlock2_relu")(x)
+
+    # Bottleneck
+    x = tf.keras.layers.Dense(512, activation="relu", name="Dense512")(x)
+    embedding = tf.keras.layers.Dense(128, activation="relu", name="embedding")(x)
+
+    # Per-head outputs
+    outputs = {}
+    # 2-class softmax heads
+    for name in ("winner", "winner_kills"):
+        outputs[name] = tf.keras.layers.Dense(2, activation="softmax", name=name)(embedding)
+    # 3-class softmax heads
+    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
+        outputs[name] = tf.keras.layers.Dense(3, activation="softmax", name=name)(embedding)
+    # Binary sigmoid heads
+    for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
+        outputs[name] = tf.keras.layers.Dense(1, activation="sigmoid", name=name)(embedding)
+    # Regression heads
+    for name in ("kill_handicap", "total_kills", "team_a_kills", "team_b_kills",
+                 "total_barons", "total_dragons", "total_towers"):
+        outputs[name] = tf.keras.layers.Dense(1, activation="linear", name=name)(embedding)
+
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_MultiHead")
+
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss=LOSS_PER_HEAD,
+        loss_weights=LOSS_WEIGHTS,
+        metrics=METRICS_PER_HEAD,
+    )
     return model
 
 
