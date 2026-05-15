@@ -73,9 +73,6 @@ def init_trainer():
         return trainer, True
     except Exception as e:
         logger.error(f"Failed to load TF trainer: {e}", exc_info=True)
-        import traceback
-
-        logger.error(traceback.format_exc(), exc_info=True)
         return None, False
 
 
