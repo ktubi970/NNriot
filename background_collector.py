@@ -3,7 +3,7 @@ import riot_api
 import database
 import time
 import json_utils
-from data_collector import resolve_region
+from data_collector import resolve_region, EXCLUDED_GAME_MODES
 
 # Limit in Bytes (50 GB)
 MAX_DB_SIZE = 50 * 1024 * 1024 * 1024
@@ -99,6 +99,8 @@ def run_collector():
             for mid, details in details_map.items():
                 # Process participants for crawling
                 info = details.get("info", {})
+                if (info.get("gameMode") or "") in EXCLUDED_GAME_MODES:
+                    continue
                 participants = info.get("participants", [])
 
                 for p in participants:

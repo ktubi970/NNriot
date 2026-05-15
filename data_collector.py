@@ -29,6 +29,11 @@ _TAG_TO_REGION = {
     "TR": "TR",
 }
 
+# Game modes with non-standard teams[] structures (Arena 2v2v2v2, Swarm PvE,
+# etc.) that don't fit the binary team_a/team_b model. Matches with these
+# modes are skipped at training-record build time.
+EXCLUDED_GAME_MODES = frozenset({"CHERRY", "STRAWBERRY"})
+
 
 def resolve_region(tag: str) -> str:
     """
@@ -51,12 +56,17 @@ def _build_training_record(
     training tuple. Returns None if the data is malformed.
     """
     try:
-        # Use centralized feature extraction
-        feature = json_utils.extract_match_features(details, region=region)
-
         # Determine winner label (Team 100 win -> 0, Team 200 win -> 1)
         # Note: Riot Match-V5 has 'win' boolean in each participant and also in 'teams'
         info = details.get("info", details)
+
+        game_mode = info.get("gameMode") or ""
+        if game_mode in EXCLUDED_GAME_MODES:
+            return None
+
+        # Use centralized feature extraction
+        feature = json_utils.extract_match_features(details, region=region)
+
         teams = info.get("teams", [])
         winner = 0
         for t in teams:
