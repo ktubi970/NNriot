@@ -22,7 +22,8 @@ _CHUNK_SIZE = 500
 
 def _decode_raw_json(rj: str) -> dict:
     """Decode a raw_json string (either plain JSON or gzip+base64)."""
-    if rj.startswith("{") or rj.startswith("["):
+    stripped = rj.lstrip() if rj else ""
+    if stripped.startswith("{") or stripped.startswith("["):
         return json.loads(rj)
     return json.loads(gzip.decompress(base64.b64decode(rj)).decode("utf-8"))
 
@@ -90,17 +91,15 @@ def backfill_labels(db_path: str = database.DB_PATH, chunk_size: int = _CHUNK_SI
         logger.info("Backfill progress: chunk processed (%d rows), cumulative %d, updated %d, skipped %d, errors %d",
                     len(rows), cumulative, stats["updated"], stats["skipped_malformed"], stats["errors"])
 
-        # Safety: if a chunk yields ZERO updates AND zero skips AND zero errors,
-        # something's wrong (probably NULL labels_json on a row whose raw_json
-        # decoded successfully but extract_labels returned None — counted in
-        # skipped_malformed). If updates were empty but we kept seeing rows,
-        # we'd loop forever. Break to be safe.
-        if not updates and stats["skipped_malformed"] == cumulative and stats["errors"] == 0:
-            # All remaining NULL rows are malformed — no point looping.
-            # But they ARE still in the DB with NULL. Tell the user.
+        # Per-chunk safety: any chunk that produces 0 updates from N rows means
+        # those un-updated rows stay NULL in the DB and will re-emerge on the
+        # next `WHERE labels_json IS NULL` query → infinite loop. Stop and
+        # surface a hint instead.
+        if rows and not updates:
             logger.warning(
-                "All %d remaining NULL rows are malformed (extract_labels returned None). "
-                "Run cleanup_malformed.py --apply to remove them.", stats["skipped_malformed"]
+                "Chunk of %d rows produced 0 updates (all malformed or errored). "
+                "Remaining NULL rows cannot be backfilled. Stopping. "
+                "Run cleanup_malformed.py --apply to remove them.", len(rows)
             )
             break
 

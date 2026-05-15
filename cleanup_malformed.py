@@ -38,7 +38,7 @@ def cleanup_malformed(db_path: str = database.DB_PATH, dry_run: bool = True) -> 
 
     if n == 0:
         logger.info("No malformed training records to clean up.")
-        return {"deleted": 0}
+        return {"would_delete": 0} if dry_run else {"deleted": 0}
 
     if dry_run:
         logger.info("Dry run: %d training records have labels_json IS NULL. "
