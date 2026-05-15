@@ -1,8 +1,11 @@
+import logging
 import riot_api
 import database
 import time
 import json_utils
 import threading
+
+logger = logging.getLogger(__name__)
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.
@@ -82,7 +85,7 @@ def _build_training_record(
 
         return (match_id, feature, winner)
     except Exception as e:
-        print(f"  Error building training record for match {match_id}: {e}")
+        logger.error(f"  Error building training record for match {match_id}: {e}", exc_info=True)
         return None
 
 
@@ -183,7 +186,7 @@ def collect_top_leagues_data(
             all_entries.extend(region_entries)
 
         except Exception as e:
-            print(f"  ❌ Error fetching {region}: {e}")
+            logger.error(f"  ❌ Error fetching {region}: {e}", exc_info=True)
             continue
 
     print(f"\n📊 Total players collected across all regions: {len(all_entries)}")
@@ -350,7 +353,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
             stats["processed"] += 1
 
         except Exception as e:
-            print(f"    ✗ Error for {name}#{tag}: {e}")
+            logger.error(f"    ✗ Error for {name}#{tag}: {e}", exc_info=True)
             stats["errors"] += 1
 
     return stats
@@ -438,6 +441,7 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
                         add_batch_log(f"    ✓ Saved {len(training_batch)} records.")
                         
         except Exception as e:
+            logger.error(f"  [ERROR] {e}", exc_info=True)
             add_batch_log(f"  [ERROR] {e}")
 
     with batch_lock:

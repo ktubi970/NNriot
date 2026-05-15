@@ -1,3 +1,4 @@
+import logging
 import os
 import requests
 import time
@@ -7,6 +8,8 @@ from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv(override=True)
+
+logger = logging.getLogger(__name__)
 
 
 class RiotAPI:
@@ -111,14 +114,16 @@ class RiotAPI:
                     print(f"API Error {response.status_code} for URL: {url}")
                     return response
             except requests.exceptions.RequestException as e:
-                print(
-                    f"Request exception: {e}. Retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})"
+                logger.error(
+                    f"Request exception: {e}. Retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})",
+                    exc_info=True,
                 )
                 time.sleep(5)
             except (OSError, IOError) as e:
                 # Catches SSL errors, broken pipe, connection reset, etc.
-                print(
-                    f"Network/SSL error: {e}. Retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})"
+                logger.error(
+                    f"Network/SSL error: {e}. Retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})",
+                    exc_info=True,
                 )
                 time.sleep(5)
 
@@ -208,7 +213,7 @@ class RiotAPI:
                         if verbose:
                             print(f"      [{completed}/{total}] Téléchargement : {mid}")
                 except Exception as e:
-                    print(f"      Error fetching match {mid}: {e}")
+                    logger.error(f"      Error fetching match {mid}: {e}", exc_info=True)
         return results
 
     def get_featured_games(self) -> list:

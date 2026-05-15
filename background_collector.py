@@ -1,9 +1,12 @@
+import logging
 import os
 import riot_api
 import database
 import time
 import json_utils
 from data_collector import resolve_region, EXCLUDED_GAME_MODES
+
+logger = logging.getLogger(__name__)
 
 # Limit in Bytes (50 GB)
 MAX_DB_SIZE = 50 * 1024 * 1024 * 1024
@@ -133,7 +136,7 @@ def run_collector():
                     matches_batch.append((mid, details))
                     training_records_batch.append((mid, matchup_feature, winner))
                 except Exception as e:
-                    print(f"  Error processing features for {mid}: {e}")
+                    logger.error(f"  Error processing features for {mid}: {e}", exc_info=True)
 
             # Flush batches
             if matches_batch:
@@ -150,7 +153,7 @@ def run_collector():
             time.sleep(2)
 
         except Exception as e:
-            print(f"Error processing {name}: {e}")
+            logger.error(f"Error processing {name}: {e}", exc_info=True)
             time.sleep(10)
 
 

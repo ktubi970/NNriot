@@ -15,10 +15,11 @@ def client(monkeypatch):
     fake_trainer.predict.return_value = _fake_preds()
 
     # We can't easily prevent init_trainer from running at import; instead,
-    # import the module, then overwrite globals.
+    # import the module, then overwrite globals via monkeypatch so the
+    # assignments are undone after each test (clean teardown).
     import final_web_app
-    final_web_app.global_trainer = fake_trainer
-    final_web_app.tf_available = True
+    monkeypatch.setattr(final_web_app, "global_trainer", fake_trainer)
+    monkeypatch.setattr(final_web_app, "tf_available", True)
     final_web_app.app.config["TESTING"] = True
     return final_web_app.app.test_client()
 

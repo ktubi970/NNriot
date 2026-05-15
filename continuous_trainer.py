@@ -16,6 +16,7 @@ import time
 import logging
 import database
 import json_utils
+from feature_labels import LABEL_KEYS
 from generate_graph import build_multi_output_model
 
 # Configuration
@@ -44,6 +45,19 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
     Given training records (each with a parsed `labels_json` dict),
     build a dict of {head_name: ndarray} ready for model.train_on_batch.
     """
+    # Filter out records with incomplete labels_json (corruption, partial migration).
+    # Without this, r["labels_json"][name] would raise KeyError mid-batch.
+    required_keys = set(LABEL_KEYS)
+    incomplete = [r for r in records if not required_keys.issubset(r["labels_json"].keys())]
+    if incomplete:
+        logger.warning(
+            "Skipping %d records with incomplete labels_json (missing keys)",
+            len(incomplete),
+        )
+        records = [r for r in records if required_keys.issubset(r["labels_json"].keys())]
+        if not records:
+            return {}
+
     n = len(records)
     # Pre-allocate arrays per head type
     targets: dict[str, np.ndarray] = {}
@@ -52,7 +66,7 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
     for name in ("winner", "winner_kills"):
         arr = np.zeros((n, 2), dtype=np.float32)
         for i, r in enumerate(records):
-            val = int(r["labels_json"][name])
+            val = int(r["labels_json"].get(name, 0))
             arr[i, val] = 1.0
         targets[name] = arr
 
@@ -60,7 +74,7 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
         arr = np.zeros((n, 3), dtype=np.float32)
         for i, r in enumerate(records):
-            val = int(r["labels_json"][name])
+            val = int(r["labels_json"].get(name, 0))
             arr[i, val] = 1.0
         targets[name] = arr
 
@@ -68,7 +82,7 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
     for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
         arr = np.zeros((n, 1), dtype=np.float32)
         for i, r in enumerate(records):
-            arr[i, 0] = float(r["labels_json"][name])
+            arr[i, 0] = float(r["labels_json"].get(name, 0))
         targets[name] = arr
 
     # Regression heads: shape (n, 1), raw float
@@ -76,7 +90,7 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
                  "total_barons", "total_dragons", "total_towers"):
         arr = np.zeros((n, 1), dtype=np.float32)
         for i, r in enumerate(records):
-            arr[i, 0] = float(r["labels_json"][name])
+            arr[i, 0] = float(r["labels_json"].get(name, 0))
         targets[name] = arr
 
     return targets

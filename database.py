@@ -770,7 +770,7 @@ def get_unique_champions(db_path: str = DB_PATH) -> list[str]:
 
 def _decode_compressed_json(blob: str | None):
     """Decode a possibly-gzip+b64 JSON blob; pass through plain JSON / None."""
-    if blob is None:
+    if not blob:
         return None
     if blob.startswith("{") or blob.startswith("["):
         return json.loads(blob)

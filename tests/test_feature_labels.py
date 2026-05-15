@@ -292,3 +292,16 @@ def test_extract_labels_label_keys_constant_matches():
     assert labels is not None
     assert set(labels.keys()) == set(LABEL_KEYS)
     assert len(LABEL_KEYS) == 18
+
+
+def test_extract_labels_coerces_non_int_kills():
+    """_safe_int handles None and string-number kills values."""
+    # _make_match takes team_a_kills/team_b_kills as ints, but we override below
+    match = _make_match(team_a_kills=0, team_b_kills=0)
+    # Override participant kills with non-int values
+    match["info"]["participants"][0]["kills"] = None
+    match["info"]["participants"][1]["kills"] = "7"
+    labels = extract_labels(match)
+    assert labels is not None
+    assert labels["team_a_kills"] == 0  # None -> 0
+    assert labels["team_b_kills"] == 7  # "7" -> 7
