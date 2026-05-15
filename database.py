@@ -975,7 +975,7 @@ def backfill_seasons(db_path: str = DB_PATH):
                 season_id = int(gv.split(".")[0])
                 updates.append((season_id, match_id))
         except Exception as e:
-            logger.error("Failed to parse match %s during backfill: %s", match_id, e)
+            logger.error("Failed to parse match %s during backfill: %s", match_id, e, exc_info=True)
 
     if updates:
         with get_connection(db_path) as conn:
