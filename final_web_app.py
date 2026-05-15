@@ -661,16 +661,16 @@ def api_predict_custom():
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
-            _avg_kda = stats.get("avg_kda", 0) if stats else 0
+            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
             participants.append(
                 {
                     "teamId": 100,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": int(round(_avg_kda * 0.7)),
+                    "kills": _avg_kda * 0.7,
                     "deaths": 1,
-                    "assists": int(round(_avg_kda * 0.3)),
+                    "assists": _avg_kda * 0.3,
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -678,16 +678,16 @@ def api_predict_custom():
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
-            _avg_kda = stats.get("avg_kda", 0) if stats else 0
+            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
             participants.append(
                 {
                     "teamId": 200,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": int(round(_avg_kda * 0.7)),
+                    "kills": _avg_kda * 0.7,
                     "deaths": 1,
-                    "assists": int(round(_avg_kda * 0.3)),
+                    "assists": _avg_kda * 0.3,
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
