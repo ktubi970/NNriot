@@ -1,4 +1,5 @@
 import logging
+import os
 import riot_api
 import database
 import time
@@ -6,6 +7,10 @@ import json_utils
 import threading
 
 logger = logging.getLogger(__name__)
+
+# Opt-in: also fetch Riot timelines for each match (doubles API cost).
+# Used by the first_to_N_kills feature labels (Sprint 4b).
+FETCH_TIMELINES = os.environ.get("NNRIOT_FETCH_TIMELINES", "0") == "1"
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.
@@ -147,6 +152,11 @@ def collect_training_data(seed_players, matches_per_player=5, days_back=None):
                     f"  Saved {len(training_records_batch)} training records for {name}#{tag}"
                 )
 
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
+
 
 def collect_top_leagues_data(
     regions=["KR"], total_players_per_region=100, matches_per_player=10, days_back=30
@@ -251,6 +261,11 @@ def collect_top_leagues_data(
                 print(
                     f"    Saved {len(training_records_batch)} records for {summoner_name}"
                 )
+
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
         else:
             print(f"    No new matches for {summoner_name}")
 
@@ -350,6 +365,11 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
                 print(f"    ✓ Saved {len(training_batch)} records.")
                 stats["saved"] += len(training_batch)
 
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=4)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
+
             stats["processed"] += 1
 
         except Exception as e:
@@ -439,6 +459,11 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
                         database.save_training_records_batch(training_batch)
                         database.increment_player_matches(acc["puuid"], len(training_batch))
                         add_batch_log(f"    ✓ Saved {len(training_batch)} records.")
+
+                    if FETCH_TIMELINES and new_mids:
+                        timelines = p_api.get_match_timelines_batch(new_mids, max_workers=3, verbose=True)
+                        if timelines:
+                            database.save_match_timelines_batch(list(timelines.items()))
                         
         except Exception as e:
             logger.error(f"  [ERROR] {e}", exc_info=True)
