@@ -30,7 +30,7 @@ _TAG_TO_REGION = {
 }
 
 
-def _resolve_region(tag: str) -> str:
+def resolve_region(tag: str) -> str:
     """
     Convert a Riot tag/platform suffix to the canonical region code
     used by RiotAPI (e.g. 'KR1' -> 'KR').
@@ -96,7 +96,7 @@ def collect_training_data(seed_players, matches_per_player=5, days_back=None):
     print(f"Starting collection for {len(seed_players)} seed players...")
 
     for name, tag in seed_players:
-        region = _resolve_region(tag)
+        region = resolve_region(tag)
         print(f"Processing {name}#{tag} (Region: {region})...")
 
         api = riot_api.RiotAPI(region)
@@ -277,7 +277,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
 
         # Resolve region — the lolpros.gg 'server' field maps directly
         try:
-            region = _resolve_region(server) if server else None
+            region = resolve_region(server) if server else None
         except ValueError:
             # Try a fallback: keep server as-is if it looks like a known region
             region = (
@@ -376,7 +376,7 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
         
         add_batch_log(f"Processing {name}#{tag}...")
         try:
-            region = _resolve_region(tag)
+            region = resolve_region(tag)
             api = riot_api.RiotAPI(region)
             main_puuid = api.get_puuid(name, tag)
             

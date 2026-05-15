@@ -704,9 +704,9 @@ def api_spectator_active():
 
         # Enhance participants with local database info (puuid and stats)
         # We need to resolve each participant
-        from data_collector import _resolve_region
+        from data_collector import resolve_region
 
-        region = _resolve_region(tag)
+        region = resolve_region(tag)
         participants = game_data.get("participants", [])
 
         # Add PUUID info using our utility
