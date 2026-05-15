@@ -80,36 +80,100 @@ global_trainer, tf_available = init_trainer()
 VECTOR_DIM = 100000
 
 
-def final_predict_match_outcome(match_data):
-    """Final prediction function utilizing the trained TensorFlow model."""
+def _format_multi_output_response(preds: dict) -> dict:
+    """
+    Convert raw Keras dict-output (shape (1, k) per head) into the
+    public API response shape.
+    """
+    def _scalar(name):
+        """Extract the single scalar from a (1, 1) regression/sigmoid head."""
+        return float(preds[name][0][0])
+
+    def _two_class(name):
+        """Extract (p_team_a, p_team_b) from a (1, 2) softmax head."""
+        return float(preds[name][0][0]), float(preds[name][0][1])
+
+    def _three_class(name):
+        """Extract (p_team_a, p_team_b, p_none) from a (1, 3) softmax head."""
+        return float(preds[name][0][0]), float(preds[name][0][1]), float(preds[name][0][2])
+
+    p_a, p_b = _two_class("winner")
+    pk_a, pk_b = _two_class("winner_kills")
+
+    response = {
+        "success": True,
+        "winner": {
+            "team_a": round(p_a, 3),
+            "team_b": round(p_b, 3),
+            "predicted": "B" if p_b > p_a else "A",
+            "confidence": round(max(p_a, p_b), 3),
+        },
+        "winner_kills": {
+            "team_a": round(pk_a, 3),
+            "team_b": round(pk_b, 3),
+            "predicted": "B" if pk_b > pk_a else "A",
+        },
+        "kills": {
+            "total":           round(_scalar("total_kills"), 1),
+            "team_a":          round(_scalar("team_a_kills"), 1),
+            "team_b":          round(_scalar("team_b_kills"), 1),
+            "handicap":        round(_scalar("kill_handicap"), 1),
+            "odd_probability": round(_scalar("kills_odd"), 3),
+        },
+        "first": {
+            event: {
+                "team_a": round(a, 3),
+                "team_b": round(b, 3),
+                "none":   round(n, 3),
+            }
+            for event, (a, b, n) in (
+                ("blood",     _three_class("first_blood")),
+                ("baron",     _three_class("first_baron")),
+                ("inhibitor", _three_class("first_inhibitor")),
+                ("tower",     _three_class("first_tower")),
+            )
+        },
+        "totals": {
+            "barons":  round(_scalar("total_barons"), 2),
+            "dragons": round(_scalar("total_dragons"), 2),
+            "towers":  round(_scalar("total_towers"), 1),
+        },
+        "both_teams": {
+            "baron":     round(_scalar("both_baron"), 3),
+            "inhibitor": round(_scalar("both_inhibitor"), 3),
+            "dragon":    round(_scalar("both_dragon"), 3),
+        },
+        "elder_dragon": round(_scalar("elder_dragon"), 3),
+    }
+
+    # Backward-compat shim (one release window — delete after one deploy)
+    response["predicted_outcome"]  = "WIN" if p_a > p_b else "LOSE"
+    response["win_probability"]    = round(p_a, 3)
+    response["lose_probability"]   = round(p_b, 3)
+    response["confidence"]         = round(max(p_a, p_b), 3)
+
+    return response
+
+
+def final_predict_match_outcome(match_data: dict) -> dict:
+    """
+    Multi-output prediction. Returns a dict with named keys (winner, kills,
+    first.*, totals.*, both_teams.*, elder_dragon) plus a legacy
+    `predicted_outcome`/`win_probability` shim for backward compatibility.
+    """
     try:
         if not tf_available or global_trainer is None:
             return {"error": "TensorFlow model is not loaded or available"}
 
-        # Use centralized feature extraction
         feature_dict = json_utils.extract_match_features(match_data)
-
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
         dense_vec = sparse_vec.toarray()
 
         with predict_lock:
             preds = global_trainer.predict(dense_vec)
-        probs = preds[0]
+        # preds is a dict: {head_name: ndarray(1, k)}
 
-        win_probability = float(probs[0])
-        lose_probability = float(probs[1])
-
-        predicted_outcome = "WIN" if win_probability > lose_probability else "LOSE"
-        confidence = max(win_probability, lose_probability)
-
-        return {
-            "success": True,
-            "predicted_outcome": predicted_outcome,
-            "win_probability": round(win_probability, 3),
-            "lose_probability": round(lose_probability, 3),
-            "confidence": round(confidence, 3),
-        }
-
+        return _format_multi_output_response(preds)
     except Exception as e:
         logger.error(f"Prediction error: {e}", exc_info=True)
         return {"error": str(e)}
@@ -644,23 +708,31 @@ def api_predict_custom():
 
         with predict_lock:
             preds = global_trainer.predict(dense_vec)
-        probs = preds[0]
-        blue_prob_nn, red_prob_nn = float(probs[0]), float(probs[1])
+
+        formatted = _format_multi_output_response(preds)
+        # Keep the legacy fields for the custom predictor UI
+        blue_prob_nn = formatted["winner"]["team_a"]
+        red_prob_nn = formatted["winner"]["team_b"]
 
         response_data = {
             "success": True,
             "nn_results": {
-                "blue_win_probability": round(blue_prob_nn, 3),
-                "red_win_probability": round(red_prob_nn, 3),
+                "blue_win_probability": blue_prob_nn,
+                "red_win_probability":  red_prob_nn,
             },
             "predicted_winner": "BLUE" if blue_prob_nn > red_prob_nn else "RED",
             "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
+            "blue_win_probability": blue_prob_nn,
+            "red_win_probability":  red_prob_nn,
+            "explanation": "Multi-head NN analysis complete.",
+            "llm_active": False,
+            # Include the full multi-output dict for clients that want it
+            "multi_output": {
+                k: v for k, v in formatted.items()
+                if k not in ("success", "predicted_outcome", "win_probability",
+                              "lose_probability", "confidence")
+            },
         }
-
-        response_data["blue_win_probability"] = round(blue_prob_nn, 3)
-        response_data["red_win_probability"] = round(red_prob_nn, 3)
-        response_data["explanation"] = "Baseline NN analysis complete."
-        response_data["llm_active"] = False
 
         return jsonify(response_data)
 

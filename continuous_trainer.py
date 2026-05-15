@@ -16,13 +16,7 @@ import time
 import logging
 import database
 import json_utils
-import feature_labels
-from generate_graph import (
-    build_multi_output_model,
-    LOSS_PER_HEAD,
-    LOSS_WEIGHTS,
-    METRICS_PER_HEAD,
-)
+from generate_graph import build_multi_output_model
 
 # Configuration
 VECTOR_DIM = 100000
