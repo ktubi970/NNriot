@@ -191,11 +191,13 @@ def api_players_search():
 def api_players_random():
     """Return a random sample of players from the database."""
     limit = request.args.get("limit", 10, type=int)
+    # Sample from a pool of high-match-count players so results are actually
+    # varied but still skewed toward players the model has data on.
+    pool_size = max(limit * 20, 200)
     try:
-        players = database.get_top_players(
-            limit=limit
-        )  # Using top players as a proxy for interesting ones
-        return jsonify(players)
+        pool = database.get_top_players(limit=pool_size)
+        sample = random.sample(pool, min(limit, len(pool)))
+        return jsonify(sample)
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
