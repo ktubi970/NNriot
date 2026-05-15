@@ -85,8 +85,10 @@ def test_predict_returns_multi_output_shape(client):
     assert "totals" in data and set(data["totals"].keys()) == {"barons", "dragons", "towers"}
     assert "both_teams" in data and set(data["both_teams"].keys()) == {"baron", "inhibitor", "dragon"}
     assert "elder_dragon" in data
-    # Legacy shim
-    assert "predicted_outcome" in data and "win_probability" in data
+    # Legacy shim has been removed — these keys must NOT be present
+    assert "predicted_outcome" not in data
+    assert "win_probability" not in data
+    assert "lose_probability" not in data
 
 
 def test_predict_winner_predicted_field(client):

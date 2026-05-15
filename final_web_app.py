@@ -164,20 +164,13 @@ def _format_multi_output_response(preds: dict) -> dict:
         "elder_dragon": round(_scalar("elder_dragon"), 3),
     }
 
-    # Backward-compat shim (one release window — delete after one deploy)
-    response["predicted_outcome"]  = "WIN" if p_a > p_b else "LOSE"
-    response["win_probability"]    = round(p_a, 3)
-    response["lose_probability"]   = round(p_b, 3)
-    response["confidence"]         = round(max(p_a, p_b), 3)
-
     return response
 
 
 def final_predict_match_outcome(match_data: dict) -> dict:
     """
-    Multi-output prediction. Returns a dict with named keys (winner, kills,
-    first.*, totals.*, both_teams.*, elder_dragon) plus a legacy
-    `predicted_outcome`/`win_probability` shim for backward compatibility.
+    Multi-output prediction. Returns a dict with named keys: winner,
+    team_b_kill_lead, kills, first.*, totals.*, both_teams.*, elder_dragon.
     """
     try:
         if not tf_available or global_trainer is None:
