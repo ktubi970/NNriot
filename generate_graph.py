@@ -64,12 +64,16 @@ LOSS_WEIGHTS: dict[str, float] = {
     "team_a_kills":      1.0,
     "team_b_kills":      1.0,
     "kill_handicap":     1.0,
-    # Timeline kill thresholds — weights decay with rarity (most matches
-    # never hit 15 or 20 team kills, so those targets are heavily class-2).
-    "first_to_5_kills":  0.7,
-    "first_to_10_kills": 0.7,
-    "first_to_15_kills": 0.5,
-    "first_to_20_kills": 0.3,
+    # Timeline kill thresholds. Weights are 0.0 while the match_timelines table
+    # is empty — every record's label defaults to class 2 ("neither team
+    # reached the threshold"), so these heads contribute pure noise to the
+    # shared trunk's gradient. Re-enable (suggested: 0.7/0.7/0.5/0.3) once
+    # NNRIOT_FETCH_TIMELINES=1 has been run long enough to populate the
+    # timeline column on a meaningful fraction of records.
+    "first_to_5_kills":  0.0,
+    "first_to_10_kills": 0.0,
+    "first_to_15_kills": 0.0,
+    "first_to_20_kills": 0.0,
 }
 
 # Output head name -> list of Keras metric strings (for logging during training).

@@ -38,8 +38,15 @@ REGRESSION_STATS: dict[str, tuple[float, float]] = {
 # BATCH_SIZE / EPOCHS_PER_BATCH can be overridden via env vars so users can
 # do a small smoke run before kicking off a full training cycle:
 #   NNRIOT_BATCH_SIZE=100 NNRIOT_EPOCHS=1 python continuous_trainer.py
-BATCH_SIZE = int(os.environ.get("NNRIOT_BATCH_SIZE", "500"))
-EPOCHS_PER_BATCH = int(os.environ.get("NNRIOT_EPOCHS", "2"))  # Reduced to avoid overfitting
+#
+# Defaults raised after focused_train.py diagnostic showed the multi-output
+# model requires ~8 warmup epochs before signal appears. The previous defaults
+# (500 / 2) trapped the model at baseline accuracy on every cycle. The new
+# defaults push each cycle past the warmup plateau but make cycles much slower
+# (~3 minutes instead of ~10 seconds). For periodic from-scratch retraining,
+# use retrain_full.py instead — that is the recommended workflow.
+BATCH_SIZE = int(os.environ.get("NNRIOT_BATCH_SIZE", "3000"))
+EPOCHS_PER_BATCH = int(os.environ.get("NNRIOT_EPOCHS", "15"))
 
 # Use script-relative paths so the trainer works regardless of CWD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
