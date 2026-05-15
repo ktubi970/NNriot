@@ -1,8 +1,16 @@
+import logging
+import os
 import riot_api
 import database
 import time
 import json_utils
 import threading
+
+logger = logging.getLogger(__name__)
+
+# Opt-in: also fetch Riot timelines for each match (doubles API cost).
+# Used by the first_to_N_kills feature labels (Sprint 4b).
+FETCH_TIMELINES = os.environ.get("NNRIOT_FETCH_TIMELINES", "0") == "1"
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.
@@ -29,6 +37,19 @@ _TAG_TO_REGION = {
     "TR": "TR",
 }
 
+# Game modes with non-standard teams[] structures (Arena 2v2v2v2, Swarm PvE,
+# etc.) that don't fit the binary team_a/team_b model. Matches with these
+# modes are skipped at training-record build time.
+EXCLUDED_GAME_MODES = frozenset({"CHERRY", "STRAWBERRY"})
+
+# Default training-config knobs — surfaced via /api/monitor/metrics for the UI.
+# Keep these as the single source of truth so the dashboard never drifts from
+# the collector defaults.
+DEFAULT_REGIONS = ["KR", "NA", "EUW", "EUN", "BR", "LA1", "LA2", "OCE", "JP", "RU", "TR"]
+DEFAULT_PLAYERS_PER_REGION = 500
+DEFAULT_MATCHES_PER_PLAYER = 20
+DEFAULT_LOOKBACK_DAYS = 60
+
 
 def resolve_region(tag: str) -> str:
     """
@@ -51,12 +72,17 @@ def _build_training_record(
     training tuple. Returns None if the data is malformed.
     """
     try:
-        # Use centralized feature extraction
-        feature = json_utils.extract_match_features(details, region=region)
-
         # Determine winner label (Team 100 win -> 0, Team 200 win -> 1)
         # Note: Riot Match-V5 has 'win' boolean in each participant and also in 'teams'
         info = details.get("info", details)
+
+        game_mode = info.get("gameMode") or ""
+        if game_mode in EXCLUDED_GAME_MODES:
+            return None
+
+        # Use centralized feature extraction
+        feature = json_utils.extract_match_features(details, region=region)
+
         teams = info.get("teams", [])
         winner = 0
         for t in teams:
@@ -72,7 +98,7 @@ def _build_training_record(
 
         return (match_id, feature, winner)
     except Exception as e:
-        print(f"  Error building training record for match {match_id}: {e}")
+        logger.error(f"  Error building training record for match {match_id}: {e}", exc_info=True)
         return None
 
 
@@ -134,6 +160,11 @@ def collect_training_data(seed_players, matches_per_player=5, days_back=None):
                     f"  Saved {len(training_records_batch)} training records for {name}#{tag}"
                 )
 
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
+
 
 def collect_top_leagues_data(
     regions=["KR"], total_players_per_region=100, matches_per_player=10, days_back=30
@@ -173,7 +204,7 @@ def collect_top_leagues_data(
             all_entries.extend(region_entries)
 
         except Exception as e:
-            print(f"  ❌ Error fetching {region}: {e}")
+            logger.error(f"  ❌ Error fetching {region}: {e}", exc_info=True)
             continue
 
     print(f"\n📊 Total players collected across all regions: {len(all_entries)}")
@@ -238,6 +269,11 @@ def collect_top_leagues_data(
                 print(
                     f"    Saved {len(training_records_batch)} records for {summoner_name}"
                 )
+
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
         else:
             print(f"    No new matches for {summoner_name}")
 
@@ -337,10 +373,15 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
                 print(f"    ✓ Saved {len(training_batch)} records.")
                 stats["saved"] += len(training_batch)
 
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=4)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
+
             stats["processed"] += 1
 
         except Exception as e:
-            print(f"    ✗ Error for {name}#{tag}: {e}")
+            logger.error(f"    ✗ Error for {name}#{tag}: {e}", exc_info=True)
             stats["errors"] += 1
 
     return stats
@@ -426,8 +467,14 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
                         database.save_training_records_batch(training_batch)
                         database.increment_player_matches(acc["puuid"], len(training_batch))
                         add_batch_log(f"    ✓ Saved {len(training_batch)} records.")
+
+                    if FETCH_TIMELINES and new_mids:
+                        timelines = p_api.get_match_timelines_batch(new_mids, max_workers=3, verbose=True)
+                        if timelines:
+                            database.save_match_timelines_batch(list(timelines.items()))
                         
         except Exception as e:
+            logger.error(f"  [ERROR] {e}", exc_info=True)
             add_batch_log(f"  [ERROR] {e}")
 
     with batch_lock:

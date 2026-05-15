@@ -54,3 +54,5 @@ build_maturin_utf8.log
 .worktrees/
 .superpowers/
 model.keras
+model_v2.keras
+BACKLOG.md

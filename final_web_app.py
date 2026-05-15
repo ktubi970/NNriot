@@ -31,10 +31,19 @@ import json_utils
 import live_game
 import data_collector
 import riot_api
+from feature_labels import VECTOR_DIM
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+# Ensure DB exists and is at the latest schema. Idempotent — no-op if already
+# migrated. Critical for fresh deployments with no training_data.db.
+try:
+    database.init_db()
+except Exception:
+    logger.error("Database initialization failed", exc_info=True)
+    raise
 
 # Absolute directory of this script — used for checkpoint discovery,
 # so it works regardless of the working directory the server is started from.
@@ -77,17 +86,29 @@ def init_trainer():
 
 
 global_trainer, tf_available = init_trainer()
-VECTOR_DIM = 100000
 
 
 def _format_multi_output_response(preds: dict) -> dict:
     """
     Convert raw Keras dict-output (shape (1, k) per head) into the
     public API response shape.
+
+    Regression heads are trained on normalized targets (see
+    continuous_trainer.REGRESSION_STATS); _denorm restores them to
+    original units for the public API.
     """
+    # Lazy import: avoids importing TF-heavy continuous_trainer at module
+    # top-level (init_trainer() already handles the TF-unavailable path).
+    from continuous_trainer import REGRESSION_STATS
+
     def _scalar(name):
         """Extract the single scalar from a (1, 1) regression/sigmoid head."""
         return float(preds[name][0][0])
+
+    def _denorm(name):
+        """Denormalize a regression head's output back to original scale."""
+        mean, std = REGRESSION_STATS[name]
+        return _scalar(name) * std + mean
 
     def _two_class(name):
         """Extract (p_team_a, p_team_b) from a (1, 2) softmax head."""
@@ -98,7 +119,7 @@ def _format_multi_output_response(preds: dict) -> dict:
         return float(preds[name][0][0]), float(preds[name][0][1]), float(preds[name][0][2])
 
     p_a, p_b = _two_class("winner")
-    pk_a, pk_b = _two_class("winner_kills")
+    pk_a, pk_b = _two_class("team_b_kill_lead")
 
     response = {
         "success": True,
@@ -108,16 +129,16 @@ def _format_multi_output_response(preds: dict) -> dict:
             "predicted": "B" if p_b > p_a else "A",
             "confidence": round(max(p_a, p_b), 3),
         },
-        "winner_kills": {
+        "team_b_kill_lead": {
             "team_a": round(pk_a, 3),
             "team_b": round(pk_b, 3),
             "predicted": "B" if pk_b > pk_a else "A",
         },
         "kills": {
-            "total":           round(_scalar("total_kills"), 1),
-            "team_a":          round(_scalar("team_a_kills"), 1),
-            "team_b":          round(_scalar("team_b_kills"), 1),
-            "handicap":        round(_scalar("kill_handicap"), 1),
+            "total":           round(_denorm("total_kills"), 1),
+            "team_a":          round(_denorm("team_a_kills"), 1),
+            "team_b":          round(_denorm("team_b_kills"), 1),
+            "handicap":        round(_denorm("kill_handicap"), 1),
             "odd_probability": round(_scalar("kills_odd"), 3),
         },
         "first": {
@@ -131,12 +152,17 @@ def _format_multi_output_response(preds: dict) -> dict:
                 ("baron",     _three_class("first_baron")),
                 ("inhibitor", _three_class("first_inhibitor")),
                 ("tower",     _three_class("first_tower")),
+                # Timeline kills thresholds — additive keys, backward-compatible
+                ("kills_5",   _three_class("first_to_5_kills")),
+                ("kills_10",  _three_class("first_to_10_kills")),
+                ("kills_15",  _three_class("first_to_15_kills")),
+                ("kills_20",  _three_class("first_to_20_kills")),
             )
         },
         "totals": {
-            "barons":  round(_scalar("total_barons"), 2),
-            "dragons": round(_scalar("total_dragons"), 2),
-            "towers":  round(_scalar("total_towers"), 1),
+            "barons":  round(_denorm("total_barons"), 2),
+            "dragons": round(_denorm("total_dragons"), 2),
+            "towers":  round(_denorm("total_towers"), 1),
         },
         "both_teams": {
             "baron":     round(_scalar("both_baron"), 3),
@@ -146,20 +172,13 @@ def _format_multi_output_response(preds: dict) -> dict:
         "elder_dragon": round(_scalar("elder_dragon"), 3),
     }
 
-    # Backward-compat shim (one release window — delete after one deploy)
-    response["predicted_outcome"]  = "WIN" if p_a > p_b else "LOSE"
-    response["win_probability"]    = round(p_a, 3)
-    response["lose_probability"]   = round(p_b, 3)
-    response["confidence"]         = round(max(p_a, p_b), 3)
-
     return response
 
 
 def final_predict_match_outcome(match_data: dict) -> dict:
     """
-    Multi-output prediction. Returns a dict with named keys (winner, kills,
-    first.*, totals.*, both_teams.*, elder_dragon) plus a legacy
-    `predicted_outcome`/`win_probability` shim for backward compatibility.
+    Multi-output prediction. Returns a dict with named keys: winner,
+    team_b_kill_lead, kills, first.*, totals.*, both_teams.*, elder_dragon.
     """
     try:
         if not tf_available or global_trainer is None:
@@ -400,6 +419,7 @@ def api_stream_process_frame():
                 blue_names = ["Wunder", "Skeanz", "LIDER", "Jopa", "Mikyx"]
                 red_names = ["Rhilech", "Maynter", "Poby", "SamD", "Parus"]
         except Exception:
+            logger.error("Failed to load top players for stream OCR fallback", exc_info=True)
             blue_names = ["Wunder", "Skeanz", "LIDER", "Jopa", "Mikyx"]
             red_names = ["Rhilech", "Maynter", "Poby", "SamD", "Parus"]
 
@@ -650,6 +670,41 @@ def api_predict_custom():
         blue_team_puuids = [p.get("puuid") for p in blue_team_data]
         red_team_puuids = [p.get("puuid") for p in red_team_data]
 
+        # Warm-up: enqueue background refresh for any player whose data is stale (>7 days).
+        # Non-blocking — the current prediction uses whatever data is in the DB now.
+        all_puuids = blue_team_puuids + red_team_puuids
+        try:
+            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7)
+            if stale_puuids:
+                logger.info("Warm-up: %d/%d players have stale data — enqueueing refresh",
+                            len(stale_puuids), len(all_puuids))
+                # Get account info (game_name, tag_line) for each stale puuid to feed collect_by_puuid
+                with database.get_connection() as conn:
+                    placeholders = ",".join(["?"] * len(stale_puuids))
+                    rows = conn.execute(
+                        f"SELECT puuid, game_name, tag_line FROM players WHERE puuid IN ({placeholders})",
+                        tuple(stale_puuids),
+                    ).fetchall()
+                accounts = [
+                    {
+                        "puuid": r["puuid"],
+                        "server": r["tag_line"] or "EUW",  # tag_line ≈ server (KR1, EUW, etc.)
+                        "gamename": r["game_name"] or "?",
+                        "tagline": r["tag_line"] or "?",
+                    }
+                    for r in rows
+                ]
+                if accounts:
+                    def _refresh_stale():
+                        try:
+                            result = data_collector.collect_by_puuid(accounts, matches_per_player=20)
+                            logger.info("Warm-up refresh complete: %s", result)
+                        except Exception:
+                            logger.error("Warm-up refresh failed", exc_info=True)
+                    threading.Thread(target=_refresh_stale, daemon=True).start()
+        except Exception:
+            logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
+
         # Fetch stats for all players
         blue_stats = [database.get_player_stats(p) for p in blue_team_puuids]
         red_stats = [database.get_player_stats(p) for p in red_team_puuids]
@@ -661,16 +716,16 @@ def api_predict_custom():
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
-            _avg_kda = stats.get("avg_kda", 0) if stats else 0
+            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
             participants.append(
                 {
                     "teamId": 100,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": int(round(_avg_kda * 0.7)),
+                    "kills": _avg_kda * 0.7,
                     "deaths": 1,
-                    "assists": int(round(_avg_kda * 0.3)),
+                    "assists": _avg_kda * 0.3,
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -678,16 +733,16 @@ def api_predict_custom():
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
-            _avg_kda = stats.get("avg_kda", 0) if stats else 0
+            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
             participants.append(
                 {
                     "teamId": 200,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": int(round(_avg_kda * 0.7)),
+                    "kills": _avg_kda * 0.7,
                     "deaths": 1,
-                    "assists": int(round(_avg_kda * 0.3)),
+                    "assists": _avg_kda * 0.3,
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -739,6 +794,21 @@ def api_predict_custom():
     except Exception as e:
         logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/warmup/status", methods=["GET"])
+def api_warmup_status():
+    """Check warm-up freshness for a list of puuids passed as ?puuids=p1,p2,..."""
+    raw = request.args.get("puuids", "")
+    puuids = [p.strip() for p in raw.split(",") if p.strip()]
+    if not puuids:
+        return jsonify({"error": "puuids query param required"}), 400
+    stale = database.get_stale_puuids(puuids, stale_after_days=7)
+    return jsonify({
+        "puuids_checked": puuids,
+        "stale_count": len(stale),
+        "stale_puuids": stale,
+    })
 
 
 @app.route("/api/spectator/featured", methods=["GET"])
@@ -1004,25 +1074,17 @@ def api_monitor_metrics():
                 "versions": sorted(checkpoint_versions),
             }
 
-        # Training configuration (from data_collector defaults)
+        # Training configuration — regions/lookback come from data_collector
+        # so the UI tracks the collector defaults. batch_size/epochs are
+        # hardcoded here to avoid importing TF-heavy continuous_trainer; if
+        # the trainer constants change, bump these to match (continuous_trainer
+        # BATCH_SIZE / EPOCHS_PER_BATCH).
         metrics["training_config"] = {
-            "regions": [
-                "KR",
-                "NA",
-                "EUW",
-                "EUN",
-                "BR",
-                "LA1",
-                "LA2",
-                "OCE",
-                "JP",
-                "RU",
-                "TR",
-            ],
-            "players_per_region": 500,
-            "matches_per_player": 20,
-            "lookback_days": 60,
-            "model_type": "ResMLP",
+            "regions": data_collector.DEFAULT_REGIONS,
+            "players_per_region": data_collector.DEFAULT_PLAYERS_PER_REGION,
+            "matches_per_player": data_collector.DEFAULT_MATCHES_PER_PLAYER,
+            "lookback_days": data_collector.DEFAULT_LOOKBACK_DAYS,
+            "model_type": "ResMLP-22",  # 22-head multi-output model
             "batch_size": 500,
             "epochs": 100,
         }

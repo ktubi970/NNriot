@@ -11,11 +11,17 @@ full design.
 
 from __future__ import annotations
 
+# Hashing-vectorizer output dimensionality — single source of truth.
+# Both continuous_trainer and final_web_app import this constant so the
+# model input shape, the predictor request payload, and the training
+# pipeline can never drift.
+VECTOR_DIM = 20000
+
 # Ordered list of all label keys produced by ``extract_labels``.
 # Used by the trainer (target dict assembly) and by tests.
 LABEL_KEYS = [
     "winner",
-    "winner_kills",
+    "team_b_kill_lead",
     "kill_handicap",
     "total_kills",
     "team_a_kills",
@@ -85,7 +91,7 @@ def _any_elder(obj: dict) -> bool:
     return _obj_kills(obj, "dragon") >= 5
 
 
-def extract_labels(match_details: dict) -> dict | None:
+def extract_labels(match_details: dict, timeline_labels: dict | None = None) -> dict | None:
     """
     Compute all 18 multi-output labels for a single match.
 
@@ -94,12 +100,19 @@ def extract_labels(match_details: dict) -> dict | None:
     match_details:
         Riot Match-V5 dict, either the top-level response (with ``info`` key)
         or the inner ``info`` dict.
+    timeline_labels:
+        Optional dict produced by :func:`extract_timeline_labels` containing
+        the 4 ``first_to_N_kills`` keys. When provided, the returned dict
+        also contains these keys; otherwise the result has only the original
+        18 :data:`LABEL_KEYS`.
 
     Returns
     -------
     dict | None
-        Flat dict keyed by :data:`LABEL_KEYS`, or ``None`` for malformed
-        matches (missing team, both teams marked win, both marked loss, etc.).
+        Flat dict keyed by :data:`LABEL_KEYS` (and optionally
+        :data:`TIMELINE_LABEL_KEYS` when ``timeline_labels`` is given),
+        or ``None`` for malformed matches (missing team, both teams marked
+        win, both marked loss, etc.).
     """
     if not isinstance(match_details, dict):
         return None
@@ -145,6 +158,8 @@ def extract_labels(match_details: dict) -> dict | None:
     obj_a = _safe_dict(team_a.get("objectives"))
     obj_b = _safe_dict(team_b.get("objectives"))
 
+    # (timeline_labels merged into the final result below)
+
     def first_team(key: str) -> int:
         """Return 0 if team A claimed it first, 1 for team B, 2 if neither."""
         if _obj_first(obj_a, key):
@@ -162,11 +177,11 @@ def extract_labels(match_details: dict) -> dict | None:
     a_inhibs = _obj_kills(obj_a, "inhibitor")
     b_inhibs = _obj_kills(obj_b, "inhibitor")
 
-    return {
+    result = {
         "winner": int(b_win),                            # 0 = team A win, 1 = team B win
-        # winner_kills: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
+        # team_b_kill_lead: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
         # Intentional: ties (~1-2% of matches) collapse to team-A side.
-        "winner_kills": int(b_kills > a_kills),          # 1 iff team B has more kills (ties -> 0)
+        "team_b_kill_lead": int(b_kills > a_kills),          # 1 iff team B has more kills (ties -> 0)
         "kill_handicap": a_kills - b_kills,              # signed int (team A perspective)
         "total_kills": total_kills,                      # int
         "team_a_kills": a_kills,                         # int
@@ -184,3 +199,89 @@ def extract_labels(match_details: dict) -> dict | None:
         "both_dragon": int(a_dragons >= 1 and b_dragons >= 1),
         "elder_dragon": int(_any_elder(obj_a) or _any_elder(obj_b)),
     }
+    if timeline_labels is not None:
+        # Merge timeline labels (first_to_N_kills) when available — opt-in
+        # so existing callers/tests keep getting exactly 18 keys.
+        result.update(timeline_labels)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Timeline-based labels (Sprint 4a)
+# ---------------------------------------------------------------------------
+
+# Kill thresholds for first-to-N-kills labels.
+TIMELINE_KILL_THRESHOLDS = (5, 10, 15, 20)
+TIMELINE_LABEL_KEYS = [f"first_to_{n}_kills" for n in TIMELINE_KILL_THRESHOLDS]
+
+# Combined ordered list of all 22 label keys (18 original + 4 timeline).
+# Used by the model (head construction / loss config) where all heads must
+# be enumerated. Timeline labels are OPTIONAL per row (defaulted to class 2
+# by the trainer when absent from a record's labels_json).
+ALL_LABEL_KEYS = LABEL_KEYS + TIMELINE_LABEL_KEYS
+
+
+def extract_timeline_labels(timeline_data: dict) -> dict | None:
+    """
+    Extract first-to-N-kills labels from a Riot Match-V5 timeline.
+
+    For N in (5, 10, 15, 20), returns:
+        0 if team 100 (blue) reaches N team-kills first,
+        1 if team 200 (red) reaches N first,
+        2 if neither team reaches N during the match.
+
+    Riot timelines have a `info.participants` list mapping participantId -> puuid,
+    plus `info.frames[].events[]` with `CHAMPION_KILL` events. We use the
+    convention: participantId 1-5 = team 100, 6-10 = team 200.
+
+    Returns None if the timeline is malformed.
+    """
+    try:
+        if not isinstance(timeline_data, dict):
+            return None
+        info = timeline_data.get("info", timeline_data)
+        if not isinstance(info, dict):
+            return None
+        frames = info.get("frames", [])
+        if not isinstance(frames, list) or not frames:
+            return None
+
+        team_a_kills = 0
+        team_b_kills = 0
+        result = {key: 2 for key in TIMELINE_LABEL_KEYS}  # default: neither team
+
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            events = frame.get("events", [])
+            if not isinstance(events, list):
+                continue
+            for ev in events:
+                if not isinstance(ev, dict):
+                    continue
+                if ev.get("type") != "CHAMPION_KILL":
+                    continue
+                killer_id = ev.get("killerId")
+                if killer_id is None:
+                    continue
+                # Convention: participantId 1-5 = team_a (100), 6-10 = team_b (200)
+                if 1 <= killer_id <= 5:
+                    team_a_kills += 1
+                    team_for_threshold = 0
+                    counter = team_a_kills
+                elif 6 <= killer_id <= 10:
+                    team_b_kills += 1
+                    team_for_threshold = 1
+                    counter = team_b_kills
+                else:
+                    continue  # executor / monster / unknown
+
+                # Check each threshold
+                for n in TIMELINE_KILL_THRESHOLDS:
+                    key = f"first_to_{n}_kills"
+                    if result[key] == 2 and counter >= n:
+                        result[key] = team_for_threshold
+
+        return result
+    except Exception:
+        return None

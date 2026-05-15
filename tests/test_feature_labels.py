@@ -80,7 +80,7 @@ def test_extract_labels_team_a_wins():
     assert len(labels) == len(LABEL_KEYS)
 
     assert labels["winner"] == 0
-    assert labels["winner_kills"] == 0  # A has more kills
+    assert labels["team_b_kill_lead"] == 0  # A has more kills
     assert labels["kill_handicap"] == 15
     assert labels["total_kills"] == 35
     assert labels["team_a_kills"] == 25
@@ -100,7 +100,7 @@ def test_extract_labels_team_a_wins():
 
 
 def test_extract_labels_team_b_wins():
-    """Team B wins — verify winner=1 and winner_kills mirrors kill totals."""
+    """Team B wins — verify winner=1 and team_b_kill_lead mirrors kill totals."""
     match = _make_match(
         team_a_win=False,
         team_b_win=True,
@@ -118,7 +118,7 @@ def test_extract_labels_team_b_wins():
     labels = extract_labels(match)
     assert labels is not None
     assert labels["winner"] == 1
-    assert labels["winner_kills"] == 1  # B has more kills
+    assert labels["team_b_kill_lead"] == 1  # B has more kills
     assert labels["kill_handicap"] == -15
     assert labels["total_kills"] == 25
     assert labels["team_a_kills"] == 5
@@ -275,12 +275,12 @@ def test_extract_labels_elder_dragon_proxy():
     assert labels_no_elder["elder_dragon"] == 0
 
 
-def test_extract_labels_winner_kills_tie_favors_team_a():
-    """Ties on total kills must collapse to winner_kills=0 (team-A side)."""
+def test_extract_labels_team_b_kill_lead_tie_favors_team_a():
+    """Ties on total kills must collapse to team_b_kill_lead=0 (team-A side)."""
     match = _make_match(team_a_kills=15, team_b_kills=15, team_a_win=True, team_b_win=False)
     labels = extract_labels(match)
     assert labels is not None
-    assert labels["winner_kills"] == 0
+    assert labels["team_b_kill_lead"] == 0
     assert labels["total_kills"] == 30
     assert labels["kill_handicap"] == 0
 
@@ -292,3 +292,94 @@ def test_extract_labels_label_keys_constant_matches():
     assert labels is not None
     assert set(labels.keys()) == set(LABEL_KEYS)
     assert len(LABEL_KEYS) == 18
+
+
+def test_extract_labels_coerces_non_int_kills():
+    """_safe_int handles None and string-number kills values."""
+    # _make_match takes team_a_kills/team_b_kills as ints, but we override below
+    match = _make_match(team_a_kills=0, team_b_kills=0)
+    # Override participant kills with non-int values
+    match["info"]["participants"][0]["kills"] = None
+    match["info"]["participants"][1]["kills"] = "7"
+    labels = extract_labels(match)
+    assert labels is not None
+    assert labels["team_a_kills"] == 0  # None -> 0
+    assert labels["team_b_kills"] == 7  # "7" -> 7
+
+
+def test_extract_timeline_labels_team_a_5_kills():
+    """Team A reaches 5 kills first."""
+    from feature_labels import extract_timeline_labels
+    # Build a timeline where killer participants 1-5 each get one kill in sequence
+    timeline = {
+        "info": {
+            "frames": [
+                {"events": [{"type": "CHAMPION_KILL", "killerId": i, "victimId": 6}] }
+                for i in range(1, 6)
+            ]
+        }
+    }
+    labels = extract_timeline_labels(timeline)
+    assert labels is not None
+    assert labels["first_to_5_kills"] == 0  # team A
+    assert labels["first_to_10_kills"] == 2  # neither
+    assert labels["first_to_15_kills"] == 2
+    assert labels["first_to_20_kills"] == 2
+
+
+def test_extract_timeline_labels_team_b_10_kills():
+    """Team B reaches 10 kills first."""
+    from feature_labels import extract_timeline_labels
+    # Team A: 9 kills. Team B: 10 kills. Team B should "win" first_to_10.
+    events = []
+    for i in range(1, 10):  # 9 team-A kills (killerId 1-9 cycling through 1-5)
+        events.append({"type": "CHAMPION_KILL", "killerId": ((i - 1) % 5) + 1, "victimId": 6})
+    for i in range(10):  # 10 team-B kills (killerId 6-10 cycling)
+        events.append({"type": "CHAMPION_KILL", "killerId": ((i) % 5) + 6, "victimId": 1})
+
+    timeline = {"info": {"frames": [{"events": events}]}}
+    labels = extract_timeline_labels(timeline)
+    assert labels is not None
+    assert labels["first_to_5_kills"] == 0  # team A (was reached after 5 of the 9 team-A kills)
+    assert labels["first_to_10_kills"] == 1  # team B
+    assert labels["first_to_15_kills"] == 2
+    assert labels["first_to_20_kills"] == 2
+
+
+def test_extract_timeline_labels_ignores_non_champion_kill():
+    """Events other than CHAMPION_KILL are ignored."""
+    from feature_labels import extract_timeline_labels
+    timeline = {
+        "info": {
+            "frames": [{
+                "events": [
+                    {"type": "BUILDING_KILL", "killerId": 1},
+                    {"type": "MONSTER_KILL", "killerId": 2},
+                    {"type": "WARD_PLACED", "killerId": 3},
+                ]
+            }]
+        }
+    }
+    labels = extract_timeline_labels(timeline)
+    assert labels is not None
+    # No CHAMPION_KILL events → no team reaches any threshold
+    assert labels == {
+        "first_to_5_kills": 2,
+        "first_to_10_kills": 2,
+        "first_to_15_kills": 2,
+        "first_to_20_kills": 2,
+    }
+
+
+def test_extract_timeline_labels_returns_none_on_malformed():
+    """Empty / non-dict / missing frames returns None."""
+    from feature_labels import extract_timeline_labels
+    assert extract_timeline_labels({}) is None
+    assert extract_timeline_labels({"info": {}}) is None
+    assert extract_timeline_labels({"info": {"frames": []}}) is None
+
+
+def test_timeline_label_keys_constant():
+    """TIMELINE_LABEL_KEYS contains exactly the 4 keys."""
+    from feature_labels import TIMELINE_LABEL_KEYS
+    assert TIMELINE_LABEL_KEYS == ["first_to_5_kills", "first_to_10_kills", "first_to_15_kills", "first_to_20_kills"]

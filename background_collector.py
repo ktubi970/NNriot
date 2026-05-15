@@ -1,12 +1,16 @@
+import logging
 import os
 import riot_api
 import database
 import time
 import json_utils
-from data_collector import resolve_region
+from data_collector import resolve_region, EXCLUDED_GAME_MODES
+from feature_labels import extract_labels
 
-# Limit in Bytes (50 GB)
-MAX_DB_SIZE = 50 * 1024 * 1024 * 1024
+logger = logging.getLogger(__name__)
+
+# Limit in Bytes — defaults to 50 GB, overridable via NNRIOT_MAX_DB_SIZE_GB.
+MAX_DB_SIZE = int(os.environ.get("NNRIOT_MAX_DB_SIZE_GB", "50")) * 1024 * 1024 * 1024
 
 
 def get_db_size():
@@ -99,6 +103,8 @@ def run_collector():
             for mid, details in details_map.items():
                 # Process participants for crawling
                 info = details.get("info", {})
+                if (info.get("gameMode") or "") in EXCLUDED_GAME_MODES:
+                    continue
                 participants = info.get("participants", [])
 
                 for p in participants:
@@ -128,10 +134,15 @@ def run_collector():
                         print(f"  Skipping match {mid}: no team marked as winner")
                         continue
 
+                    labels = extract_labels(details)
+                    if labels is None:
+                        # Match couldn't produce labels (Arena/Swarm/malformed) — skip
+                        continue
+
                     matches_batch.append((mid, details))
-                    training_records_batch.append((mid, matchup_feature, winner))
+                    training_records_batch.append((mid, matchup_feature, winner, labels))
                 except Exception as e:
-                    print(f"  Error processing features for {mid}: {e}")
+                    logger.error(f"  Error processing features for {mid}: {e}", exc_info=True)
 
             # Flush batches
             if matches_batch:
@@ -148,7 +159,7 @@ def run_collector():
             time.sleep(2)
 
         except Exception as e:
-            print(f"Error processing {name}: {e}")
+            logger.error(f"Error processing {name}: {e}", exc_info=True)
             time.sleep(10)
 
 

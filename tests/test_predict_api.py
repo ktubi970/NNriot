@@ -15,10 +15,11 @@ def client(monkeypatch):
     fake_trainer.predict.return_value = _fake_preds()
 
     # We can't easily prevent init_trainer from running at import; instead,
-    # import the module, then overwrite globals.
+    # import the module, then overwrite globals via monkeypatch so the
+    # assignments are undone after each test (clean teardown).
     import final_web_app
-    final_web_app.global_trainer = fake_trainer
-    final_web_app.tf_available = True
+    monkeypatch.setattr(final_web_app, "global_trainer", fake_trainer)
+    monkeypatch.setattr(final_web_app, "tf_available", True)
     final_web_app.app.config["TESTING"] = True
     return final_web_app.app.test_client()
 
@@ -27,7 +28,7 @@ def _fake_preds():
     """Synthetic Keras-dict output for a single match (batch size 1)."""
     return {
         "winner":           np.array([[0.40, 0.60]], dtype=np.float32),
-        "winner_kills":     np.array([[0.45, 0.55]], dtype=np.float32),
+        "team_b_kill_lead":     np.array([[0.45, 0.55]], dtype=np.float32),
         "first_blood":      np.array([[0.50, 0.45, 0.05]], dtype=np.float32),
         "first_baron":      np.array([[0.40, 0.45, 0.15]], dtype=np.float32),
         "first_inhibitor":  np.array([[0.42, 0.43, 0.15]], dtype=np.float32),
@@ -44,6 +45,11 @@ def _fake_preds():
         "total_barons":     np.array([[1.8]], dtype=np.float32),
         "total_dragons":    np.array([[3.6]], dtype=np.float32),
         "total_towers":     np.array([[14.2]], dtype=np.float32),
+        # Timeline kill-threshold heads (3-class softmax; class 2 = "neither")
+        "first_to_5_kills":  np.array([[0.30, 0.20, 0.50]], dtype=np.float32),
+        "first_to_10_kills": np.array([[0.25, 0.25, 0.50]], dtype=np.float32),
+        "first_to_15_kills": np.array([[0.10, 0.10, 0.80]], dtype=np.float32),
+        "first_to_20_kills": np.array([[0.05, 0.05, 0.90]], dtype=np.float32),
     }
 
 
@@ -71,13 +77,18 @@ def test_predict_returns_multi_output_shape(client):
     # New shape
     assert "winner" in data and "team_a" in data["winner"] and "team_b" in data["winner"]
     assert data["winner"]["predicted"] in ("A", "B")
-    assert "first" in data and set(data["first"].keys()) == {"blood", "baron", "inhibitor", "tower"}
+    assert "first" in data and set(data["first"].keys()) == {
+        "blood", "baron", "inhibitor", "tower",
+        "kills_5", "kills_10", "kills_15", "kills_20",
+    }
     assert "kills" in data and set(data["kills"].keys()) == {"total", "team_a", "team_b", "handicap", "odd_probability"}
     assert "totals" in data and set(data["totals"].keys()) == {"barons", "dragons", "towers"}
     assert "both_teams" in data and set(data["both_teams"].keys()) == {"baron", "inhibitor", "dragon"}
     assert "elder_dragon" in data
-    # Legacy shim
-    assert "predicted_outcome" in data and "win_probability" in data
+    # Legacy shim has been removed — these keys must NOT be present
+    assert "predicted_outcome" not in data
+    assert "win_probability" not in data
+    assert "lose_probability" not in data
 
 
 def test_predict_winner_predicted_field(client):
@@ -97,7 +108,9 @@ def test_predict_first_event_three_keys(client):
                        data=json.dumps(_sample_match_payload()),
                        content_type="application/json")
     data = resp.get_json()
-    for event in ("blood", "baron", "inhibitor", "tower"):
+    # 4 first-event keys + 4 timeline kill-threshold keys = 8 sub-keys total.
+    for event in ("blood", "baron", "inhibitor", "tower",
+                  "kills_5", "kills_10", "kills_15", "kills_20"):
         assert set(data["first"][event].keys()) == {"team_a", "team_b", "none"}
 
 
