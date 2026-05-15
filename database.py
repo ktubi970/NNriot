@@ -22,7 +22,7 @@ import functools
 DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 9
+SCHEMA_VERSION = 10
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -198,6 +198,14 @@ _MIGRATIONS = [
             "ALTER TABLE matches ADD COLUMN season_id INTEGER",
             "CREATE INDEX IF NOT EXISTS idx_matches_season_id ON matches(season_id)",
             "UPDATE schema_version SET version = 9",
+        ],
+    ),
+    # v9 -> v10 : add multi-output labels JSON to training_dataset
+    (
+        9,
+        [
+            "ALTER TABLE training_dataset ADD COLUMN labels_json TEXT",
+            "UPDATE schema_version SET version = 10",
         ],
     ),
 ]
@@ -388,13 +396,31 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
     logger.debug("Batch-saved %d matches and updated champions.", len(rows))
 
 
+def _compress_labels(labels: dict | None) -> str | None:
+    """Serialise+gzip+b64 encode a labels dict, or return None if labels is None."""
+    if labels is None:
+        return None
+    return base64.b64encode(
+        gzip.compress(json.dumps(labels).encode("utf-8"))
+    ).decode("ascii")
+
+
 def save_training_record(
     match_id: str,
     feature_json: dict,
     winner_label: int,
     db_path: str = DB_PATH,
+    labels: dict | None = None,
 ):
-    """Insert a training record (silently ignored if it already exists)."""
+    """
+    Insert a training record (silently ignored if it already exists).
+
+    Parameters
+    ----------
+    labels:
+        Optional dict of multi-output labels (see ``feature_labels.extract_labels``).
+        Stored gzipped+b64 in the ``labels_json`` column.  ``None`` stores SQL NULL.
+    """
     if not match_id:
         raise ValueError("match_id must not be empty.")
     if winner_label not in (0, 1):
@@ -402,17 +428,19 @@ def save_training_record(
     compressed_feature = base64.b64encode(
         gzip.compress(json.dumps(feature_json).encode("utf-8"))
     ).decode("ascii")
+    compressed_labels = _compress_labels(labels)
     with get_connection(db_path) as conn:
         conn.execute(
             """
             INSERT OR IGNORE INTO training_dataset
-                (match_id, feature_json, winner_label)
-            VALUES (?, ?, ?)
+                (match_id, feature_json, winner_label, labels_json)
+            VALUES (?, ?, ?, ?)
             """,
             (
                 match_id,
                 compressed_feature,
                 winner_label,
+                compressed_labels,
             ),
         )
     logger.debug("Saved training record for match %s.", match_id)
@@ -425,12 +453,24 @@ def save_training_records_batch(
     """
     Bulk-insert multiple training records in a single transaction.
 
-    Each element of *records* should be a
-    ``(match_id, feature_json_dict, winner_label)`` tuple.
+    Each element of *records* may be either:
+    - a 3-tuple ``(match_id, feature_json_dict, winner_label)`` -- labels_json NULL.
+    - a 4-tuple ``(match_id, feature_json_dict, winner_label, labels_dict)``
+      where ``labels_dict`` is the output of ``feature_labels.extract_labels``
+      (``None`` allowed).
     """
     rows = []
     for rec in records:
-        match_id, feature_json, winner_label = rec
+        if len(rec) == 4:
+            match_id, feature_json, winner_label, labels = rec
+        elif len(rec) == 3:
+            match_id, feature_json, winner_label = rec
+            labels = None
+        else:
+            logger.warning(
+                "Skipping malformed training record tuple of length %d.", len(rec)
+            )
+            continue
         if not match_id:
             logger.warning("Skipping training record with empty match_id.")
             continue
@@ -442,11 +482,13 @@ def save_training_records_batch(
         compressed_feature = base64.b64encode(
             gzip.compress(json.dumps(feature_json).encode("utf-8"))
         ).decode("ascii")
+        compressed_labels = _compress_labels(labels)
         rows.append(
             (
                 match_id,
                 compressed_feature,
                 winner_label,
+                compressed_labels,
             )
         )
 
@@ -457,8 +499,8 @@ def save_training_records_batch(
         conn.executemany(
             """
             INSERT OR IGNORE INTO training_dataset
-                (match_id, feature_json, winner_label)
-            VALUES (?, ?, ?)
+                (match_id, feature_json, winner_label, labels_json)
+            VALUES (?, ?, ?, ?)
             """,
             rows,
         )
