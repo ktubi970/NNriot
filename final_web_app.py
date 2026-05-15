@@ -144,6 +144,11 @@ def _format_multi_output_response(preds: dict) -> dict:
                 ("baron",     _three_class("first_baron")),
                 ("inhibitor", _three_class("first_inhibitor")),
                 ("tower",     _three_class("first_tower")),
+                # Timeline kills thresholds — additive keys, backward-compatible
+                ("kills_5",   _three_class("first_to_5_kills")),
+                ("kills_10",  _three_class("first_to_10_kills")),
+                ("kills_15",  _three_class("first_to_15_kills")),
+                ("kills_20",  _three_class("first_to_20_kills")),
             )
         },
         "totals": {

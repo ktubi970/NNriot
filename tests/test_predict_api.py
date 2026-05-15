@@ -45,6 +45,11 @@ def _fake_preds():
         "total_barons":     np.array([[1.8]], dtype=np.float32),
         "total_dragons":    np.array([[3.6]], dtype=np.float32),
         "total_towers":     np.array([[14.2]], dtype=np.float32),
+        # Timeline kill-threshold heads (3-class softmax; class 2 = "neither")
+        "first_to_5_kills":  np.array([[0.30, 0.20, 0.50]], dtype=np.float32),
+        "first_to_10_kills": np.array([[0.25, 0.25, 0.50]], dtype=np.float32),
+        "first_to_15_kills": np.array([[0.10, 0.10, 0.80]], dtype=np.float32),
+        "first_to_20_kills": np.array([[0.05, 0.05, 0.90]], dtype=np.float32),
     }
 
 
@@ -72,7 +77,10 @@ def test_predict_returns_multi_output_shape(client):
     # New shape
     assert "winner" in data and "team_a" in data["winner"] and "team_b" in data["winner"]
     assert data["winner"]["predicted"] in ("A", "B")
-    assert "first" in data and set(data["first"].keys()) == {"blood", "baron", "inhibitor", "tower"}
+    assert "first" in data and set(data["first"].keys()) == {
+        "blood", "baron", "inhibitor", "tower",
+        "kills_5", "kills_10", "kills_15", "kills_20",
+    }
     assert "kills" in data and set(data["kills"].keys()) == {"total", "team_a", "team_b", "handicap", "odd_probability"}
     assert "totals" in data and set(data["totals"].keys()) == {"barons", "dragons", "towers"}
     assert "both_teams" in data and set(data["both_teams"].keys()) == {"baron", "inhibitor", "dragon"}
@@ -98,7 +106,9 @@ def test_predict_first_event_three_keys(client):
                        data=json.dumps(_sample_match_payload()),
                        content_type="application/json")
     data = resp.get_json()
-    for event in ("blood", "baron", "inhibitor", "tower"):
+    # 4 first-event keys + 4 timeline kill-threshold keys = 8 sub-keys total.
+    for event in ("blood", "baron", "inhibitor", "tower",
+                  "kills_5", "kills_10", "kills_15", "kills_20"):
         assert set(data["first"][event].keys()) == {"team_a", "team_b", "none"}
 
 

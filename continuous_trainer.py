@@ -16,7 +16,7 @@ import time
 import logging
 import database
 import json_utils
-from feature_labels import LABEL_KEYS
+from feature_labels import LABEL_KEYS, ALL_LABEL_KEYS
 from generate_graph import build_multi_output_model
 
 # Configuration
@@ -77,10 +77,21 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
         targets[name] = arr
 
     # 3-class softmax heads: shape (n, 3), one-hot
+    # NOTE: timeline kill-threshold heads (first_to_N_kills) default to class 2
+    # ("neither team reached the threshold") when the key is missing from a
+    # record's labels_json. This makes timeline labels OPTIONAL — existing rows
+    # without timeline ingestion still train these heads (toward "neither").
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
         arr = np.zeros((n, 3), dtype=np.float32)
         for i, r in enumerate(records):
             val = int(r["labels_json"].get(name, 0))
+            arr[i, val] = 1.0
+        targets[name] = arr
+    for name in ("first_to_5_kills", "first_to_10_kills",
+                 "first_to_15_kills", "first_to_20_kills"):
+        arr = np.zeros((n, 3), dtype=np.float32)
+        for i, r in enumerate(records):
+            val = int(r["labels_json"].get(name, 2))  # default: "neither" class
             arr[i, val] = 1.0
         targets[name] = arr
 
@@ -183,6 +194,8 @@ class ContinuousTrainer:
         # Filter records with incomplete labels_json before building inputs/targets.
         # Must happen BEFORE x_data_sparse is built so that x.shape[0] matches
         # the length of each per-head target array produced by _build_targets.
+        # Filter uses LABEL_KEYS (18) — timeline keys (TIMELINE_LABEL_KEYS) are
+        # OPTIONAL and default to class 2 in _build_targets when absent.
         required_keys = set(LABEL_KEYS)
         incomplete_count = sum(
             1 for r in records if not required_keys.issubset(r["labels_json"].keys())
@@ -203,7 +216,9 @@ class ContinuousTrainer:
         json_features = [r["feature_json"] for r in records]
         x_data_sparse = json_utils.json_to_vector(json_features, dim=VECTOR_DIM)
 
-        # Build dict of {head_name: ndarray} targets for all 18 heads
+        # Build dict of {head_name: ndarray} targets for all 22 heads
+        # (18 LABEL_KEYS + 4 TIMELINE_LABEL_KEYS; the latter default to class 2
+        # when the row's labels_json is missing them).
         y_data = _build_targets(records)
 
         logger.info(
