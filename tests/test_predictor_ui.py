@@ -6,15 +6,17 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import pytest
 
+from app import app as flask_app
+from app import core as app_core
+
 
 @pytest.fixture
 def client(monkeypatch):
     from unittest.mock import MagicMock
-    import final_web_app
-    monkeypatch.setattr(final_web_app, "global_trainer", MagicMock())
-    monkeypatch.setattr(final_web_app, "tf_available", True)
-    final_web_app.app.config["TESTING"] = True
-    return final_web_app.app.test_client()
+    monkeypatch.setattr(app_core, "global_trainer", MagicMock())
+    monkeypatch.setattr(app_core, "tf_available", True)
+    flask_app.config["TESTING"] = True
+    return flask_app.test_client()
 
 
 def test_predictor_html_contains_markets_container(client):

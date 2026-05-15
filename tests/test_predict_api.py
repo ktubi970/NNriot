@@ -6,22 +6,23 @@ import numpy as np
 import pytest
 from unittest.mock import MagicMock, patch
 
+from app import app as flask_app
+from app import core as app_core
+
 
 @pytest.fixture
 def client(monkeypatch):
     """Build a Flask test client with a mocked global_trainer."""
-    # Mock the trainer BEFORE importing final_web_app (init_trainer runs at import time)
     fake_trainer = MagicMock()
     fake_trainer.predict.return_value = _fake_preds()
 
-    # We can't easily prevent init_trainer from running at import; instead,
-    # import the module, then overwrite globals via monkeypatch so the
-    # assignments are undone after each test (clean teardown).
-    import final_web_app
-    monkeypatch.setattr(final_web_app, "global_trainer", fake_trainer)
-    monkeypatch.setattr(final_web_app, "tf_available", True)
-    final_web_app.app.config["TESTING"] = True
-    return final_web_app.app.test_client()
+    # init_trainer runs at app package import time; overwrite the
+    # core-module globals via monkeypatch so the assignments are undone
+    # after each test (clean teardown).
+    monkeypatch.setattr(app_core, "global_trainer", fake_trainer)
+    monkeypatch.setattr(app_core, "tf_available", True)
+    flask_app.config["TESTING"] = True
+    return flask_app.test_client()
 
 
 def _fake_preds():
@@ -125,9 +126,8 @@ def test_predict_handles_missing_fields(client):
 
 def test_predict_handles_model_unavailable(client, monkeypatch):
     """When tf_available=False, /api/predict returns 500 with error."""
-    import final_web_app
-    monkeypatch.setattr(final_web_app, "tf_available", False)
-    monkeypatch.setattr(final_web_app, "global_trainer", None)
+    monkeypatch.setattr(app_core, "tf_available", False)
+    monkeypatch.setattr(app_core, "global_trainer", None)
     resp = client.post("/api/predict",
                        data=json.dumps(_sample_match_payload()),
                        content_type="application/json")

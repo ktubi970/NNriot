@@ -2,7 +2,7 @@
 
 Replaces the previous live-server tests at localhost:5000. Uses
 monkeypatched MagicMock trainer to avoid loading TF at test time
-(other than via the initial final_web_app import).
+(other than via the initial app package import).
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -12,6 +12,9 @@ from unittest.mock import MagicMock
 
 import numpy as np
 import pytest
+
+from app import app as flask_app
+from app import core as app_core
 
 
 def _fake_preds():
@@ -50,11 +53,10 @@ def client(monkeypatch):
     # JSON-serializable return for /api/train/manual.
     fake_trainer.run_training_step.return_value = 0
 
-    import final_web_app
-    monkeypatch.setattr(final_web_app, "global_trainer", fake_trainer)
-    monkeypatch.setattr(final_web_app, "tf_available", True)
-    final_web_app.app.config["TESTING"] = True
-    return final_web_app.app.test_client()
+    monkeypatch.setattr(app_core, "global_trainer", fake_trainer)
+    monkeypatch.setattr(app_core, "tf_available", True)
+    flask_app.config["TESTING"] = True
+    return flask_app.test_client()
 
 
 def _sample_match():

@@ -42,7 +42,7 @@ echo   NNriot Launcher
 echo ============================================================
 echo   Python: %PYTHON%
 echo.
-echo   [1] Web app       (final_web_app.py — http://localhost:5000)
+echo   [1] Web app       (run.py — http://localhost:5000)
 echo   [2] Trainer       (continuous_trainer.py — loops every 10 min)
 echo   [3] Backfill labels (backfill_labels.py — one-shot)
 echo   [Q] Quit
@@ -59,7 +59,7 @@ goto :menu
 :run_web
 echo.
 echo Starting Flask web app...
-"%PYTHON%" final_web_app.py
+"%PYTHON%" run.py
 goto :after
 
 :run_train

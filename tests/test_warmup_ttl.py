@@ -82,7 +82,8 @@ def test_get_stale_puuids_threshold_boundary(tmp_path):
 def test_warmup_status_endpoint(tmp_path, monkeypatch):
     """GET /api/warmup/status returns stale list."""
     from unittest.mock import MagicMock
-    import final_web_app
+    from app import app as flask_app
+    from app import core as app_core
 
     # Point the function defaults at a fresh, initialized tmp DB so the
     # endpoint doesn't hit the dev DB (which may not be migrated/initialized
@@ -95,10 +96,10 @@ def test_warmup_status_endpoint(tmp_path, monkeypatch):
     monkeypatch.setattr(database.get_stale_puuids, "__defaults__", (7, db))
 
     # Mock the trainer so the app can boot
-    monkeypatch.setattr(final_web_app, "global_trainer", MagicMock())
-    monkeypatch.setattr(final_web_app, "tf_available", True)
-    final_web_app.app.config["TESTING"] = True
-    client = final_web_app.app.test_client()
+    monkeypatch.setattr(app_core, "global_trainer", MagicMock())
+    monkeypatch.setattr(app_core, "tf_available", True)
+    flask_app.config["TESTING"] = True
+    client = flask_app.test_client()
 
     # No puuids → 400
     resp = client.get("/api/warmup/status")
@@ -116,8 +117,9 @@ def test_warmup_status_endpoint(tmp_path, monkeypatch):
     assert set(data["stale_puuids"]) == {"p1", "p2"}
 
 
-def test_final_web_app_calls_init_db_at_import():
-    """Importing final_web_app should ensure DB is initialized."""
+def test_app_package_calls_init_db_at_create():
+    """The app package's create_app() should ensure DB is initialized."""
     import inspect
-    src = inspect.getsource(__import__("final_web_app"))
+    import app as app_pkg
+    src = inspect.getsource(app_pkg)
     assert "database.init_db()" in src

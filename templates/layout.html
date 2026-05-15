@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NNriot{% endblock %}</title>
+  <meta name="description" content="NNriot — real-time League of Legends match outcome prediction powered by a trained neural network.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #070b12;
+      --surface:   #0f1620;
+      --surface2:  #141e2e;
+      --border:    rgba(255,255,255,0.07);
+      --accent:    #00ff88;
+      --accent2:   #00c8ff;
+      --blue:      #3d7eff;
+      --red:       #ff4d6d;
+      --gold:      #ffc93c;
+      --text:      #e8edf5;
+      --muted:     #6b7a96;
+      --glow:      rgba(0,255,136,0.18);
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
+
+    /* ── NAVBAR ── */
+    .navbar {
+      position: sticky; top: 0; z-index: 999;
+      background: rgba(7,11,18,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 72px;
+      display: flex; align-items: center; justify-content: space-between;
+      transition: background 0.3s, height 0.3s;
+    }
+    .navbar.scrolled {
+      height: 64px;
+      background: rgba(7,11,18,0.95);
+    }
+    .nav-logo {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.6rem; font-weight: 900;
+      color: #fff; text-decoration: none;
+      display: flex; align-items: center; gap: 4px;
+      position: relative;
+    }
+    .nav-logo em { 
+      color: var(--accent); font-style: normal; 
+      text-shadow: 0 0 15px var(--glow);
+    }
+    
+    .nav-links { display: flex; gap: 32px; align-items: center; }
+    .nav-link {
+      color: var(--muted); text-decoration: none;
+      font-size: 0.95rem; font-weight: 600;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative; padding: 4px 0;
+    }
+    .nav-link:hover { color: #fff; }
+    .nav-link::after {
+      content: ''; position: absolute; bottom: 0; left: 0; width: 0;
+      height: 2px; background: var(--accent); border-radius: 2px;
+      transition: width 0.3s;
+    }
+    .nav-link:hover::after { width: 100%; }
+    .nav-link.active { color: var(--accent); }
+    .nav-link.active::after { width: 100%; }
+
+    .nav-cta {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #070b12; font-family: 'Outfit', sans-serif;
+      font-weight: 800; font-size: 0.9rem;
+      padding: 10px 24px; border-radius: 10px;
+      text-decoration: none; letter-spacing: 0.5px;
+      transition: all 0.3s;
+      box-shadow: 0 4px 15px rgba(0,255,136,0.25);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .nav-cta:hover { 
+      transform: translateY(-2px); 
+      box-shadow: 0 8px 25px rgba(0,255,136,0.4);
+      filter: brightness(1.1);
+    }
+
+    /* ── MOBILE MENU ── */
+    .menu-toggle {
+      display: none;
+      flex-direction: column; gap: 6px;
+      cursor: pointer; padding: 4px; z-index: 1001;
+    }
+    .menu-toggle span {
+      display: block; width: 28px; height: 2px;
+      background: #fff; border-radius: 2px;
+      transition: all 0.3s;
+    }
+    .menu-toggle.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
+    .menu-toggle.open span:nth-child(2) { opacity: 0; }
+    .menu-toggle.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
+
+    @media (max-width: 1024px) {
+      .navbar { padding: 0 24px; }
+      .nav-links { 
+        position: fixed; top: 0; right: -100%; width: 300px; height: 100vh;
+        flex-direction: column; justify-content: center;
+        background: var(--surface2); border-left: 1px solid var(--border);
+        padding: 40px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        z-index: 1000; box-shadow: -10px 0 30px rgba(0,0,0,0.5);
+        gap: 40px;
+      }
+      .nav-links.open { right: 0; }
+      .menu-toggle { display: flex; }
+      .nav-link { font-size: 1.2rem; }
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 60px 24px 40px;
+      border-top: 1px solid var(--border);
+      color: var(--muted); font-size: 0.9rem; line-height: 1.8;
+      background: rgba(0,0,0,0.2);
+    }
+    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
+    footer a:hover { text-decoration: underline; }
+
+  </style>
+  {% block styles %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar" id="main-nav">
+  <a href="/" class="nav-logo">NN<em>RIOT</em></a>
+  <div class="menu-toggle" id="menu-toggle">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
+  <div class="nav-links" id="nav-links">
+    <a href="/" class="nav-link {% if active_page == 'index' %}active{% endif %}">Dashboard</a>
+    <a href="/explorer" class="nav-link {% if active_page == 'explorer' %}active{% endif %}">Explorer</a>
+    <a href="/predictor" class="nav-link {% if active_page == 'predictor' %}active{% endif %}">Predictor</a>
+    <a href="/live" class="nav-link {% if active_page == 'live' %}active{% endif %}">Live</a>
+    <a href="/smurfs" class="nav-link {% if active_page == 'smurfs' %}active{% endif %}">Smurfs</a>
+    <a href="/monitor" class="nav-link {% if active_page == 'monitor' %}active{% endif %}">Monitor</a>
+    <a href="/predictor" class="nav-cta">⚡ Quick Predict</a>
+  </div>
+</nav>
+
+{% block content %}{% endblock %}
+
+<footer>
+  <p>NNriot · Advanced LoL Match Analysis · Prediction Engine v2.4.0</p>
+  <p style="margin-top:8px">
+    <a href="/">Dashboard</a> · 
+    <a href="/explorer">Explorer</a> · 
+    <a href="/predictor">Predictor</a> · 
+    <a href="/live">Live</a> · 
+    <a href="/monitor">Monitor</a>
+  </p>
+  <p style="margin-top:12px; font-size: 0.75rem; opacity: 0.6;">
+    Powered by TensorFlow, Python & Riot API. Data updated in real-time.
+  </p>
+</footer>
+
+<script>
+  // Mobile Menu Toggle
+  const menuToggle = document.getElementById('menu-toggle');
+  const navLinks = document.getElementById('nav-links');
+  
+  menuToggle.addEventListener('click', () => {
+    menuToggle.classList.toggle('open');
+    navLinks.classList.toggle('open');
+  });
+
+  // Scroll effect
+  window.addEventListener('scroll', () => {
+    const nav = document.getElementById('main-nav');
+    if (window.scrollY > 50) {
+      nav.classList.add('scrolled');
+    } else {
+      nav.classList.remove('scrolled');
+    }
+  });
+
+  // Close menu on click outside
+  document.addEventListener('click', (e) => {
+    if (!navLinks.contains(e.target) && !menuToggle.contains(e.target) && navLinks.classList.contains('open')) {
+      menuToggle.classList.remove('open');
+      navLinks.classList.remove('open');
+    }
+  });
+
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>
