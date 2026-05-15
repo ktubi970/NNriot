@@ -216,6 +216,46 @@ class RiotAPI:
                     logger.error(f"      Error fetching match {mid}: {e}", exc_info=True)
         return results
 
+    def get_match_timeline(self, match_id):
+        """Match-V5: Get the full timeline (frames + events) for a match.
+
+        Endpoint: /lol/match/v5/matches/{match_id}/timeline
+        Returns the timeline dict or None on failure.
+
+        Rate limit: separate method-level bucket from get_match_details.
+        Doubles the API call cost when fetching new matches.
+        """
+        url = f"{self.regional_url}/lol/match/v5/matches/{match_id}/timeline"
+        response = self._make_request(url)
+        if response and response.status_code == 200:
+            return response.json()
+        return None
+
+    def get_match_timelines_batch(self, match_ids, max_workers=5, verbose=False):
+        """Fetch multiple timelines in parallel using a thread pool.
+
+        Same shape as get_match_details_batch.
+        """
+        results = {}
+        total = len(match_ids)
+        completed = 0
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_mid = {
+                executor.submit(self.get_match_timeline, mid): mid for mid in match_ids
+            }
+            for future in as_completed(future_to_mid):
+                mid = future_to_mid[future]
+                completed += 1
+                try:
+                    data = future.result()
+                    if data:
+                        results[mid] = data
+                        if verbose:
+                            print(f"      [{completed}/{total}] Timeline: {mid}")
+                except Exception as e:
+                    logger.error(f"Error fetching timeline for {mid}: {e}", exc_info=True)
+        return results
+
     def get_featured_games(self) -> list:
         """Spectator-V4: Retrieve the list of currently featured games.
         Returns a list of game dicts or an empty list on failure.
