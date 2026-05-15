@@ -46,6 +46,19 @@ def test_predictor_html_contains_all_market_sections(client):
         "market-both-inhibitor-bar",
         "market-both-dragon-bar",
         "market-elder-dragon-bar",
+        # Timeline first-to-N-kills cards (12 IDs: 4 thresholds x {a,b,n})
+        "market-first-kills_5-a-bar",
+        "market-first-kills_5-b-bar",
+        "market-first-kills_5-n-bar",
+        "market-first-kills_10-a-bar",
+        "market-first-kills_10-b-bar",
+        "market-first-kills_10-n-bar",
+        "market-first-kills_15-a-bar",
+        "market-first-kills_15-b-bar",
+        "market-first-kills_15-n-bar",
+        "market-first-kills_20-a-bar",
+        "market-first-kills_20-b-bar",
+        "market-first-kills_20-n-bar",
     ]
     for el_id in required_ids:
         assert f'id="{el_id}"' in body, f"required element id={el_id} not found"

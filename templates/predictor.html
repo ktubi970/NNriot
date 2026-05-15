@@ -919,6 +919,38 @@
                             <div class="market-first-bar"><span>None</span><div class="market-bar-wrap"><div id="market-first-tower-n-bar" class="market-bar market-bar-muted"></div></div><span id="market-first-tower-n-pct">—</span></div>
                         </div>
                     </div>
+                    <div class="market-first-card">
+                        <div class="market-first-title">First to 5 Kills</div>
+                        <div class="market-first-bars">
+                            <div class="market-first-bar"><span>Blue</span><div class="market-bar-wrap"><div id="market-first-kills_5-a-bar" class="market-bar market-bar-blue"></div></div><span id="market-first-kills_5-a-pct">—</span></div>
+                            <div class="market-first-bar"><span>Red</span><div class="market-bar-wrap"><div id="market-first-kills_5-b-bar" class="market-bar market-bar-red"></div></div><span id="market-first-kills_5-b-pct">—</span></div>
+                            <div class="market-first-bar"><span>None</span><div class="market-bar-wrap"><div id="market-first-kills_5-n-bar" class="market-bar market-bar-muted"></div></div><span id="market-first-kills_5-n-pct">—</span></div>
+                        </div>
+                    </div>
+                    <div class="market-first-card">
+                        <div class="market-first-title">First to 10 Kills</div>
+                        <div class="market-first-bars">
+                            <div class="market-first-bar"><span>Blue</span><div class="market-bar-wrap"><div id="market-first-kills_10-a-bar" class="market-bar market-bar-blue"></div></div><span id="market-first-kills_10-a-pct">—</span></div>
+                            <div class="market-first-bar"><span>Red</span><div class="market-bar-wrap"><div id="market-first-kills_10-b-bar" class="market-bar market-bar-red"></div></div><span id="market-first-kills_10-b-pct">—</span></div>
+                            <div class="market-first-bar"><span>None</span><div class="market-bar-wrap"><div id="market-first-kills_10-n-bar" class="market-bar market-bar-muted"></div></div><span id="market-first-kills_10-n-pct">—</span></div>
+                        </div>
+                    </div>
+                    <div class="market-first-card">
+                        <div class="market-first-title">First to 15 Kills</div>
+                        <div class="market-first-bars">
+                            <div class="market-first-bar"><span>Blue</span><div class="market-bar-wrap"><div id="market-first-kills_15-a-bar" class="market-bar market-bar-blue"></div></div><span id="market-first-kills_15-a-pct">—</span></div>
+                            <div class="market-first-bar"><span>Red</span><div class="market-bar-wrap"><div id="market-first-kills_15-b-bar" class="market-bar market-bar-red"></div></div><span id="market-first-kills_15-b-pct">—</span></div>
+                            <div class="market-first-bar"><span>None</span><div class="market-bar-wrap"><div id="market-first-kills_15-n-bar" class="market-bar market-bar-muted"></div></div><span id="market-first-kills_15-n-pct">—</span></div>
+                        </div>
+                    </div>
+                    <div class="market-first-card">
+                        <div class="market-first-title">First to 20 Kills</div>
+                        <div class="market-first-bars">
+                            <div class="market-first-bar"><span>Blue</span><div class="market-bar-wrap"><div id="market-first-kills_20-a-bar" class="market-bar market-bar-blue"></div></div><span id="market-first-kills_20-a-pct">—</span></div>
+                            <div class="market-first-bar"><span>Red</span><div class="market-bar-wrap"><div id="market-first-kills_20-b-bar" class="market-bar market-bar-red"></div></div><span id="market-first-kills_20-b-pct">—</span></div>
+                            <div class="market-first-bar"><span>None</span><div class="market-bar-wrap"><div id="market-first-kills_20-n-bar" class="market-bar market-bar-muted"></div></div><span id="market-first-kills_20-n-pct">—</span></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -1462,8 +1494,9 @@
                 const tbklYes = mo.team_b_kill_lead?.team_b ?? 0;
                 _setBar('market-team-b-kill-lead-bar', 'market-team-b-kill-lead-pct', tbklYes);
 
-                // Section: First events (4 cards, each 3 bars)
-                for (const event of ['blood', 'baron', 'inhibitor', 'tower']) {
+                // Section: First events (4 events + 4 timeline kill thresholds = 8 cards, each 3 bars)
+                for (const event of ['blood', 'baron', 'inhibitor', 'tower',
+                                     'kills_5', 'kills_10', 'kills_15', 'kills_20']) {
                     const data = mo.first?.[event] ?? {};
                     _setBar(`market-first-${event}-a-bar`, `market-first-${event}-a-pct`, data.team_a ?? 0);
                     _setBar(`market-first-${event}-b-bar`, `market-first-${event}-b-pct`, data.team_b ?? 0);
