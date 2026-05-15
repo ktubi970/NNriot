@@ -58,8 +58,8 @@ def fetch_active_game_by_summoner(name: str, tag: str) -> Optional[Dict]:
     Returns the full active-game payload or ``None`` if the summoner is not currently in a game.
     """
     # Resolve region from tag using the same mapping as data_collector
-    from data_collector import _resolve_region
-    region = _resolve_region(tag)
+    from data_collector import resolve_region
+    region = resolve_region(tag)
     api = riot_api.RiotAPI(region)
     puuid = api.get_puuid(name, tag)
     if not puuid:

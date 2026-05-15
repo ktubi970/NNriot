@@ -196,7 +196,7 @@ def main():
                     TRAINING_INTERVAL_SECONDS // 60,
                 )
         except Exception as e:
-            logger.error("Error in training batch: %s", e)
+            logger.error("Error in training batch: %s", e, exc_info=True)
 
         # Sleep before next cycle
         logger.info(

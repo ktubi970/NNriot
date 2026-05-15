@@ -3,7 +3,7 @@ import riot_api
 import database
 import time
 import json_utils
-from data_collector import _resolve_region
+from data_collector import resolve_region
 
 # Limit in Bytes (50 GB)
 MAX_DB_SIZE = 50 * 1024 * 1024 * 1024
@@ -64,7 +64,7 @@ def run_collector():
 
             # Resolve region from tag
             try:
-                region = _resolve_region(tag)
+                region = resolve_region(tag)
             except ValueError:
                 print(f"  Unsupported tag {tag}, skipping.")
                 database.mark_as_processed(name, tag)
