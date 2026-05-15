@@ -231,14 +231,14 @@ def test_extract_labels_elder_dragon_explicit():
 
 
 def test_extract_labels_elder_dragon_proxy():
-    """No elderDragon key, but dragon.kills >= 4 → elder_dragon = 1 via proxy."""
+    """No elderDragon key, but dragon.kills >= 5 → elder_dragon = 1 via proxy."""
     match = _make_match(
         objectives_a={
             "champion": {"first": True, "kills": 0},
             "baron": {"first": True, "kills": 1},
             "inhibitor": {"first": True, "kills": 1},
             "tower": {"first": True, "kills": 5},
-            "dragon": {"first": True, "kills": 4},  # proxy threshold
+            "dragon": {"first": True, "kills": 5},  # proxy threshold
         },
         objectives_b={
             "champion": {"first": False, "kills": 0},
@@ -252,14 +252,15 @@ def test_extract_labels_elder_dragon_proxy():
     assert labels is not None
     assert labels["elder_dragon"] == 1
 
-    # 3 dragons should NOT trigger the proxy.
+    # 4 dragons should NOT trigger the proxy (elder spawns after 4th drake but
+    # isn't necessarily taken until a team kills 5+).
     match_no_elder = _make_match(
         objectives_a={
             "champion": {"first": True, "kills": 0},
             "baron": {"first": True, "kills": 1},
             "inhibitor": {"first": True, "kills": 1},
             "tower": {"first": True, "kills": 5},
-            "dragon": {"first": True, "kills": 3},
+            "dragon": {"first": True, "kills": 4},
         },
         objectives_b={
             "champion": {"first": False, "kills": 0},
@@ -272,6 +273,16 @@ def test_extract_labels_elder_dragon_proxy():
     labels_no_elder = extract_labels(match_no_elder)
     assert labels_no_elder is not None
     assert labels_no_elder["elder_dragon"] == 0
+
+
+def test_extract_labels_winner_kills_tie_favors_team_a():
+    """Ties on total kills must collapse to winner_kills=0 (team-A side)."""
+    match = _make_match(team_a_kills=15, team_b_kills=15, team_a_win=True, team_b_win=False)
+    labels = extract_labels(match)
+    assert labels is not None
+    assert labels["winner_kills"] == 0
+    assert labels["total_kills"] == 30
+    assert labels["kill_handicap"] == 0
 
 
 def test_extract_labels_label_keys_constant_matches():

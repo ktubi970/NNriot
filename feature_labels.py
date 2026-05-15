@@ -64,18 +64,25 @@ def _obj_first(obj: dict, key: str) -> bool:
 
 def _any_elder(obj: dict) -> bool:
     """
-    Detect elder dragon presence for one team's objectives.
+    Return True if the team likely killed an Elder Dragon.
 
-    Prefers the newer Riot schema ``objectives.elderDragon.kills >= 1``;
-    falls back to the proxy ``objectives.dragon.kills >= 4`` (four elemental
-    drakes are required before the elder dragon spawns).
+    Checks ``objectives.elderDragon.kills >= 1`` when that field is present
+    (newer Riot Match-V5 schema). Falls back to a proxy:
+    ``objectives.dragon.kills >= 5`` — a team with 5+ elemental drakes
+    has almost certainly taken elder, since elder spawns after the 4th drake.
+
+    TODO(P5): verify against real Match-V5 samples during backfill —
+    Riot's exact schema for elderDragon may have changed across game versions,
+    and the >=5 proxy is still a known over-estimate (could fire when elder
+    spawned but wasn't taken).
     """
     elder = obj.get("elderDragon")
     if isinstance(elder, dict) and "kills" in elder:
         return _safe_int(elder.get("kills"), 0) >= 1
-    # Proxy: any team that has killed 4+ elemental dragons means elder spawned
-    # (and was almost certainly contested / taken at some point).
-    return _obj_kills(obj, "dragon") >= 4
+    # Proxy: 5+ elemental drakes implies elder spawned (after 4th drake) and
+    # was almost certainly taken on the next cycle. Known over-estimate;
+    # see TODO(P5) above.
+    return _obj_kills(obj, "dragon") >= 5
 
 
 def extract_labels(match_details: dict) -> dict | None:
@@ -157,6 +164,8 @@ def extract_labels(match_details: dict) -> dict | None:
 
     return {
         "winner": int(b_win),                            # 0 = team A win, 1 = team B win
+        # winner_kills: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
+        # Intentional: ties (~1-2% of matches) collapse to team-A side.
         "winner_kills": int(b_kills > a_kills),          # 1 iff team B has more kills (ties -> 0)
         "kill_handicap": a_kills - b_kills,              # signed int (team A perspective)
         "total_kills": total_kills,                      # int
