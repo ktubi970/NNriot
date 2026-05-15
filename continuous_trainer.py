@@ -144,17 +144,53 @@ class ContinuousTrainer:
         self._initialize_model()
 
     def _initialize_model(self):
-        """Initialize or restore the model."""
+        """Load model_v2.keras if compatible with current architecture, else rebuild.
+
+        ``tf.keras.models.load_model`` happily loads a legacy checkpoint with a
+        different input dimension or head set — the mismatch only surfaces later
+        at predict time as a confusing shape error. We validate the candidate
+        eagerly and rebuild from scratch on any mismatch.
+        """
         if os.path.exists(CHECKPOINT_PATH):
             try:
-                self.model = tf.keras.models.load_model(CHECKPOINT_PATH)
+                candidate = tf.keras.models.load_model(CHECKPOINT_PATH)
+                self._validate_checkpoint(candidate)
+                self.model = candidate
                 logger.info("Model restored from %s.", CHECKPOINT_PATH)
+                return
             except Exception as e:
-                logger.warning("Failed to restore checkpoint: %s. Re-initializing.", e)
-                self.model = build_multi_output_model(input_dim=VECTOR_DIM)
-        else:
-            self.model = build_multi_output_model(input_dim=VECTOR_DIM)
-            logger.info("No checkpoint found. Model initialized from scratch.")
+                logger.warning(
+                    "Checkpoint at %s incompatible (%s). Rebuilding from scratch.",
+                    CHECKPOINT_PATH, e,
+                )
+        self.model = build_multi_output_model(input_dim=VECTOR_DIM)
+        logger.info("Model initialized from scratch.")
+
+    def _validate_checkpoint(self, model):
+        """Raise if the candidate model's architecture doesn't match the expected one.
+
+        Checks two things:
+        - Input dimension equals :data:`VECTOR_DIM` (currently 20000).
+        - Output head names exactly match :data:`feature_labels.ALL_LABEL_KEYS`
+          (the 22 multi-output heads). A stale 18-head checkpoint or legacy
+          single-output model is rejected.
+        """
+        from feature_labels import ALL_LABEL_KEYS
+
+        actual_input_dim = model.input_shape[-1]
+        if actual_input_dim != VECTOR_DIM:
+            raise ValueError(
+                f"Checkpoint input dim {actual_input_dim} != expected {VECTOR_DIM}"
+            )
+
+        actual_heads = set(model.output_names)
+        expected_heads = set(ALL_LABEL_KEYS)
+        if actual_heads != expected_heads:
+            missing = expected_heads - actual_heads
+            extra = actual_heads - expected_heads
+            raise ValueError(
+                f"Checkpoint heads mismatch. Missing: {sorted(missing)}, Extra: {sorted(extra)}"
+            )
 
     def close(self):
         """No explicit session close needed in TF2."""

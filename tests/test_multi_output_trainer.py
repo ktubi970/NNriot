@@ -110,3 +110,26 @@ def test_sparse_microbatch_generator_with_dict_targets():
         assert set(y_batch.keys()) == {"winner", "total_kills"}
         assert y_batch["winner"].shape[0] == x_batch.shape[0]
         assert y_batch["total_kills"].shape[0] == x_batch.shape[0]
+
+
+def test_validate_checkpoint_input_dim_mismatch():
+    """_validate_checkpoint rejects a model with wrong input dim."""
+    from continuous_trainer import ContinuousTrainer
+    from generate_graph import build_multi_output_model
+
+    # Build a model with the WRONG dim (different from VECTOR_DIM)
+    wrong = build_multi_output_model(input_dim=999)
+    trainer = ContinuousTrainer.__new__(ContinuousTrainer)  # bypass __init__
+    with pytest.raises(ValueError, match="input dim"):
+        trainer._validate_checkpoint(wrong)
+
+
+def test_validate_checkpoint_correct_arch_passes():
+    """_validate_checkpoint accepts a model with matching input dim and heads."""
+    import continuous_trainer
+    from generate_graph import build_multi_output_model
+
+    correct = build_multi_output_model(input_dim=continuous_trainer.VECTOR_DIM)
+    trainer = continuous_trainer.ContinuousTrainer.__new__(continuous_trainer.ContinuousTrainer)
+    # Should not raise
+    trainer._validate_checkpoint(correct)
