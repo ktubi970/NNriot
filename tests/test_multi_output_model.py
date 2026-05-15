@@ -10,22 +10,29 @@ from generate_graph import (
     LOSS_WEIGHTS,
     METRICS_PER_HEAD,
 )
-from feature_labels import LABEL_KEYS
+from feature_labels import LABEL_KEYS, TIMELINE_LABEL_KEYS, ALL_LABEL_KEYS
 
 
 def test_constants_cover_label_keys():
-    """LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly LABEL_KEYS."""
-    assert set(LOSS_PER_HEAD) == set(LABEL_KEYS)
-    assert set(LOSS_WEIGHTS) == set(LABEL_KEYS)
-    assert set(METRICS_PER_HEAD) == set(LABEL_KEYS)
+    """LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly ALL_LABEL_KEYS."""
+    assert set(LOSS_PER_HEAD) == set(ALL_LABEL_KEYS)
+    assert set(LOSS_WEIGHTS) == set(ALL_LABEL_KEYS)
+    assert set(METRICS_PER_HEAD) == set(ALL_LABEL_KEYS)
+
+
+def test_label_keys_includes_timeline_keys():
+    """ALL_LABEL_KEYS = LABEL_KEYS (18) + TIMELINE_LABEL_KEYS (4) = 22."""
+    assert len(ALL_LABEL_KEYS) == 22
+    assert ALL_LABEL_KEYS[:18] == LABEL_KEYS
+    assert ALL_LABEL_KEYS[18:] == TIMELINE_LABEL_KEYS
 
 
 def test_model_builds_with_small_input_dim():
     """Build the model with a small input dim to make the test fast and assert structure."""
     model = build_multi_output_model(input_dim=100)
-    # 18 named outputs
-    assert len(model.output_names) == 18
-    assert set(model.output_names) == set(LABEL_KEYS)
+    # 22 named outputs (18 original + 4 timeline)
+    assert len(model.output_names) == 22
+    assert set(model.output_names) == set(ALL_LABEL_KEYS)
 
 
 def test_model_output_shapes():
@@ -38,8 +45,10 @@ def test_model_output_shapes():
     # 2-class heads
     assert preds["winner"].shape == (1, 2)
     assert preds["team_b_kill_lead"].shape == (1, 2)
-    # 3-class heads
-    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
+    # 3-class heads (first events + timeline kill thresholds)
+    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower",
+                 "first_to_5_kills", "first_to_10_kills",
+                 "first_to_15_kills", "first_to_20_kills"):
         assert preds[name].shape == (1, 3), f"{name} shape mismatch"
     # Binary heads (Dense 1, sigmoid)
     for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
@@ -54,6 +63,8 @@ def test_model_trains_one_step():
     """A single train_on_batch call works end-to-end with dict targets."""
     model = build_multi_output_model(input_dim=50)
     x = np.random.rand(4, 50).astype(np.float32)
+    # Class-2 one-hot for the 4 timeline heads (default "neither team reached threshold")
+    _none = np.array([[0, 0, 1]] * 4, dtype=np.float32)
     targets = {
         "winner":          np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=np.float32),
         "team_b_kill_lead":    np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=np.float32),
@@ -73,10 +84,15 @@ def test_model_trains_one_step():
         "total_barons":    np.array([[2.0], [1.0], [3.0], [1.0]], dtype=np.float32),
         "total_dragons":   np.array([[4.0], [2.0], [5.0], [3.0]], dtype=np.float32),
         "total_towers":    np.array([[12.0], [8.0], [15.0], [10.0]], dtype=np.float32),
+        # Timeline kill-threshold heads (default class 2 in absence of timeline data)
+        "first_to_5_kills":  _none,
+        "first_to_10_kills": _none,
+        "first_to_15_kills": _none,
+        "first_to_20_kills": _none,
     }
     result = model.train_on_batch(x, targets)
     # train_on_batch returns a list with overall loss + per-head losses + per-head metrics
-    # For multi-output models with 18 heads + total + metrics, expect a non-empty result
+    # For multi-output models with 22 heads + total + metrics, expect a non-empty result
     assert result is not None
 
 
@@ -88,10 +104,10 @@ def test_dropout_layers_present():
 
 
 def test_per_head_hidden_layers_present():
-    """Each of the 18 heads has a *_hidden Dense(64) layer before the output."""
+    """Each of the 22 heads has a *_hidden Dense(64) layer before the output."""
     model = build_multi_output_model(input_dim=100)
     hidden_layers = [layer for layer in model.layers if layer.name.endswith("_hidden")]
-    assert len(hidden_layers) == 18, f"Expected 18 *_hidden layers, got {len(hidden_layers)}"
+    assert len(hidden_layers) == 22, f"Expected 22 *_hidden layers, got {len(hidden_layers)}"
     for layer in hidden_layers:
         assert isinstance(layer, tf.keras.layers.Dense)
         assert layer.units == 64

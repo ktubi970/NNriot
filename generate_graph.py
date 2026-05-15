@@ -14,7 +14,8 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
 # Output head name -> loss function (Keras strings).
-# Keys must match feature_labels.LABEL_KEYS exactly.
+# Keys must match feature_labels.ALL_LABEL_KEYS exactly (22 heads = 18 original
+# + 4 timeline first_to_N_kills).
 LOSS_PER_HEAD: dict[str, str] = {
     "winner":               "categorical_crossentropy",
     "team_b_kill_lead":         "categorical_crossentropy",
@@ -34,6 +35,11 @@ LOSS_PER_HEAD: dict[str, str] = {
     "total_barons":         "mse",
     "total_dragons":        "mse",
     "total_towers":         "mse",
+    # Timeline-derived 3-class softmax heads (0=blue first, 1=red first, 2=neither)
+    "first_to_5_kills":     "categorical_crossentropy",
+    "first_to_10_kills":    "categorical_crossentropy",
+    "first_to_15_kills":    "categorical_crossentropy",
+    "first_to_20_kills":    "categorical_crossentropy",
 }
 
 # Output head name -> loss weight (starting point per MULTI_OUTPUT_MODEL_PLAN.md §5).
@@ -58,6 +64,12 @@ LOSS_WEIGHTS: dict[str, float] = {
     "team_a_kills":      1.0,
     "team_b_kills":      1.0,
     "kill_handicap":     1.0,
+    # Timeline kill thresholds — weights decay with rarity (most matches
+    # never hit 15 or 20 team kills, so those targets are heavily class-2).
+    "first_to_5_kills":  0.7,
+    "first_to_10_kills": 0.7,
+    "first_to_15_kills": 0.5,
+    "first_to_20_kills": 0.3,
 }
 
 # Output head name -> list of Keras metric strings (for logging during training).
@@ -80,6 +92,10 @@ METRICS_PER_HEAD: dict[str, list[str]] = {
     "total_barons":         ["mae"],
     "total_dragons":        ["mae"],
     "total_towers":         ["mae"],
+    "first_to_5_kills":     ["accuracy"],
+    "first_to_10_kills":    ["accuracy"],
+    "first_to_15_kills":    ["accuracy"],
+    "first_to_20_kills":    ["accuracy"],
 }
 
 
@@ -127,14 +143,15 @@ def _head(name: str, units: int, activation: str | None, source, hidden_size: in
 
 def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3) -> tf.keras.Model:
     """
-    Build the 18-output multi-task model.
+    Build the 22-output multi-task model.
 
     Shared trunk (identical to build_keras_model):
       Input -> Dense 1024 -> ResBlock x 2 -> Dense 512 -> Dense 128 (embedding)
 
-    Per-task heads off the 128-dim embedding (18 named outputs). Each head
-    has a Dense(64, relu) "*_hidden" layer before its final output Dense,
-    giving each head a bit of per-task capacity.
+    Per-task heads off the 128-dim embedding (22 named outputs = 18 original
+    + 4 timeline first_to_N_kills). Each head has a Dense(64, relu)
+    "*_hidden" layer before its final output Dense, giving each head a bit
+    of per-task capacity.
 
     Dropout (default 0.3) is applied after each trunk dense layer
     (Projection, ResBlock1_relu, ResBlock2_relu, Dense512) — 4 Dropout
@@ -142,9 +159,9 @@ def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3)
 
     See MULTI_OUTPUT_MODEL_PLAN.md section 4 for the head spec.
     """
-    import feature_labels
-    assert set(LOSS_PER_HEAD) == set(LOSS_WEIGHTS) == set(METRICS_PER_HEAD) == set(feature_labels.LABEL_KEYS), \
-        "LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly LABEL_KEYS"
+    from feature_labels import ALL_LABEL_KEYS
+    assert set(LOSS_PER_HEAD) == set(LOSS_WEIGHTS) == set(METRICS_PER_HEAD) == set(ALL_LABEL_KEYS), \
+        "LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly ALL_LABEL_KEYS"
 
     inputs = tf.keras.Input(shape=(input_dim,), name="Input")
 
@@ -176,8 +193,10 @@ def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3)
     # 2-class softmax heads
     for name in ("winner", "team_b_kill_lead"):
         outputs[name] = _head(name=name, units=2, activation="softmax", source=embedding)
-    # 3-class softmax heads
-    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
+    # 3-class softmax heads (first_* event ownership + first-to-N kill thresholds)
+    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower",
+                 "first_to_5_kills", "first_to_10_kills",
+                 "first_to_15_kills", "first_to_20_kills"):
         outputs[name] = _head(name=name, units=3, activation="softmax", source=embedding)
     # Binary sigmoid heads
     for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):

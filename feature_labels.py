@@ -85,7 +85,7 @@ def _any_elder(obj: dict) -> bool:
     return _obj_kills(obj, "dragon") >= 5
 
 
-def extract_labels(match_details: dict) -> dict | None:
+def extract_labels(match_details: dict, timeline_labels: dict | None = None) -> dict | None:
     """
     Compute all 18 multi-output labels for a single match.
 
@@ -94,12 +94,19 @@ def extract_labels(match_details: dict) -> dict | None:
     match_details:
         Riot Match-V5 dict, either the top-level response (with ``info`` key)
         or the inner ``info`` dict.
+    timeline_labels:
+        Optional dict produced by :func:`extract_timeline_labels` containing
+        the 4 ``first_to_N_kills`` keys. When provided, the returned dict
+        also contains these keys; otherwise the result has only the original
+        18 :data:`LABEL_KEYS`.
 
     Returns
     -------
     dict | None
-        Flat dict keyed by :data:`LABEL_KEYS`, or ``None`` for malformed
-        matches (missing team, both teams marked win, both marked loss, etc.).
+        Flat dict keyed by :data:`LABEL_KEYS` (and optionally
+        :data:`TIMELINE_LABEL_KEYS` when ``timeline_labels`` is given),
+        or ``None`` for malformed matches (missing team, both teams marked
+        win, both marked loss, etc.).
     """
     if not isinstance(match_details, dict):
         return None
@@ -145,6 +152,8 @@ def extract_labels(match_details: dict) -> dict | None:
     obj_a = _safe_dict(team_a.get("objectives"))
     obj_b = _safe_dict(team_b.get("objectives"))
 
+    # (timeline_labels merged into the final result below)
+
     def first_team(key: str) -> int:
         """Return 0 if team A claimed it first, 1 for team B, 2 if neither."""
         if _obj_first(obj_a, key):
@@ -162,7 +171,7 @@ def extract_labels(match_details: dict) -> dict | None:
     a_inhibs = _obj_kills(obj_a, "inhibitor")
     b_inhibs = _obj_kills(obj_b, "inhibitor")
 
-    return {
+    result = {
         "winner": int(b_win),                            # 0 = team A win, 1 = team B win
         # team_b_kill_lead: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
         # Intentional: ties (~1-2% of matches) collapse to team-A side.
@@ -184,6 +193,11 @@ def extract_labels(match_details: dict) -> dict | None:
         "both_dragon": int(a_dragons >= 1 and b_dragons >= 1),
         "elder_dragon": int(_any_elder(obj_a) or _any_elder(obj_b)),
     }
+    if timeline_labels is not None:
+        # Merge timeline labels (first_to_N_kills) when available — opt-in
+        # so existing callers/tests keep getting exactly 18 keys.
+        result.update(timeline_labels)
+    return result
 
 
 # ---------------------------------------------------------------------------
@@ -193,6 +207,12 @@ def extract_labels(match_details: dict) -> dict | None:
 # Kill thresholds for first-to-N-kills labels.
 TIMELINE_KILL_THRESHOLDS = (5, 10, 15, 20)
 TIMELINE_LABEL_KEYS = [f"first_to_{n}_kills" for n in TIMELINE_KILL_THRESHOLDS]
+
+# Combined ordered list of all 22 label keys (18 original + 4 timeline).
+# Used by the model (head construction / loss config) where all heads must
+# be enumerated. Timeline labels are OPTIONAL per row (defaulted to class 2
+# by the trainer when absent from a record's labels_json).
+ALL_LABEL_KEYS = LABEL_KEYS + TIMELINE_LABEL_KEYS
 
 
 def extract_timeline_labels(timeline_data: dict) -> dict | None:
