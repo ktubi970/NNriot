@@ -1,7 +1,16 @@
+import os
 import re
 import sys
 import io
+import time
+
+import requests
 from bs4 import BeautifulSoup
+from dotenv import load_dotenv
+
+import database
+import riot_api
+import data_collector
 
 # Ensure stdout handles unicode characters (e.g. for Shōnen)
 if hasattr(sys.stdout, 'buffer'):
@@ -97,14 +106,6 @@ def get_player_links(html):
                     if full_url not in links:
                         links.append(full_url)
     return links
-
-import time
-import requests
-import database
-import riot_api
-import data_collector
-import os
-from dotenv import load_dotenv
 
 # Load for standalone use
 load_dotenv()

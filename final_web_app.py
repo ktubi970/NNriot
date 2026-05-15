@@ -74,7 +74,7 @@ def init_trainer():
 
 
 global_trainer, tf_available = init_trainer()
-VECTOR_DIM = 50000
+VECTOR_DIM = 100000
 
 
 def final_predict_match_outcome(match_data):
@@ -128,12 +128,6 @@ def explorer():
 def predictor():
     """Serve the Custom Match Predictor interface."""
     return render_template("predictor.html", active_page="predictor")
-
-
-@app.route("/history")
-def history():
-    """Serve the Player History collection interface."""
-    return render_template("history.html", active_page="history")
 
 
 @app.route("/smurfs")
@@ -380,54 +374,6 @@ def api_link_players():
         return jsonify({"success": True, "message": "Accounts completely linked."})
     except Exception as e:
         logger.error(f"Link accounts error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/auto_link", methods=["POST"])
-def api_auto_link_players():
-    """Automatically find and link smurfs with similar game names."""
-    try:
-        data = request.get_json() or {}
-        min_matches = data.get("min_matches_threshold", 5)
-        fuzzy = data.get("fuzzy", True)
-        
-        linked_count = database.auto_link_smurfs(
-            min_matches_threshold=min_matches, 
-            fuzzy=fuzzy
-        )
-        return jsonify({
-            "success": True, 
-            "linked_count": linked_count, 
-            "message": f"Successfully auto-linked {linked_count} aliases (mode: {'fuzzy' if fuzzy else 'exact'})."
-        })
-    except Exception as e:
-        logger.error(f"Auto-link accounts error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/aliases", methods=["GET"])
-def api_get_aliases():
-    """API endpoint to get all linked player aliases."""
-    try:
-        aliases = database.get_all_aliases()
-        return jsonify(aliases)
-    except Exception as e:
-        logger.error(f"Get aliases error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/unlink", methods=["DELETE"])
-def api_unlink_players():
-    """Unlink a smurf account from its canonical main account."""
-    try:
-        alias_puuid = request.args.get("alias_puuid")
-        if not alias_puuid:
-            return jsonify({"error": "alias_puuid is required"}), 400
-
-        database.unlink_accounts(alias_puuid)
-        return jsonify({"success": True, "message": "Accounts unlinked."})
-    except Exception as e:
-        logger.error(f"Unlink accounts error: {e}")
         return jsonify({"error": str(e)}), 500
 
 
@@ -759,7 +705,7 @@ def api_spectator_active():
 
         # Enhance participants with local database info (puuid and stats)
         # We need to resolve each participant
-        from riot_api import resolve_region as _resolve_region
+        from data_collector import _resolve_region
 
         region = _resolve_region(tag)
         participants = game_data.get("participants", [])
