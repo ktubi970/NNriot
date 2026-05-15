@@ -768,16 +768,28 @@ def get_unique_champions(db_path: str = DB_PATH) -> list[str]:
     return [r["name"] for r in rows]
 
 
+def _decode_compressed_json(blob: str | None):
+    """Decode a possibly-gzip+b64 JSON blob; pass through plain JSON / None."""
+    if blob is None:
+        return None
+    if blob.startswith("{") or blob.startswith("["):
+        return json.loads(blob)
+    return json.loads(gzip.decompress(base64.b64decode(blob)).decode("utf-8"))
+
+
 def get_untrained_records(limit: int = 500, db_path: str = DB_PATH) -> list[dict]:
     """
     Retrieve training records that have not yet been used for model training.
+
+    Returns dicts with keys: ``id``, ``match_id``, ``feature_json`` (parsed),
+    ``winner_label``, ``labels_json`` (parsed dict or None).
     """
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, match_id, feature_json, winner_label 
-            FROM training_dataset 
-            WHERE is_trained = 0 
+            SELECT id, match_id, feature_json, winner_label, labels_json
+            FROM training_dataset
+            WHERE is_trained = 0
             LIMIT ?
             """,
             (limit,),
@@ -786,13 +798,8 @@ def get_untrained_records(limit: int = 500, db_path: str = DB_PATH) -> list[dict
     res = []
     for r in rows:
         d = dict(r)
-        fj = d["feature_json"]
-        if fj is None:
-            d["feature_json"] = None
-        elif fj.startswith("{") or fj.startswith("["):
-            d["feature_json"] = json.loads(fj)
-        else:
-            d["feature_json"] = json.loads(gzip.decompress(base64.b64decode(fj)).decode("utf-8"))
+        d["feature_json"] = _decode_compressed_json(d["feature_json"])
+        d["labels_json"] = _decode_compressed_json(d["labels_json"])
         res.append(d)
     return res
 
@@ -801,13 +808,16 @@ def get_random_trained_records(limit: int = 500, db_path: str = DB_PATH) -> list
     """
     Retrieve a random sample of training records that HAVE been trained on.
     Used for experience replay to prevent catastrophic forgetting.
+
+    Returns dicts with keys: ``id``, ``match_id``, ``feature_json`` (parsed),
+    ``winner_label``, ``labels_json`` (parsed dict or None).
     """
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, match_id, feature_json, winner_label 
-            FROM training_dataset 
-            WHERE is_trained = 1 
+            SELECT id, match_id, feature_json, winner_label, labels_json
+            FROM training_dataset
+            WHERE is_trained = 1
             ORDER BY RANDOM()
             LIMIT ?
             """,
@@ -817,13 +827,8 @@ def get_random_trained_records(limit: int = 500, db_path: str = DB_PATH) -> list
     res = []
     for r in rows:
         d = dict(r)
-        fj = d["feature_json"]
-        if fj is None:
-            d["feature_json"] = None
-        elif fj.startswith("{") or fj.startswith("["):
-            d["feature_json"] = json.loads(fj)
-        else:
-            d["feature_json"] = json.loads(gzip.decompress(base64.b64decode(fj)).decode("utf-8"))
+        d["feature_json"] = _decode_compressed_json(d["feature_json"])
+        d["labels_json"] = _decode_compressed_json(d["labels_json"])
         res.append(d)
     return res
 

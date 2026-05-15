@@ -21,8 +21,11 @@ from generate_graph import build_multi_output_model
 # Configuration
 VECTOR_DIM = 100000
 TRAINING_INTERVAL_SECONDS = 10 * 60  # 10 minutes
-BATCH_SIZE = 500
-EPOCHS_PER_BATCH = 2  # Reduced to avoid overfitting
+# BATCH_SIZE / EPOCHS_PER_BATCH can be overridden via env vars so users can
+# do a small smoke run before kicking off a full training cycle:
+#   NNRIOT_BATCH_SIZE=100 NNRIOT_EPOCHS=1 python continuous_trainer.py
+BATCH_SIZE = int(os.environ.get("NNRIOT_BATCH_SIZE", "500"))
+EPOCHS_PER_BATCH = int(os.environ.get("NNRIOT_EPOCHS", "2"))  # Reduced to avoid overfitting
 
 # Use script-relative paths so the trainer works regardless of CWD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
