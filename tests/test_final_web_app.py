@@ -1,127 +1,226 @@
-import pytest
-import requests
+"""Flask test client tests for the main API surface.
+
+Replaces the previous live-server tests at localhost:5000. Uses
+monkeypatched MagicMock trainer to avoid loading TF at test time
+(other than via the initial final_web_app import).
+"""
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 import json
-import time
+from unittest.mock import MagicMock
 
-BASE_URL = "http://localhost:5000"
-
-
-def test_index_page():
-    """Verify the main landing page loads."""
-    response = requests.get(f"{BASE_URL}/")
-    assert response.status_code == 200
-    assert "NNriot" in response.text
+import numpy as np
+import pytest
 
 
-def test_api_status():
-    """Check if the TF model is loaded and dimension is correct."""
-    response = requests.get(f"{BASE_URL}/api/status")
-    assert response.status_code == 200
-    data = response.json()
+def _fake_preds():
+    """Synthetic Keras dict output for the 22-head multi-output model."""
+    return {
+        "winner":            np.array([[0.40, 0.60]], dtype=np.float32),
+        "team_b_kill_lead":  np.array([[0.45, 0.55]], dtype=np.float32),
+        "first_blood":       np.array([[0.50, 0.45, 0.05]], dtype=np.float32),
+        "first_baron":       np.array([[0.40, 0.45, 0.15]], dtype=np.float32),
+        "first_inhibitor":   np.array([[0.42, 0.43, 0.15]], dtype=np.float32),
+        "first_tower":       np.array([[0.50, 0.48, 0.02]], dtype=np.float32),
+        "kills_odd":         np.array([[0.51]], dtype=np.float32),
+        "both_baron":        np.array([[0.22]], dtype=np.float32),
+        "both_inhibitor":    np.array([[0.41]], dtype=np.float32),
+        "both_dragon":       np.array([[0.93]], dtype=np.float32),
+        "elder_dragon":      np.array([[0.18]], dtype=np.float32),
+        "kill_handicap":     np.array([[0.0]], dtype=np.float32),  # normalized scale
+        "total_kills":       np.array([[0.3]], dtype=np.float32),
+        "team_a_kills":      np.array([[0.1]], dtype=np.float32),
+        "team_b_kills":      np.array([[0.5]], dtype=np.float32),
+        "total_barons":      np.array([[0.2]], dtype=np.float32),
+        "total_dragons":     np.array([[0.4]], dtype=np.float32),
+        "total_towers":      np.array([[0.3]], dtype=np.float32),
+        "first_to_5_kills":  np.array([[0.45, 0.40, 0.15]], dtype=np.float32),
+        "first_to_10_kills": np.array([[0.40, 0.40, 0.20]], dtype=np.float32),
+        "first_to_15_kills": np.array([[0.20, 0.20, 0.60]], dtype=np.float32),
+        "first_to_20_kills": np.array([[0.10, 0.10, 0.80]], dtype=np.float32),
+    }
+
+
+@pytest.fixture
+def client(monkeypatch):
+    """Flask test client with the trainer mocked out (no TF predict cost)."""
+    fake_trainer = MagicMock()
+    fake_trainer.predict.return_value = _fake_preds()
+    # JSON-serializable return for /api/train/manual.
+    fake_trainer.run_training_step.return_value = 0
+
+    import final_web_app
+    monkeypatch.setattr(final_web_app, "global_trainer", fake_trainer)
+    monkeypatch.setattr(final_web_app, "tf_available", True)
+    final_web_app.app.config["TESTING"] = True
+    return final_web_app.app.test_client()
+
+
+def _sample_match():
+    """Minimal /api/predict payload."""
+    return {
+        "participants": [
+            {"teamId": 100, "championName": "Aatrox", "kills": 10, "deaths": 5,
+             "assists": 7, "goldEarned": 14000, "teamPosition": "TOP"},
+            {"teamId": 200, "championName": "Lux", "kills": 8, "deaths": 7,
+             "assists": 4, "goldEarned": 12000, "teamPosition": "MID"},
+        ],
+        "teams": [
+            {"teamId": 100, "win": True},
+            {"teamId": 200, "win": False},
+        ],
+    }
+
+
+# ============================================================================
+# Static pages — confirm they render
+# ============================================================================
+
+def test_index_page(client):
+    resp = client.get("/")
+    assert resp.status_code == 200
+    assert b"NNriot" in resp.data
+
+
+def test_explorer_page(client):
+    assert client.get("/explorer").status_code == 200
+
+
+def test_predictor_page(client):
+    assert client.get("/predictor").status_code == 200
+
+
+def test_monitor_page(client):
+    assert client.get("/monitor").status_code == 200
+
+
+# ============================================================================
+# Health / status — current shape (NO legacy fields)
+# ============================================================================
+
+def test_api_status(client):
+    resp = client.get("/api/status")
+    assert resp.status_code == 200
+    data = resp.get_json()
     assert data["model_loaded"] is True
-    assert data["tensorflow_version"] != "N/A"
-    assert data["input_dimension"] == 100000
+    assert "tensorflow_version" in data
+    # New VECTOR_DIM (was 100000 before Sprint 2)
+    assert data["input_dimension"] == 20000
 
 
-def test_db_health():
-    """Check database health metrics."""
-    response = requests.get(f"{BASE_URL}/api/db-health")
-    assert response.status_code == 200
-    data = response.json()
+def test_db_health(client):
+    resp = client.get("/api/db-health")
+    assert resp.status_code == 200
+    data = resp.get_json()
     assert data["ok"] is True
     assert "matches" in data
     assert "training_records" in data
-    assert "trained_records" in data
-    assert "untrained_records" in data
-    assert "trained_ratio" in data
 
 
-def test_player_search():
-    """Test searching for players (even if data is sparse)."""
-    # Search for a common name fragment or just something that won't 500
-    response = requests.get(f"{BASE_URL}/api/players/search?q=test")
-    assert response.status_code == 200
-    assert isinstance(response.json(), list)
+def test_monitor_metrics(client):
+    resp = client.get("/api/monitor/metrics")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert "matches" in data
+    assert "training_config" in data
 
 
-def test_sample_match():
-    """Verify the sample match data structure is still valid."""
-    response = requests.get(f"{BASE_URL}/api/sample-match")
-    assert response.status_code == 200
-    data = response.json()
-    assert "match_id" in data
+# ============================================================================
+# Players
+# ============================================================================
+
+def test_player_search_short_query(client):
+    """Queries < 2 chars return []."""
+    resp = client.get("/api/players/search?q=a")
+    assert resp.status_code == 200
+    assert resp.get_json() == []
+
+
+def test_player_search_valid(client):
+    resp = client.get("/api/players/search?q=test")
+    assert resp.status_code == 200
+    assert isinstance(resp.get_json(), list)
+
+
+# ============================================================================
+# Predict — modern multi-output shape (NO legacy shim)
+# ============================================================================
+
+def test_sample_match(client):
+    resp = client.get("/api/sample-match")
+    assert resp.status_code == 200
+    data = resp.get_json()
     assert "participants" in data
     assert len(data["participants"]) >= 2
 
 
-def test_predict_standard_match():
-    """Test the main prediction endpoint with the sample match data."""
-    # First get a valid sample match
-    sample = requests.get(f"{BASE_URL}/api/sample-match").json()
-
-    response = requests.post(
-        f"{BASE_URL}/api/predict",
-        json=sample,
-        headers={"Content-Type": "application/json"},
-    )
-    assert response.status_code == 200
-    data = response.json()
+def test_predict_returns_multi_output(client):
+    resp = client.post("/api/predict",
+                       data=json.dumps(_sample_match()),
+                       content_type="application/json")
+    assert resp.status_code == 200
+    data = resp.get_json()
     assert data["success"] is True
-    assert "predicted_outcome" in data
-    assert "win_probability" in data
-    assert "confidence" in data
+    # New shape
+    assert "winner" in data
+    assert "team_b_kill_lead" in data
+    assert "kills" in data
+    assert "first" in data
+    assert "totals" in data
+    assert "both_teams" in data
+    assert "elder_dragon" in data
+    # Legacy shim removed in 7840e87 — must NOT be present
+    assert "predicted_outcome" not in data
+    assert "win_probability" not in data
+    assert "lose_probability" not in data
 
 
-def test_predict_custom_match_fail_missing_players():
-    """Verify custom prediction fails if players aren't in DB."""
+def test_predict_missing_fields(client):
+    resp = client.post("/api/predict",
+                       data=json.dumps({"participants": []}),
+                       content_type="application/json")
+    assert resp.status_code == 400
+
+
+def test_predict_custom_invalid_team_size(client):
+    """5v5 required — fewer players returns 400."""
     payload = {
-        "blue_team": [
-            {"puuid": "non_existent_1"},
-            {"puuid": "2"},
-            {"puuid": "3"},
-            {"puuid": "4"},
-            {"puuid": "5"},
-        ],
-        "red_team": [
-            {"puuid": "6"},
-            {"puuid": "7"},
-            {"puuid": "8"},
-            {"puuid": "9"},
-            {"puuid": "10"},
-        ],
+        "blue_team": [{"puuid": "p1"}],
+        "red_team":  [{"puuid": "p2"}],
         "game_mode": "CLASSIC",
     }
-    response = requests.post(
-        f"{BASE_URL}/api/predict/custom",
-        json=payload,
-        headers={"Content-Type": "application/json"},
-    )
-    # It should return 404 because players are missing
-    assert response.status_code == 404
-    assert "error" in response.json()
+    resp = client.post("/api/predict/custom",
+                       data=json.dumps(payload),
+                       content_type="application/json")
+    assert resp.status_code == 400
 
 
-def test_history_status():
-    """Check history collection status endpoint."""
-    response = requests.get(f"{BASE_URL}/api/history/status")
-    assert response.status_code == 200
-    data = response.json()
-    assert "status" in data
+# ============================================================================
+# Async / status endpoints
+# ============================================================================
+
+def test_history_status(client):
+    resp = client.get("/api/history/status")
+    assert resp.status_code == 200
+    assert "status" in resp.get_json()
 
 
-def test_monitor_metrics():
-    """Verify monitor metrics are populated."""
-    response = requests.get(f"{BASE_URL}/api/monitor/metrics")
-    assert response.status_code == 200
-    data = response.json()
-    assert "database_stats" in data or "matches" in data
-    assert "training_config" in data
+def test_train_manual(client):
+    """Trigger returns 200 with success, or 404 if no untrained data."""
+    resp = client.post("/api/train/manual")
+    assert resp.status_code in (200, 404)
+    if resp.status_code == 200:
+        assert resp.get_json()["success"] is True
 
 
-def test_manual_train_trigger():
-    """Test manual training step trigger."""
-    response = requests.post(f"{BASE_URL}/api/train/manual")
-    # This might return 404 if no untrained data, which is acceptable
-    assert response.status_code in [200, 404]
-    if response.status_code == 200:
-        assert response.json()["success"] is True
+# ============================================================================
+# Stream OCR gating
+# ============================================================================
+
+def test_stream_ocr_disabled_by_default(client):
+    """Without MOCK_OCR_ENABLED=1 env var, /api/stream/process_frame returns 503."""
+    resp = client.post("/api/stream/process_frame",
+                       data=json.dumps({"image": "data:image/jpeg;base64,/9j/"}),
+                       content_type="application/json")
+    assert resp.status_code == 503
