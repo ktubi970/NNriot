@@ -184,3 +184,78 @@ def extract_labels(match_details: dict) -> dict | None:
         "both_dragon": int(a_dragons >= 1 and b_dragons >= 1),
         "elder_dragon": int(_any_elder(obj_a) or _any_elder(obj_b)),
     }
+
+
+# ---------------------------------------------------------------------------
+# Timeline-based labels (Sprint 4a)
+# ---------------------------------------------------------------------------
+
+# Kill thresholds for first-to-N-kills labels.
+TIMELINE_KILL_THRESHOLDS = (5, 10, 15, 20)
+TIMELINE_LABEL_KEYS = [f"first_to_{n}_kills" for n in TIMELINE_KILL_THRESHOLDS]
+
+
+def extract_timeline_labels(timeline_data: dict) -> dict | None:
+    """
+    Extract first-to-N-kills labels from a Riot Match-V5 timeline.
+
+    For N in (5, 10, 15, 20), returns:
+        0 if team 100 (blue) reaches N team-kills first,
+        1 if team 200 (red) reaches N first,
+        2 if neither team reaches N during the match.
+
+    Riot timelines have a `info.participants` list mapping participantId -> puuid,
+    plus `info.frames[].events[]` with `CHAMPION_KILL` events. We use the
+    convention: participantId 1-5 = team 100, 6-10 = team 200.
+
+    Returns None if the timeline is malformed.
+    """
+    try:
+        if not isinstance(timeline_data, dict):
+            return None
+        info = timeline_data.get("info", timeline_data)
+        if not isinstance(info, dict):
+            return None
+        frames = info.get("frames", [])
+        if not isinstance(frames, list) or not frames:
+            return None
+
+        team_a_kills = 0
+        team_b_kills = 0
+        result = {key: 2 for key in TIMELINE_LABEL_KEYS}  # default: neither team
+
+        for frame in frames:
+            if not isinstance(frame, dict):
+                continue
+            events = frame.get("events", [])
+            if not isinstance(events, list):
+                continue
+            for ev in events:
+                if not isinstance(ev, dict):
+                    continue
+                if ev.get("type") != "CHAMPION_KILL":
+                    continue
+                killer_id = ev.get("killerId")
+                if killer_id is None:
+                    continue
+                # Convention: participantId 1-5 = team_a (100), 6-10 = team_b (200)
+                if 1 <= killer_id <= 5:
+                    team_a_kills += 1
+                    team_for_threshold = 0
+                    counter = team_a_kills
+                elif 6 <= killer_id <= 10:
+                    team_b_kills += 1
+                    team_for_threshold = 1
+                    counter = team_b_kills
+                else:
+                    continue  # executor / monster / unknown
+
+                # Check each threshold
+                for n in TIMELINE_KILL_THRESHOLDS:
+                    key = f"first_to_{n}_kills"
+                    if result[key] == 2 and counter >= n:
+                        result[key] = team_for_threshold
+
+        return result
+    except Exception:
+        return None
