@@ -241,7 +241,7 @@ def main():
     trainer = ContinuousTrainer()
 
     print("\n" + "=" * 40)
-    print("🚀 NNriot Batch Trainer Started")
+    print("NNriot Batch Trainer Started")
     print("Processing all untrained data in database...")
     print("=" * 40 + "\n")
 
