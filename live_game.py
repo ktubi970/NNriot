@@ -1,4 +1,3 @@
-import os
 from typing import List, Dict, Optional
 
 import riot_api

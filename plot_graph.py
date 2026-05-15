@@ -7,7 +7,6 @@ Creates an interactive HTML visualization of the NNriot neural network architect
 import plotly.graph_objects as go
 import plotly.offline as pyo
 import numpy as np
-from typing import List, Tuple, Dict, Any
 
 
 class NeuralNetworkVisualizer:

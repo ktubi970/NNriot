@@ -1,11 +1,8 @@
 import riot_api
 import database
-import json
 import time
 import json_utils
 import threading
-import import_liquipedia
-import requests
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.

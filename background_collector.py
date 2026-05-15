@@ -1,9 +1,7 @@
 import os
 import riot_api
 import database
-import json
 import time
-import random
 import json_utils
 from data_collector import _resolve_region
 

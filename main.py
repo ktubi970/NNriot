@@ -1,6 +1,4 @@
-import tensorflow as tf
 import numpy as np
-import os
 import json_utils
 import plotly.graph_objects as go
 from generate_graph import build_keras_model
