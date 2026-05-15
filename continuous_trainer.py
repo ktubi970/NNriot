@@ -22,6 +22,20 @@ from generate_graph import build_multi_output_model
 # Configuration
 VECTOR_DIM = 20000
 TRAINING_INTERVAL_SECONDS = 10 * 60  # 10 minutes
+
+# Normalization stats for regression heads, derived empirically from the
+# production training set (47k Match-V5 records). Values are (mean, std).
+# After normalization, each regression head sees ~unit-variance targets,
+# letting LOSS_WEIGHTS for regressions be 1.0 alongside categorical heads.
+REGRESSION_STATS: dict[str, tuple[float, float]] = {
+    "total_kills":   (30.0, 12.0),
+    "team_a_kills":  (15.0, 7.0),
+    "team_b_kills":  (15.0, 7.0),
+    "kill_handicap": (0.0, 12.0),
+    "total_barons":  (1.0, 1.0),
+    "total_dragons": (2.5, 1.5),
+    "total_towers":  (10.0, 5.0),
+}
 # BATCH_SIZE / EPOCHS_PER_BATCH can be overridden via env vars so users can
 # do a small smoke run before kicking off a full training cycle:
 #   NNRIOT_BATCH_SIZE=100 NNRIOT_EPOCHS=1 python continuous_trainer.py
@@ -77,12 +91,15 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
             arr[i, 0] = float(r["labels_json"].get(name, 0))
         targets[name] = arr
 
-    # Regression heads: shape (n, 1), raw float
+    # Regression heads: shape (n, 1), normalized via (raw - mean) / std
+    # so each head sees ~unit-variance targets (REGRESSION_STATS).
     for name in ("kill_handicap", "total_kills", "team_a_kills", "team_b_kills",
                  "total_barons", "total_dragons", "total_towers"):
         arr = np.zeros((n, 1), dtype=np.float32)
+        mean, std = REGRESSION_STATS[name]
         for i, r in enumerate(records):
-            arr[i, 0] = float(r["labels_json"].get(name, 0))
+            raw = float(r["labels_json"].get(name, 0))
+            arr[i, 0] = (raw - mean) / std
         targets[name] = arr
 
     return targets

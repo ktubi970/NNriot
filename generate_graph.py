@@ -37,9 +37,11 @@ LOSS_PER_HEAD: dict[str, str] = {
 }
 
 # Output head name -> loss weight (starting point per MULTI_OUTPUT_MODEL_PLAN.md §5).
+# Regression heads run at 1.0 because their targets are normalized to ~unit
+# variance in continuous_trainer._build_targets (see REGRESSION_STATS).
 LOSS_WEIGHTS: dict[str, float] = {
     "winner":            1.0,
-    "team_b_kill_lead":      1.0,
+    "team_b_kill_lead":  1.0,
     "kills_odd":         0.5,
     "first_blood":       0.7,
     "first_baron":       0.7,
@@ -49,13 +51,13 @@ LOSS_WEIGHTS: dict[str, float] = {
     "both_inhibitor":    0.4,
     "both_dragon":       0.4,
     "elder_dragon":      0.3,
-    "total_kills":       0.05,
-    "total_barons":      0.5,
-    "total_dragons":     0.3,
-    "total_towers":      0.05,
-    "team_a_kills":      0.05,
-    "team_b_kills":      0.05,
-    "kill_handicap":     0.05,
+    "total_kills":       1.0,
+    "total_barons":      1.0,
+    "total_dragons":     1.0,
+    "total_towers":      1.0,
+    "team_a_kills":      1.0,
+    "team_b_kills":      1.0,
+    "kill_handicap":     1.0,
 }
 
 # Output head name -> list of Keras metric strings (for logging during training).

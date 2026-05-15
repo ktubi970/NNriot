@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pytest
 
-from continuous_trainer import _build_targets, sparse_microbatch_generator
+from continuous_trainer import _build_targets, sparse_microbatch_generator, REGRESSION_STATS
 from feature_labels import LABEL_KEYS
 
 
@@ -55,13 +55,22 @@ def test_build_targets_one_hot_encoding():
     np.testing.assert_array_equal(t["first_baron"][0], [0, 0, 1])
 
 
-def test_build_targets_regression_passthrough():
-    """Regression heads receive the raw float values."""
-    r0 = _make_record(_full_labels(total_kills=42, kill_handicap=-7, total_dragons=5))
-    t = _build_targets([r0])
-    assert t["total_kills"][0, 0] == 42.0
-    assert t["kill_handicap"][0, 0] == -7.0
-    assert t["total_dragons"][0, 0] == 5.0
+def test_build_targets_regression_normalized():
+    """Regression targets are normalized: (raw - mean) / std."""
+    rec = _make_record(_full_labels(total_kills=42, team_a_kills=20, kill_handicap=-7))
+    t = _build_targets([rec])
+
+    # total_kills: (42 - 30) / 12 = 1.0
+    expected_total = (42 - REGRESSION_STATS["total_kills"][0]) / REGRESSION_STATS["total_kills"][1]
+    assert abs(t["total_kills"][0, 0] - expected_total) < 1e-5
+
+    # team_a_kills: (20 - 15) / 7
+    expected_a = (20 - REGRESSION_STATS["team_a_kills"][0]) / REGRESSION_STATS["team_a_kills"][1]
+    assert abs(t["team_a_kills"][0, 0] - expected_a) < 1e-5
+
+    # kill_handicap: (-7 - 0) / 12
+    expected_h = (-7 - REGRESSION_STATS["kill_handicap"][0]) / REGRESSION_STATS["kill_handicap"][1]
+    assert abs(t["kill_handicap"][0, 0] - expected_h) < 1e-5
 
 
 def test_sparse_microbatch_generator_with_dict_targets():

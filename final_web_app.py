@@ -84,10 +84,23 @@ def _format_multi_output_response(preds: dict) -> dict:
     """
     Convert raw Keras dict-output (shape (1, k) per head) into the
     public API response shape.
+
+    Regression heads are trained on normalized targets (see
+    continuous_trainer.REGRESSION_STATS); _denorm restores them to
+    original units for the public API.
     """
+    # Lazy import: avoids importing TF-heavy continuous_trainer at module
+    # top-level (init_trainer() already handles the TF-unavailable path).
+    from continuous_trainer import REGRESSION_STATS
+
     def _scalar(name):
         """Extract the single scalar from a (1, 1) regression/sigmoid head."""
         return float(preds[name][0][0])
+
+    def _denorm(name):
+        """Denormalize a regression head's output back to original scale."""
+        mean, std = REGRESSION_STATS[name]
+        return _scalar(name) * std + mean
 
     def _two_class(name):
         """Extract (p_team_a, p_team_b) from a (1, 2) softmax head."""
@@ -114,10 +127,10 @@ def _format_multi_output_response(preds: dict) -> dict:
             "predicted": "B" if pk_b > pk_a else "A",
         },
         "kills": {
-            "total":           round(_scalar("total_kills"), 1),
-            "team_a":          round(_scalar("team_a_kills"), 1),
-            "team_b":          round(_scalar("team_b_kills"), 1),
-            "handicap":        round(_scalar("kill_handicap"), 1),
+            "total":           round(_denorm("total_kills"), 1),
+            "team_a":          round(_denorm("team_a_kills"), 1),
+            "team_b":          round(_denorm("team_b_kills"), 1),
+            "handicap":        round(_denorm("kill_handicap"), 1),
             "odd_probability": round(_scalar("kills_odd"), 3),
         },
         "first": {
@@ -134,9 +147,9 @@ def _format_multi_output_response(preds: dict) -> dict:
             )
         },
         "totals": {
-            "barons":  round(_scalar("total_barons"), 2),
-            "dragons": round(_scalar("total_dragons"), 2),
-            "towers":  round(_scalar("total_towers"), 1),
+            "barons":  round(_denorm("total_barons"), 2),
+            "dragons": round(_denorm("total_dragons"), 2),
+            "towers":  round(_denorm("total_towers"), 1),
         },
         "both_teams": {
             "baron":     round(_scalar("both_baron"), 3),
