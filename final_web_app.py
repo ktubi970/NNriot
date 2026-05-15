@@ -42,7 +42,11 @@ PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
 app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
-_allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+    if o.strip()
+]
 CORS(app, origins=_allowed_origins)
 
 # History Collection Background Job State

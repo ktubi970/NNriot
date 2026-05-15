@@ -9,7 +9,6 @@ import os
 # Silence TensorFlow oneDNN performance warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-import json
 import random
 import tensorflow as tf
 import numpy as np
@@ -86,6 +85,7 @@ class ContinuousTrainer:
         # Increased ratio to 2x historical data relative to new_records
         old_records = database.get_random_trained_records(limit=len(new_records) * 2)
         records = new_records + old_records
+        records = [r for r in records if r["feature_json"] is not None]
 
         logger.info(
             "Found %d new matches. Adding %d historical matches for replay (Total batch: %d).",
