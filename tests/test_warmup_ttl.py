@@ -114,3 +114,10 @@ def test_warmup_status_endpoint(tmp_path, monkeypatch):
     assert data["puuids_checked"] == ["p1", "p2"]
     # Both unknown → both stale
     assert set(data["stale_puuids"]) == {"p1", "p2"}
+
+
+def test_final_web_app_calls_init_db_at_import():
+    """Importing final_web_app should ensure DB is initialized."""
+    import inspect
+    src = inspect.getsource(__import__("final_web_app"))
+    assert "database.init_db()" in src

@@ -36,6 +36,14 @@ import riot_api
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Ensure DB exists and is at the latest schema. Idempotent — no-op if already
+# migrated. Critical for fresh deployments with no training_data.db.
+try:
+    database.init_db()
+except Exception:
+    logger.error("Database initialization failed", exc_info=True)
+    raise
+
 # Absolute directory of this script — used for checkpoint discovery,
 # so it works regardless of the working directory the server is started from.
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
