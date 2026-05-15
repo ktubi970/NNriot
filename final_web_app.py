@@ -41,7 +41,9 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for API endpoints
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
+_allowed_origins = os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+CORS(app, origins=_allowed_origins)
 
 # History Collection Background Job State
 collection_lock = threading.Lock()
@@ -311,7 +313,7 @@ def api_stream_process_frame():
         image_bytes = base64.b64decode(image_data)
 
         # Ensure directory exists
-        screenshot_dir = os.path.join(app.static_folder, "screenshots")
+        screenshot_dir = os.path.join(app.static_folder or "static", "screenshots")
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir)
 
@@ -598,17 +600,16 @@ def api_predict_custom():
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
+            _avg_kda = stats.get("avg_kda", 0) if stats else 0
             participants.append(
                 {
                     "teamId": 100,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": (
-                        stats.get("avg_kda", 0) if stats else 0
-                    ),  # Hack: use KDA as kills for extraction if no raw stats
+                    "kills": int(round(_avg_kda * 0.7)),
                     "deaths": 1,
-                    "assists": 0,
+                    "assists": int(round(_avg_kda * 0.3)),
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -616,15 +617,16 @@ def api_predict_custom():
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
+            _avg_kda = stats.get("avg_kda", 0) if stats else 0
             participants.append(
                 {
                     "teamId": 200,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": stats.get("avg_kda", 0) if stats else 0,
+                    "kills": int(round(_avg_kda * 0.7)),
                     "deaths": 1,
-                    "assists": 0,
+                    "assists": int(round(_avg_kda * 0.3)),
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -1166,6 +1168,6 @@ if __name__ == "__main__":
     # Never use debug=True in production — read from environment instead
     app.run(
         debug=os.getenv("FLASK_DEBUG", "0") == "1",
-        host="0.0.0.0",
+        host=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", 5000)),
     )

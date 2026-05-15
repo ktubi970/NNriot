@@ -1,7 +1,5 @@
 import os
 import re
-import sys
-import io
 import time
 
 import requests
@@ -12,9 +10,6 @@ import database
 import riot_api
 import data_collector
 
-# Ensure stdout handles unicode characters (e.g. for Shōnen)
-if hasattr(sys.stdout, 'buffer'):
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
 
 def normalise_handle(handle, default_tag="EUW"):
     """
@@ -184,6 +179,13 @@ def import_from_liquipedia(stats_url, matches_per_player=50):
                 print(f"  [!] Collection failed: {e}")
 
 if __name__ == "__main__":
+    import sys
+    import io
+
+    # Ensure stdout handles unicode characters (e.g. for Shōnen)
+    if hasattr(sys.stdout, 'buffer'):
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', line_buffering=True)
+
     LFL_STATS_URL = "https://liquipedia.net/leagueoflegends/LFL/2026/Spring/Player_Stats"
     # Matches per player set to 50 as requested
     import_from_liquipedia(LFL_STATS_URL, matches_per_player=50)

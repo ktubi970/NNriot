@@ -97,7 +97,7 @@ class ContinuousTrainer:
         random.shuffle(records)
 
         # Prepare inputs natively via feature hasher which uses iterators & small memory overhead
-        json_features = [json.loads(r["feature_json"]) for r in records]
+        json_features = [r["feature_json"] for r in records]
         x_data_sparse = json_utils.json_to_vector(json_features, dim=VECTOR_DIM)
 
         # Prepare labels (0 -> [1, 0], 1 -> [0, 1])

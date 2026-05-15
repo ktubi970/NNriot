@@ -67,6 +67,12 @@ def _build_training_record(
                 winner = 1
                 break
 
+        team_a_won = any(t.get("win") and t.get("teamId") == 100 for t in teams)
+        team_b_won = any(t.get("win") and t.get("teamId") == 200 for t in teams)
+        if not (team_a_won or team_b_won):
+            print(f"  Skipping match {match_id}: no team marked as winner")
+            return None
+
         return (match_id, feature, winner)
     except Exception as e:
         print(f"  Error building training record for match {match_id}: {e}")
