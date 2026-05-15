@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================================
-REM NNriot launcher — Web app or continuous trainer
+REM NNriot launcher - Web app or continuous trainer
 REM Reads .env for RIOT_API_KEY, HOST, PORT, etc. (see .env.example)
 REM ============================================================================
 
@@ -42,9 +42,9 @@ echo   NNriot Launcher
 echo ============================================================
 echo   Python: %PYTHON%
 echo.
-echo   [1] Web app       (run.py — http://localhost:5000)
-echo   [2] Trainer       (continuous_trainer.py — loops every 10 min)
-echo   [3] Backfill labels (backfill_labels.py — one-shot)
+echo   [1] Web app       (run.py - http://localhost:5000)
+echo   [2] Trainer       (continuous_trainer.py - loops every 10 min)
+echo   [3] Backfill labels (backfill_labels.py - one-shot)
 echo   [Q] Quit
 echo ============================================================
 set /p CHOICE="Choose an action [1]: "
