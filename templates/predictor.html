@@ -789,8 +789,6 @@
             <button class="quick-btn" onclick="fillRandomTeams()">🎲 Random Teams</button>
             <button class="quick-btn" onclick="swapTeams()">⇄ Swap Teams</button>
             <button class="quick-btn" onclick="clearAllSlots()">🗑️ Clear All</button>
-            <button class="quick-btn" onclick="fillFFvsG2N()" style="background: linear-gradient(135deg, #4b134f 0%, #c94b4b 100%);">⚔️ FF vs G2N</button>
-            <button class="quick-btn" onclick="fillBIGvsKCB()" style="background: linear-gradient(135deg, #09203f 0%, #537895 100%);">⚔️ BIG vs KCB</button>
             <button id="add-history-btn" class="quick-btn" onclick="addSelectedPlayersHistory()" style="background: linear-gradient(135deg, #a83279 0%, #d38312 100%);">📅 Add History</button>
             <button id="import-live-btn" class="quick-btn" onclick="importLiveMatch()" style="background: linear-gradient(135deg, #2c3e50 0%, #4ca1af 100%);">📡 Import Live</button>
             <select id="hot-players-select" class="quick-select" onchange="fillFromHot()">
@@ -1149,99 +1147,6 @@
                     updateSlotDisplay('blue', i);
                     updateSlotDisplay('red', i);
                 }
-            }
-
-            async function fillFFvsG2N() {
-                const btn = event.target.closest('.quick-btn');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
-                
-                const ffPlayers = [
-                    {name: "Adam", tag: "EUW"},
-                    {name: "NattyNatt", tag: "EUW"},
-                    {name: "Saken", tag: "EUW"},
-                    {name: "3XA", tag: "EUW"},
-                    {name: "Targamas", tag: "EUW"}
-                ];
-                const g2nPlayers = [
-                    {name: "Shelfmade", tag: "EUW"},
-                    {name: "Markoon", tag: "EUW"},
-                    {name: "Toasty", tag: "EUW"},
-                    {name: "Rin", tag: "EUW"},
-                    {name: "Tockimo", tag: "EUW"}
-                ];
-                
-                clearAllSlots();
-                
-                async function lookupPlayer(p) {
-                    try {
-                        const res = await fetch(`/api/players/search?q=${encodeURIComponent(p.name)}&limit=1`);
-                        const data = await res.json();
-                        if (data && data.length > 0) return data[0].puuid;
-                    } catch(e) {}
-                    return 'NEW_PLAYER';
-                }
-                
-                for(let i=0; i<5; i++) {
-                    let puuid1 = await lookupPlayer(ffPlayers[i]);
-                    let puuid2 = await lookupPlayer(g2nPlayers[i]);
-                    
-                    selectPlayer('blue', i, puuid1, ffPlayers[i].name, ffPlayers[i].tag);
-                    selectPlayer('red', i, puuid2, g2nPlayers[i].name, g2nPlayers[i].tag);
-                }
-                
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                
-                // Show a brief logic summary popup
-                alert("⚔️ Les joueurs de FF vs G2N ont été pré-remplis !\n\nSi certains joueurs n'ont pas encore de match dans la base de données, cliquez sur le bouton '📅 Add History' pour les télécharger avant de prédire.");
-            }
-
-            async function fillBIGvsKCB() {
-                const btn = event.target.closest('.quick-btn');
-                const originalText = btn.innerHTML;
-                btn.disabled = true;
-                btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
-                
-                const bigPlayers = [
-                    {name: "Irrelevant", tag: "EUW"},
-                    {name: "Habubu", tag: "EUW"},
-                    {name: "Reeker", tag: "EUW"},
-                    {name: "Patrik", tag: "EUW"},
-                    {name: "Kaiser", tag: "EUW"}
-                ];
-                const kcbPlayers = [
-                    {name: "Tao", tag: "EUW"},
-                    {name: "Yukino", tag: "EUW"},
-                    {name: "Kamiloo", tag: "EUW"},
-                    {name: "Hazel", tag: "EUW"},
-                    {name: "Prime", tag: "EUW"}
-                ];
-                
-                clearAllSlots();
-                
-                async function lookupPlayer(p) {
-                    try {
-                        const res = await fetch(`/api/players/search?q=${encodeURIComponent(p.name)}&limit=1`);
-                        const data = await res.json();
-                        if (data && data.length > 0) return data[0].puuid;
-                    } catch(e) {}
-                    return 'NEW_PLAYER';
-                }
-                
-                for(let i=0; i<5; i++) {
-                    let puuid1 = await lookupPlayer(bigPlayers[i]);
-                    let puuid2 = await lookupPlayer(kcbPlayers[i]);
-                    
-                    selectPlayer('blue', i, puuid1, bigPlayers[i].name, bigPlayers[i].tag);
-                    selectPlayer('red', i, puuid2, kcbPlayers[i].name, kcbPlayers[i].tag);
-                }
-                
-                btn.disabled = false;
-                btn.innerHTML = originalText;
-                
-                alert("⚔️ Les équipes BIG et KCB ont été chargées ! Pensez à utiliser le bouton 'Add History' s'ils n'ont pas encore de match enregistré.");
             }
 
             async function addSelectedPlayersHistory() {
