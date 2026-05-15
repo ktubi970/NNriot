@@ -5,6 +5,7 @@ import database
 import time
 import json_utils
 from data_collector import resolve_region, EXCLUDED_GAME_MODES
+from feature_labels import extract_labels
 
 logger = logging.getLogger(__name__)
 
@@ -133,8 +134,13 @@ def run_collector():
                         print(f"  Skipping match {mid}: no team marked as winner")
                         continue
 
+                    labels = extract_labels(details)
+                    if labels is None:
+                        # Match couldn't produce labels (Arena/Swarm/malformed) — skip
+                        continue
+
                     matches_batch.append((mid, details))
-                    training_records_batch.append((mid, matchup_feature, winner))
+                    training_records_batch.append((mid, matchup_feature, winner, labels))
                 except Exception as e:
                     logger.error(f"  Error processing features for {mid}: {e}", exc_info=True)
 

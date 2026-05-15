@@ -419,6 +419,7 @@ def api_stream_process_frame():
                 blue_names = ["Wunder", "Skeanz", "LIDER", "Jopa", "Mikyx"]
                 red_names = ["Rhilech", "Maynter", "Poby", "SamD", "Parus"]
         except Exception:
+            logger.error("Failed to load top players for stream OCR fallback", exc_info=True)
             blue_names = ["Wunder", "Skeanz", "LIDER", "Jopa", "Mikyx"]
             red_names = ["Rhilech", "Maynter", "Poby", "SamD", "Parus"]
 

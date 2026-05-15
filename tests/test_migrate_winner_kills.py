@@ -81,3 +81,20 @@ def test_idempotent_on_already_migrated(tmp_path):
     stats = m.migrate(db_path=db, dry_run=False)
     assert stats["renamed"] == 0
     assert stats["already_new"] == 1
+
+
+def test_migrate_preserves_new_key_if_both_present(tmp_path):
+    """When both winner_kills AND team_b_kill_lead exist, keep team_b_kill_lead value."""
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+    # Insert a row with BOTH keys — team_b_kill_lead=1 should survive
+    _save_legacy_label_row(db, "M_dual", {"winner_kills": 0, "team_b_kill_lead": 1, "winner": 0})
+
+    stats = m.migrate(db_path=db, dry_run=False)
+    assert stats["renamed"] == 1
+
+    with database.get_connection(db) as conn:
+        row = conn.execute("SELECT labels_json FROM training_dataset").fetchone()
+    labels = m._decode(row["labels_json"])
+    assert "winner_kills" not in labels
+    assert labels["team_b_kill_lead"] == 1  # NOT 0 from the legacy key

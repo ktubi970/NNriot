@@ -78,7 +78,12 @@ def migrate(db_path: str = database.DB_PATH, dry_run: bool = True, chunk_size: i
                 if OLD_KEY not in labels:
                     stats["already_new"] += 1
                     continue
-                labels[NEW_KEY] = labels.pop(OLD_KEY)
+                if NEW_KEY in labels:
+                    # Both present (partial migration from a crash mid-run):
+                    # drop the legacy key without overwriting the new one.
+                    labels.pop(OLD_KEY)
+                else:
+                    labels[NEW_KEY] = labels.pop(OLD_KEY)
                 updates.append((_encode(labels), r["id"]))
             except Exception:
                 stats["errors"] += 1

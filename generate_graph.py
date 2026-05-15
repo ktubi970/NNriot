@@ -141,7 +141,7 @@ def _head(name: str, units: int, activation: str | None, source, hidden_size: in
     return tf.keras.layers.Dense(units, activation=activation, name=name)(h)
 
 
-def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3) -> tf.keras.Model:
+def build_multi_output_model(input_dim: int = 20000, dropout_rate: float = 0.3) -> tf.keras.Model:
     """
     Build the 22-output multi-task model.
 
@@ -218,7 +218,9 @@ def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3)
 
 
 if __name__ == "__main__":
-    model = build_keras_model()
+    # Sanity build of the current multi-output model — does NOT save a checkpoint
+    # (training is handled by continuous_trainer.py). The old code saved a legacy
+    # model.keras that would shadow the real model_v2.keras checkpoint.
+    model = build_multi_output_model()
     model.summary()
-    model.save("model.keras")
-    print("Keras model saved to model.keras")
+    print(f"Multi-output model has {len(model.output_names)} heads.")

@@ -13,7 +13,6 @@ import os
 import logging
 import datetime as _dt
 from contextlib import contextmanager
-import functools
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -882,7 +881,6 @@ def get_top_players(limit: int = 10, db_path: str = DB_PATH) -> list[dict]:
     return [dict(r) for r in rows]
 
 
-@functools.lru_cache(maxsize=4)
 def get_unique_champions(db_path: str = DB_PATH) -> list[str]:
     """
     Retrieve alphabetical list of unique champion names from the registry.
