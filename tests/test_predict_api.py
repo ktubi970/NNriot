@@ -28,7 +28,7 @@ def _fake_preds():
     """Synthetic Keras-dict output for a single match (batch size 1)."""
     return {
         "winner":           np.array([[0.40, 0.60]], dtype=np.float32),
-        "winner_kills":     np.array([[0.45, 0.55]], dtype=np.float32),
+        "team_b_kill_lead":     np.array([[0.45, 0.55]], dtype=np.float32),
         "first_blood":      np.array([[0.50, 0.45, 0.05]], dtype=np.float32),
         "first_baron":      np.array([[0.40, 0.45, 0.15]], dtype=np.float32),
         "first_inhibitor":  np.array([[0.42, 0.43, 0.15]], dtype=np.float32),

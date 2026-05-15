@@ -80,7 +80,7 @@ def test_extract_labels_team_a_wins():
     assert len(labels) == len(LABEL_KEYS)
 
     assert labels["winner"] == 0
-    assert labels["winner_kills"] == 0  # A has more kills
+    assert labels["team_b_kill_lead"] == 0  # A has more kills
     assert labels["kill_handicap"] == 15
     assert labels["total_kills"] == 35
     assert labels["team_a_kills"] == 25
@@ -100,7 +100,7 @@ def test_extract_labels_team_a_wins():
 
 
 def test_extract_labels_team_b_wins():
-    """Team B wins — verify winner=1 and winner_kills mirrors kill totals."""
+    """Team B wins — verify winner=1 and team_b_kill_lead mirrors kill totals."""
     match = _make_match(
         team_a_win=False,
         team_b_win=True,
@@ -118,7 +118,7 @@ def test_extract_labels_team_b_wins():
     labels = extract_labels(match)
     assert labels is not None
     assert labels["winner"] == 1
-    assert labels["winner_kills"] == 1  # B has more kills
+    assert labels["team_b_kill_lead"] == 1  # B has more kills
     assert labels["kill_handicap"] == -15
     assert labels["total_kills"] == 25
     assert labels["team_a_kills"] == 5
@@ -275,12 +275,12 @@ def test_extract_labels_elder_dragon_proxy():
     assert labels_no_elder["elder_dragon"] == 0
 
 
-def test_extract_labels_winner_kills_tie_favors_team_a():
-    """Ties on total kills must collapse to winner_kills=0 (team-A side)."""
+def test_extract_labels_team_b_kill_lead_tie_favors_team_a():
+    """Ties on total kills must collapse to team_b_kill_lead=0 (team-A side)."""
     match = _make_match(team_a_kills=15, team_b_kills=15, team_a_win=True, team_b_win=False)
     labels = extract_labels(match)
     assert labels is not None
-    assert labels["winner_kills"] == 0
+    assert labels["team_b_kill_lead"] == 0
     assert labels["total_kills"] == 30
     assert labels["kill_handicap"] == 0
 

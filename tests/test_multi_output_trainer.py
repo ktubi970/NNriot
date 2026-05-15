@@ -16,7 +16,7 @@ def _make_record(labels: dict) -> dict:
 def _full_labels(**overrides) -> dict:
     """Default-valid labels dict, overridable for specific tests."""
     base = {
-        "winner": 0, "winner_kills": 0,
+        "winner": 0, "team_b_kill_lead": 0,
         "kill_handicap": 5, "total_kills": 30, "team_a_kills": 17, "team_b_kills": 13,
         "kills_odd": 0,
         "first_blood": 0, "first_baron": 0, "first_inhibitor": 0, "first_tower": 0,
@@ -33,7 +33,7 @@ def test_build_targets_shapes_and_keys():
     t = _build_targets(records)
     assert set(t.keys()) == set(LABEL_KEYS), "missing or extra head"
     # softmax-2
-    for name in ("winner", "winner_kills"):
+    for name in ("winner", "team_b_kill_lead"):
         assert t[name].shape == (3, 2)
     # softmax-3
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
@@ -47,10 +47,10 @@ def test_build_targets_shapes_and_keys():
 
 def test_build_targets_one_hot_encoding():
     """Categorical heads are one-hot encoded correctly."""
-    r0 = _make_record(_full_labels(winner=0, first_baron=2, winner_kills=1, first_blood=1))
+    r0 = _make_record(_full_labels(winner=0, first_baron=2, team_b_kill_lead=1, first_blood=1))
     t = _build_targets([r0])
     np.testing.assert_array_equal(t["winner"][0], [1, 0])
-    np.testing.assert_array_equal(t["winner_kills"][0], [0, 1])
+    np.testing.assert_array_equal(t["team_b_kill_lead"][0], [0, 1])
     np.testing.assert_array_equal(t["first_blood"][0], [0, 1, 0])
     np.testing.assert_array_equal(t["first_baron"][0], [0, 0, 1])
 

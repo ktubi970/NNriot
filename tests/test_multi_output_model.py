@@ -36,7 +36,7 @@ def test_model_output_shapes():
     assert isinstance(preds, dict)
     # 2-class heads
     assert preds["winner"].shape == (1, 2)
-    assert preds["winner_kills"].shape == (1, 2)
+    assert preds["team_b_kill_lead"].shape == (1, 2)
     # 3-class heads
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
         assert preds[name].shape == (1, 3), f"{name} shape mismatch"
@@ -55,7 +55,7 @@ def test_model_trains_one_step():
     x = np.random.rand(4, 50).astype(np.float32)
     targets = {
         "winner":          np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=np.float32),
-        "winner_kills":    np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=np.float32),
+        "team_b_kill_lead":    np.array([[1, 0], [0, 1], [1, 0], [0, 1]], dtype=np.float32),
         "first_blood":     np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=np.float32),
         "first_baron":     np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=np.float32),
         "first_inhibitor": np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 0, 0]], dtype=np.float32),

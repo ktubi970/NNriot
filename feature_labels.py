@@ -15,7 +15,7 @@ from __future__ import annotations
 # Used by the trainer (target dict assembly) and by tests.
 LABEL_KEYS = [
     "winner",
-    "winner_kills",
+    "team_b_kill_lead",
     "kill_handicap",
     "total_kills",
     "team_a_kills",
@@ -164,9 +164,9 @@ def extract_labels(match_details: dict) -> dict | None:
 
     return {
         "winner": int(b_win),                            # 0 = team A win, 1 = team B win
-        # winner_kills: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
+        # team_b_kill_lead: 0 if team A has >= kills (ties favor A), 1 if team B strictly more.
         # Intentional: ties (~1-2% of matches) collapse to team-A side.
-        "winner_kills": int(b_kills > a_kills),          # 1 iff team B has more kills (ties -> 0)
+        "team_b_kill_lead": int(b_kills > a_kills),          # 1 iff team B has more kills (ties -> 0)
         "kill_handicap": a_kills - b_kills,              # signed int (team A perspective)
         "total_kills": total_kills,                      # int
         "team_a_kills": a_kills,                         # int

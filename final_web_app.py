@@ -98,7 +98,7 @@ def _format_multi_output_response(preds: dict) -> dict:
         return float(preds[name][0][0]), float(preds[name][0][1]), float(preds[name][0][2])
 
     p_a, p_b = _two_class("winner")
-    pk_a, pk_b = _two_class("winner_kills")
+    pk_a, pk_b = _two_class("team_b_kill_lead")
 
     response = {
         "success": True,
@@ -108,7 +108,7 @@ def _format_multi_output_response(preds: dict) -> dict:
             "predicted": "B" if p_b > p_a else "A",
             "confidence": round(max(p_a, p_b), 3),
         },
-        "winner_kills": {
+        "team_b_kill_lead": {
             "team_a": round(pk_a, 3),
             "team_b": round(pk_b, 3),
             "predicted": "B" if pk_b > pk_a else "A",

@@ -17,7 +17,7 @@ logging.getLogger("tensorflow").setLevel(logging.ERROR)
 # Keys must match feature_labels.LABEL_KEYS exactly.
 LOSS_PER_HEAD: dict[str, str] = {
     "winner":               "categorical_crossentropy",
-    "winner_kills":         "categorical_crossentropy",
+    "team_b_kill_lead":         "categorical_crossentropy",
     "first_blood":          "categorical_crossentropy",
     "first_baron":          "categorical_crossentropy",
     "first_inhibitor":      "categorical_crossentropy",
@@ -39,7 +39,7 @@ LOSS_PER_HEAD: dict[str, str] = {
 # Output head name -> loss weight (starting point per MULTI_OUTPUT_MODEL_PLAN.md §5).
 LOSS_WEIGHTS: dict[str, float] = {
     "winner":            1.0,
-    "winner_kills":      1.0,
+    "team_b_kill_lead":      1.0,
     "kills_odd":         0.5,
     "first_blood":       0.7,
     "first_baron":       0.7,
@@ -61,7 +61,7 @@ LOSS_WEIGHTS: dict[str, float] = {
 # Output head name -> list of Keras metric strings (for logging during training).
 METRICS_PER_HEAD: dict[str, list[str]] = {
     "winner":               ["accuracy"],
-    "winner_kills":         ["accuracy"],
+    "team_b_kill_lead":         ["accuracy"],
     "first_blood":          ["accuracy"],
     "first_baron":          ["accuracy"],
     "first_inhibitor":      ["accuracy"],
@@ -155,7 +155,7 @@ def build_multi_output_model(input_dim: int = 100000) -> tf.keras.Model:
     # Per-head outputs
     outputs = {}
     # 2-class softmax heads
-    for name in ("winner", "winner_kills"):
+    for name in ("winner", "team_b_kill_lead"):
         outputs[name] = tf.keras.layers.Dense(2, activation="softmax", name=name)(embedding)
     # 3-class softmax heads
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):

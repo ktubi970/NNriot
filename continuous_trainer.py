@@ -55,7 +55,7 @@ def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
     targets: dict[str, np.ndarray] = {}
 
     # 2-class softmax heads: shape (n, 2), one-hot
-    for name in ("winner", "winner_kills"):
+    for name in ("winner", "team_b_kill_lead"):
         arr = np.zeros((n, 2), dtype=np.float32)
         for i, r in enumerate(records):
             val = int(r["labels_json"].get(name, 0))
