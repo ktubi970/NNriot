@@ -11,6 +11,7 @@ import gzip
 import base64
 import os
 import logging
+import datetime as _dt
 from contextlib import contextmanager
 import functools
 
@@ -802,6 +803,55 @@ def get_player_stats(puuid: str, db_path: str = DB_PATH) -> dict | None:
         "avg_gold": avg_gold,
         "total_matches": total_matches,
     }
+
+
+def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,
+                    db_path: str = DB_PATH) -> list[str]:
+    """
+    Given a list of puuids, return those whose `players.last_updated`
+    is older than `stale_after_days` (or NULL / missing from the table).
+
+    Used by the Custom Predictor warm-up: stale players get enqueued
+    for background refresh without blocking the prediction.
+
+    Args:
+        puuids: List of puuid strings to check.
+        stale_after_days: Threshold in days. Default 7.
+
+    Returns:
+        Subset of `puuids` considered stale.
+    """
+    if not puuids:
+        return []
+
+    cutoff = _dt.datetime.utcnow() - _dt.timedelta(days=stale_after_days)
+    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+
+    # Use SQL placeholders for the IN clause
+    placeholders = ",".join(["?"] * len(puuids))
+    with get_connection(db_path) as conn:
+        rows = conn.execute(
+            f"""
+            SELECT puuid FROM players
+            WHERE puuid IN ({placeholders})
+              AND (last_updated IS NULL OR last_updated < ?)
+            """,
+            tuple(puuids) + (cutoff_str,),
+        ).fetchall()
+
+    fresh_in_db = {p for p in puuids}
+    found_stale = {r["puuid"] for r in rows}
+
+    # Also flag puuids not in players table at all
+    with get_connection(db_path) as conn:
+        rows = conn.execute(
+            f"SELECT puuid FROM players WHERE puuid IN ({placeholders})",
+            tuple(puuids),
+        ).fetchall()
+    in_db = {r["puuid"] for r in rows}
+    not_in_db = fresh_in_db - in_db
+
+    return list(found_stale | not_in_db)
 
 
 def link_accounts(main_puuid: str, smurf_puuid: str, db_path: str = DB_PATH):

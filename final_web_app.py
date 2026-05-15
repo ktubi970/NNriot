@@ -661,6 +661,41 @@ def api_predict_custom():
         blue_team_puuids = [p.get("puuid") for p in blue_team_data]
         red_team_puuids = [p.get("puuid") for p in red_team_data]
 
+        # Warm-up: enqueue background refresh for any player whose data is stale (>7 days).
+        # Non-blocking — the current prediction uses whatever data is in the DB now.
+        all_puuids = blue_team_puuids + red_team_puuids
+        try:
+            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7)
+            if stale_puuids:
+                logger.info("Warm-up: %d/%d players have stale data — enqueueing refresh",
+                            len(stale_puuids), len(all_puuids))
+                # Get account info (game_name, tag_line) for each stale puuid to feed collect_by_puuid
+                with database.get_connection() as conn:
+                    placeholders = ",".join(["?"] * len(stale_puuids))
+                    rows = conn.execute(
+                        f"SELECT puuid, game_name, tag_line FROM players WHERE puuid IN ({placeholders})",
+                        tuple(stale_puuids),
+                    ).fetchall()
+                accounts = [
+                    {
+                        "puuid": r["puuid"],
+                        "server": r["tag_line"] or "EUW",  # tag_line ≈ server (KR1, EUW, etc.)
+                        "gamename": r["game_name"] or "?",
+                        "tagline": r["tag_line"] or "?",
+                    }
+                    for r in rows
+                ]
+                if accounts:
+                    def _refresh_stale():
+                        try:
+                            result = data_collector.collect_by_puuid(accounts, matches_per_player=20)
+                            logger.info("Warm-up refresh complete: %s", result)
+                        except Exception:
+                            logger.error("Warm-up refresh failed", exc_info=True)
+                    threading.Thread(target=_refresh_stale, daemon=True).start()
+        except Exception:
+            logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
+
         # Fetch stats for all players
         blue_stats = [database.get_player_stats(p) for p in blue_team_puuids]
         red_stats = [database.get_player_stats(p) for p in red_team_puuids]
@@ -750,6 +785,21 @@ def api_predict_custom():
     except Exception as e:
         logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@app.route("/api/warmup/status", methods=["GET"])
+def api_warmup_status():
+    """Check warm-up freshness for a list of puuids passed as ?puuids=p1,p2,..."""
+    raw = request.args.get("puuids", "")
+    puuids = [p.strip() for p in raw.split(",") if p.strip()]
+    if not puuids:
+        return jsonify({"error": "puuids query param required"}), 400
+    stale = database.get_stale_puuids(puuids, stale_after_days=7)
+    return jsonify({
+        "puuids_checked": puuids,
+        "stale_count": len(stale),
+        "stale_puuids": stale,
+    })
 
 
 @app.route("/api/spectator/featured", methods=["GET"])
