@@ -611,7 +611,7 @@ def search_players(query: str, limit: int = 10, db_path: str = DB_PATH) -> list[
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT puuid, game_name, tag_line, total_matches
+            SELECT puuid, game_name, tag_line, total_matches, avg_kda, avg_gold
             FROM players
             WHERE game_name LIKE ? ESCAPE '\\' OR tag_line LIKE ? ESCAPE '\\'
             ORDER BY total_matches DESC
@@ -622,18 +622,16 @@ def search_players(query: str, limit: int = 10, db_path: str = DB_PATH) -> list[
 
     results = []
     for r in rows:
-        aggregated = get_player_stats(r["puuid"], db_path)
-        if aggregated:
-            results.append(
-                {
-                    "puuid": r["puuid"],
-                    "game_name": r["game_name"],
-                    "tag_line": r["tag_line"],
-                    "total_matches": aggregated["total_matches"],
-                    "avg_kda": aggregated["avg_kda"],
-                    "avg_gold": aggregated["avg_gold"],
-                }
-            )
+        results.append(
+            {
+                "puuid": r["puuid"],
+                "game_name": r["game_name"],
+                "tag_line": r["tag_line"],
+                "total_matches": r["total_matches"] or 0,
+                "avg_kda": r["avg_kda"] or 0.0,
+                "avg_gold": r["avg_gold"] or 0,
+            }
+        )
     return results
 
 
@@ -747,8 +745,12 @@ def get_untrained_records(limit: int = 500, db_path: str = DB_PATH) -> list[dict
     for r in rows:
         d = dict(r)
         fj = d["feature_json"]
-        if fj and not (fj.startswith("{") or fj.startswith("[")):
-            d["feature_json"] = gzip.decompress(base64.b64decode(fj)).decode("utf-8")
+        if fj is None:
+            d["feature_json"] = None
+        elif fj.startswith("{") or fj.startswith("["):
+            d["feature_json"] = json.loads(fj)
+        else:
+            d["feature_json"] = json.loads(gzip.decompress(base64.b64decode(fj)).decode("utf-8"))
         res.append(d)
     return res
 
@@ -774,8 +776,12 @@ def get_random_trained_records(limit: int = 500, db_path: str = DB_PATH) -> list
     for r in rows:
         d = dict(r)
         fj = d["feature_json"]
-        if fj and not (fj.startswith("{") or fj.startswith("[")):
-            d["feature_json"] = gzip.decompress(base64.b64decode(fj)).decode("utf-8")
+        if fj is None:
+            d["feature_json"] = None
+        elif fj.startswith("{") or fj.startswith("["):
+            d["feature_json"] = json.loads(fj)
+        else:
+            d["feature_json"] = json.loads(gzip.decompress(base64.b64decode(fj)).decode("utf-8"))
         res.append(d)
     return res
 

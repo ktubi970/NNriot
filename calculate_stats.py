@@ -4,6 +4,9 @@ calculate_stats.py - Utility to populate player historical performance metrics.
 Iterates through matches and updates the 'players' table with averages.
 """
 
+import base64
+import gzip
+
 import database
 import json
 import logging
@@ -29,7 +32,11 @@ def update_all_player_stats():
     with database.get_connection() as conn:
         cursor = conn.execute("SELECT raw_json FROM matches")
         for row in cursor:
-            data = json.loads(row["raw_json"])
+            rj = row["raw_json"]
+            if rj.startswith("{") or rj.startswith("["):
+                data = json.loads(rj)
+            else:
+                data = json.loads(gzip.decompress(base64.b64decode(rj)).decode("utf-8"))
             participants = data.get("info", {}).get("participants", [])
 
             for p in participants:

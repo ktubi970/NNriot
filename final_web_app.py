@@ -19,7 +19,6 @@ import re
 import glob
 import threading
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import logging
 import base64
@@ -30,6 +29,7 @@ from flask_cors import CORS
 import database
 import json_utils
 import live_game
+import data_collector
 import riot_api
 
 # Configure logging
@@ -41,7 +41,13 @@ logger = logging.getLogger(__name__)
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for API endpoints
+app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
+_allowed_origins = [
+    o.strip()
+    for o in os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+    if o.strip()
+]
+CORS(app, origins=_allowed_origins)
 
 # History Collection Background Job State
 collection_lock = threading.Lock()
@@ -66,15 +72,12 @@ def init_trainer():
         logger.info("TensorFlow model loaded successfully.")
         return trainer, True
     except Exception as e:
-        logger.error(f"Failed to load TF trainer: {e}")
-        import traceback
-
-        logger.error(traceback.format_exc())
+        logger.error(f"Failed to load TF trainer: {e}", exc_info=True)
         return None, False
 
 
 global_trainer, tf_available = init_trainer()
-VECTOR_DIM = 50000
+VECTOR_DIM = 100000
 
 
 def final_predict_match_outcome(match_data):
@@ -108,7 +111,7 @@ def final_predict_match_outcome(match_data):
         }
 
     except Exception as e:
-        logger.error(f"Prediction error: {e}")
+        logger.error(f"Prediction error: {e}", exc_info=True)
         return {"error": str(e)}
 
 
@@ -128,12 +131,6 @@ def explorer():
 def predictor():
     """Serve the Custom Match Predictor interface."""
     return render_template("predictor.html", active_page="predictor")
-
-
-@app.route("/history")
-def history():
-    """Serve the Player History collection interface."""
-    return render_template("history.html", active_page="history")
 
 
 @app.route("/smurfs")
@@ -163,7 +160,7 @@ def api_explorer_stats():
 
         return jsonify(stats)
     except Exception as e:
-        logger.error(f"Explorer stats error: {e}")
+        logger.error(f"Explorer stats error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -193,7 +190,7 @@ def api_explorer_matches():
             }
         )
     except Exception as e:
-        logger.error(f"Explorer matches error: {e}")
+        logger.error(f"Explorer matches error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -207,7 +204,7 @@ def api_explorer_match_details(match_id):
 
         return jsonify({"success": True, "match": raw_match})
     except Exception as e:
-        logger.error(f"Explorer match details error: {e}")
+        logger.error(f"Explorer match details error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -218,7 +215,7 @@ def api_players_aliases():
         aliases = database.get_all_aliases()
         return jsonify(aliases)
     except Exception as e:
-        logger.error(f"Error fetching aliases: {e}")
+        logger.error(f"Error fetching aliases: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -240,7 +237,7 @@ def api_db_health():
             }
         )
     except Exception as e:
-        logger.error(f"Error fetching db-health: {e}")
+        logger.error(f"Error fetching db-health: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -254,7 +251,7 @@ def api_players_unlink():
         database.unlink_accounts(alias_puuid)
         return jsonify({"success": True})
     except Exception as e:
-        logger.error(f"Error unlinking accounts: {e}")
+        logger.error(f"Error unlinking accounts: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -270,7 +267,7 @@ def api_players_search():
         players = database.search_players(q, limit=limit)
         return jsonify(players)
     except Exception as e:
-        logger.error(f"Player search error: {e}")
+        logger.error(f"Player search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -284,7 +281,7 @@ def api_players_random():
         )  # Using top players as a proxy for interesting ones
         return jsonify(players)
     except Exception as e:
-        logger.error(f"Random players error: {e}")
+        logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -297,7 +294,7 @@ def api_players_top():
         players = database.get_top_players(limit=limit)
         return jsonify(players)
     except Exception as e:
-        logger.error(f"Top players error: {e}")
+        logger.error(f"Top players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -307,6 +304,8 @@ def api_stream_process_frame():
     Receives a base64 image from the frontend, saves it,
     and returns a mocked OCR player roster.
     """
+    if os.getenv("MOCK_OCR_ENABLED", "0") != "1":
+        return jsonify({"error": "OCR endpoint disabled. Set MOCK_OCR_ENABLED=1 to enable mock OCR for testing."}), 503
     try:
         data = request.get_json()
         if not data or "image" not in data:
@@ -317,7 +316,7 @@ def api_stream_process_frame():
         image_bytes = base64.b64decode(image_data)
 
         # Ensure directory exists
-        screenshot_dir = os.path.join(app.static_folder, "screenshots")
+        screenshot_dir = os.path.join(app.static_folder or "static", "screenshots")
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir)
 
@@ -359,7 +358,7 @@ def api_stream_process_frame():
             }
         )
     except Exception as e:
-        logger.error(f"Stream processing error: {e}")
+        logger.error(f"Stream processing error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -379,55 +378,7 @@ def api_link_players():
         database.link_accounts(main_puuid, smurf_puuid)
         return jsonify({"success": True, "message": "Accounts completely linked."})
     except Exception as e:
-        logger.error(f"Link accounts error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/auto_link", methods=["POST"])
-def api_auto_link_players():
-    """Automatically find and link smurfs with similar game names."""
-    try:
-        data = request.get_json() or {}
-        min_matches = data.get("min_matches_threshold", 5)
-        fuzzy = data.get("fuzzy", True)
-        
-        linked_count = database.auto_link_smurfs(
-            min_matches_threshold=min_matches, 
-            fuzzy=fuzzy
-        )
-        return jsonify({
-            "success": True, 
-            "linked_count": linked_count, 
-            "message": f"Successfully auto-linked {linked_count} aliases (mode: {'fuzzy' if fuzzy else 'exact'})."
-        })
-    except Exception as e:
-        logger.error(f"Auto-link accounts error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/aliases", methods=["GET"])
-def api_get_aliases():
-    """API endpoint to get all linked player aliases."""
-    try:
-        aliases = database.get_all_aliases()
-        return jsonify(aliases)
-    except Exception as e:
-        logger.error(f"Get aliases error: {e}")
-        return jsonify({"error": str(e)}), 500
-
-
-@app.route("/api/players/unlink", methods=["DELETE"])
-def api_unlink_players():
-    """Unlink a smurf account from its canonical main account."""
-    try:
-        alias_puuid = request.args.get("alias_puuid")
-        if not alias_puuid:
-            return jsonify({"error": "alias_puuid is required"}), 400
-
-        database.unlink_accounts(alias_puuid)
-        return jsonify({"success": True, "message": "Accounts unlinked."})
-    except Exception as e:
-        logger.error(f"Unlink accounts error: {e}")
+        logger.error(f"Link accounts error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -462,8 +413,6 @@ def api_history_collect():
 
         def run_collection():
             try:
-                import data_collector
-
                 # We'll use a modified version of collect_training_data or use it as is
                 # Note: collect_training_data prints progress, we can't easily capture it for the UI without major changes
                 # but we'll simulate completion.
@@ -473,7 +422,7 @@ def api_history_collect():
                 with collection_lock:
                     collection_status["status"] = "completed"
             except Exception as e:
-                logger.error(f"Background collection error: {e}")
+                logger.error(f"Background collection error: {e}", exc_info=True)
                 with collection_lock:
                     collection_status["status"] = "error"
                     collection_status["error"] = str(e)
@@ -483,7 +432,7 @@ def api_history_collect():
 
         return jsonify({"success": True, "message": "Collection started"})
     except Exception as e:
-        logger.error(f"History collect error: {e}")
+        logger.error(f"History collect error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -516,8 +465,6 @@ def api_history_collect_batch():
 
         def run_collection():
             try:
-                import data_collector
-
                 seeds = [
                     (p.get("game_name"), p.get("tag_line"))
                     for p in players
@@ -528,7 +475,7 @@ def api_history_collect_batch():
                 with collection_lock:
                     collection_status["status"] = "completed"
             except Exception as e:
-                logger.error(f"Background batch collection error: {e}")
+                logger.error(f"Background batch collection error: {e}", exc_info=True)
                 with collection_lock:
                     collection_status["status"] = "error"
                     collection_status["error"] = str(e)
@@ -538,7 +485,7 @@ def api_history_collect_batch():
 
         return jsonify({"success": True, "message": "Batch collection started"})
     except Exception as e:
-        logger.error(f"History batch collect error: {e}")
+        logger.error(f"History batch collect error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -568,8 +515,7 @@ def api_batch_collect():
         
         if not player_list:
             return jsonify({"error": "No valid players found"}), 400
-            
-        import data_collector
+
         with data_collector.batch_lock:
             if data_collector.batch_status["status"] == "running":
                 return jsonify({"error": "A batch job is already running"}), 409
@@ -579,12 +525,11 @@ def api_batch_collect():
         
         return jsonify({"success": True, "message": "Batch started", "players_count": len(player_list)})
     except Exception as e:
-        logger.error(f"Batch collect error: {e}")
+        logger.error(f"Batch collect error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 @app.route("/api/batch/status", methods=["GET"])
 def api_batch_status():
-    import data_collector
     with data_collector.batch_lock:
         # Create a copy to send
         status_copy = dict(data_collector.batch_status)
@@ -623,7 +568,7 @@ def api_train_manual():
             }
         )
     except Exception as e:
-        logger.error(f"Manual train error: {e}")
+        logger.error(f"Manual train error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -652,17 +597,16 @@ def api_predict_custom():
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
+            _avg_kda = stats.get("avg_kda", 0) if stats else 0
             participants.append(
                 {
                     "teamId": 100,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": (
-                        stats.get("avg_kda", 0) if stats else 0
-                    ),  # Hack: use KDA as kills for extraction if no raw stats
+                    "kills": int(round(_avg_kda * 0.7)),
                     "deaths": 1,
-                    "assists": 0,
+                    "assists": int(round(_avg_kda * 0.3)),
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -670,15 +614,16 @@ def api_predict_custom():
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
+            _avg_kda = stats.get("avg_kda", 0) if stats else 0
             participants.append(
                 {
                     "teamId": 200,
                     "championName": p.get("champion_name")
                     or p.get("championName")
                     or "Aatrox",
-                    "kills": stats.get("avg_kda", 0) if stats else 0,
+                    "kills": int(round(_avg_kda * 0.7)),
                     "deaths": 1,
-                    "assists": 0,
+                    "assists": int(round(_avg_kda * 0.3)),
                     "goldEarned": stats.get("avg_gold", 0) if stats else 0,
                     "teamPosition": p.get("role") or "UNKNOWN",
                 }
@@ -720,7 +665,7 @@ def api_predict_custom():
         return jsonify(response_data)
 
     except Exception as e:
-        logger.error(f"Custom prediction error: {e}")
+        logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -734,7 +679,7 @@ def api_spectator_featured():
         games = live_game.fetch_featured_games(region)
         return jsonify({"success": True, "region": region, "games": games})
     except Exception as e:
-        logger.error(f"Featured games error: {e}")
+        logger.error(f"Featured games error: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -759,7 +704,7 @@ def api_spectator_active():
 
         # Enhance participants with local database info (puuid and stats)
         # We need to resolve each participant
-        from riot_api import resolve_region as _resolve_region
+        from data_collector import _resolve_region
 
         region = _resolve_region(tag)
         participants = game_data.get("participants", [])
@@ -784,20 +729,18 @@ def api_spectator_active():
 
             def auto_collect_task():
                 try:
-                    import data_collector
-
                     # Use seeds approach
                     seeds = [(p["name"], p["tag"]) for p in new_players]
                     data_collector.collect_training_data(seeds, matches_per_player=10)
                 except Exception as e:
-                    logger.error(f"Auto-collection error: {e}")
+                    logger.error(f"Auto-collection error: {e}", exc_info=True)
 
             threading.Thread(target=auto_collect_task, daemon=True).start()
 
         return jsonify({"success": True, "game": game_data})
 
     except Exception as e:
-        logger.error(f"Active game search error: {e}")
+        logger.error(f"Active game search error: {e}", exc_info=True)
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -827,7 +770,7 @@ def api_predict():
         return jsonify(result)
 
     except Exception as e:
-        logger.error(f"API error: {e}")
+        logger.error(f"API error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -865,7 +808,7 @@ def api_train():
                     global_trainer.run_training_step()
                     logger.info("Background training completed.")
                 except Exception as e:
-                    logger.error(f"Background training failed: {e}")
+                    logger.error(f"Background training failed: {e}", exc_info=True)
             else:
                 # Simulate training process if model isn't active
                 training_time = min(3.0, len(matches) * 0.05)
@@ -886,7 +829,7 @@ def api_train():
         )
 
     except Exception as e:
-        logger.error(f"Training error: {e}")
+        logger.error(f"Training error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1017,7 +960,7 @@ def api_monitor_metrics():
 
         return jsonify(metrics)
     except Exception as e:
-        logger.error(f"Monitor metrics error: {e}")
+        logger.error(f"Monitor metrics error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1046,7 +989,7 @@ def api_lolpros_search():
             data = json.loads(resp.read().decode("utf-8"))
         return jsonify(data)
     except Exception as e:
-        logger.error(f"lolpros search error: {e}")
+        logger.error(f"lolpros search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 502
 
 
@@ -1070,7 +1013,7 @@ def api_lolpros_ladder():
             data = json.loads(resp.read().decode("utf-8"))
         return jsonify(data)
     except Exception as e:
-        logger.error(f"lolpros ladder error: {e}")
+        logger.error(f"lolpros ladder error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 502
 
 
@@ -1141,8 +1084,6 @@ def api_lolpros_import():
 
         def _collect_all():
             try:
-                import data_collector
-
                 # Build account dicts expected by collect_by_puuid
                 accs_payload = []
                 for acc in accounts_for_collection:
@@ -1175,7 +1116,7 @@ def api_lolpros_import():
                     with collection_lock:
                         collection_status["status"] = "completed"
             except Exception as exc:
-                logger.error(f"lolpros import collection error: {exc}")
+                logger.error(f"lolpros import collection error: {exc}", exc_info=True)
                 with collection_lock:
                     collection_status["status"] = "error"
                     collection_status["error"] = str(exc)
@@ -1206,7 +1147,7 @@ def api_lolpros_import():
             }
         )
     except Exception as e:
-        logger.error(f"lolpros import error: {e}")
+        logger.error(f"lolpros import error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -1220,6 +1161,6 @@ if __name__ == "__main__":
     # Never use debug=True in production — read from environment instead
     app.run(
         debug=os.getenv("FLASK_DEBUG", "0") == "1",
-        host="0.0.0.0",
+        host=os.getenv("HOST", "127.0.0.1"),
         port=int(os.getenv("PORT", 5000)),
     )

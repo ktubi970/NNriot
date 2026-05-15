@@ -1,9 +1,7 @@
 import os
 import riot_api
 import database
-import json
 import time
-import random
 import json_utils
 from data_collector import _resolve_region
 
@@ -26,7 +24,7 @@ def run_collector():
         ("Hide on bush", "KR1"),
         ("Chovy", "KR1"),
         ("T1 Gumayusi", "KR1"),
-        ("ShowMaker", "DK1"),
+        ("ShowMaker", "KR1"),
         ("Canyon", "KR1"),
         ("T1 Faker", "KR1"),
         ("T1 Keira", "KR1"),
@@ -123,6 +121,12 @@ def run_collector():
                         if t["win"] and t["teamId"] == 200:
                             winner = 1
                             break
+
+                    team_a_won = any(t.get("win") and t.get("teamId") == 100 for t in teams)
+                    team_b_won = any(t.get("win") and t.get("teamId") == 200 for t in teams)
+                    if not (team_a_won or team_b_won):
+                        print(f"  Skipping match {mid}: no team marked as winner")
+                        continue
 
                     matches_batch.append((mid, details))
                     training_records_batch.append((mid, matchup_feature, winner))

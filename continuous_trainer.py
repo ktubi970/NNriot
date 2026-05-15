@@ -9,7 +9,6 @@ import os
 # Silence TensorFlow oneDNN performance warnings
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
-import json
 import random
 import tensorflow as tf
 import numpy as np
@@ -86,6 +85,7 @@ class ContinuousTrainer:
         # Increased ratio to 2x historical data relative to new_records
         old_records = database.get_random_trained_records(limit=len(new_records) * 2)
         records = new_records + old_records
+        records = [r for r in records if r["feature_json"] is not None]
 
         logger.info(
             "Found %d new matches. Adding %d historical matches for replay (Total batch: %d).",
@@ -97,7 +97,7 @@ class ContinuousTrainer:
         random.shuffle(records)
 
         # Prepare inputs natively via feature hasher which uses iterators & small memory overhead
-        json_features = [json.loads(r["feature_json"]) for r in records]
+        json_features = [r["feature_json"] for r in records]
         x_data_sparse = json_utils.json_to_vector(json_features, dim=VECTOR_DIM)
 
         # Prepare labels (0 -> [1, 0], 1 -> [0, 1])

@@ -1,11 +1,8 @@
 import riot_api
 import database
-import json
 import time
 import json_utils
 import threading
-import import_liquipedia
-import requests
 
 # Maps tag suffixes (as returned by the Riot API or used by collect_training_data)
 # to the region code accepted by RiotAPI.__init__.
@@ -66,6 +63,12 @@ def _build_training_record(
             if t["win"] and t["teamId"] == 200:
                 winner = 1
                 break
+
+        team_a_won = any(t.get("win") and t.get("teamId") == 100 for t in teams)
+        team_b_won = any(t.get("win") and t.get("teamId") == 200 for t in teams)
+        if not (team_a_won or team_b_won):
+            print(f"  Skipping match {match_id}: no team marked as winner")
+            return None
 
         return (match_id, feature, winner)
     except Exception as e:

@@ -1,6 +1,7 @@
 import os
 import requests
 import time
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv
 
@@ -11,6 +12,7 @@ load_dotenv(override=True)
 class RiotAPI:
     # Class-level tracking to share call counts across instances/threads
     _total_calls = 0
+    _lock = threading.Lock()
     _last_limits = {}  # Tracks {region: {app_limit: x, app_count: y, methods: {}}}
     
     def __init__(self, region="KR"):
@@ -89,7 +91,8 @@ class RiotAPI:
                 self._update_rate_limits(response.headers)
                 
                 if response.status_code == 200:
-                    RiotAPI._total_calls += 1
+                    with RiotAPI._lock:
+                        RiotAPI._total_calls += 1
                     return response
                 elif response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 5))

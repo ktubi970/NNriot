@@ -1,8 +1,7 @@
 import numpy as np
 import hashlib
-import json
 from typing import Union, List, Dict, Any, Optional
-from scipy.sparse import csr_matrix, vstack
+from scipy.sparse import csr_matrix
 from sklearn.feature_extraction import FeatureHasher
 from sklearn.preprocessing import normalize
 

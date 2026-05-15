@@ -91,7 +91,7 @@ json_inputs = [
 y_data = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
 
 # Vectorize JSON inputs
-VECTOR_DIM = 10000
+VECTOR_DIM = 100000
 x_data = json_utils.json_to_vector(json_inputs, dim=VECTOR_DIM)
 
 # Create TensorFlow session and define network
@@ -172,7 +172,6 @@ NNriot/
 ├── requirements.txt       # Core dependencies
 ├── web_requirements.txt   # Web interface dependencies
 ├── PROJECT_SUMMARY.md     # Detailed project documentation
-├── WEB_APP_README.md      # Web interface specific documentation
 └── .env                   # Environment variables
 ```
 
@@ -339,9 +338,6 @@ The `plot_graph.py` module provides interactive visualization of the neural netw
 ```bash
 # Create network architecture visualization
 python plot_graph.py
-
-# View detailed examples with training data
-python example_usage.py
 ```
 
 ### Generated Visualizations
@@ -416,24 +412,6 @@ A comprehensive Flask-based web application is available for League of Legends m
 - **Error Handling**: Comprehensive error messages and validation
 - **Professional Styling**: Dark theme with League of Legends-inspired colors
 
-### 📚 Documentation
-
-Detailed web interface documentation is available in `WEB_APP_README.md` including:
-- Installation and setup instructions
-- API endpoint documentation
-- Match data structure examples
-- Troubleshooting guide
-- Development and deployment information
-
-### 🧪 Testing
-
-Test the web API with the provided test script:
-```bash
-python test_web_api.py
-```
-
-This will verify all API endpoints and demonstrate the web interface functionality.
-
 ## Future Enhancements
 
 - Support for TensorFlow 2.x eager execution
@@ -441,4 +419,3 @@ This will verify all API endpoints and demonstrate the web interface functionali
 - More sophisticated neural network architectures
 - Web API for JSON classification service
 - Real-time streaming JSON processing
-# NNriot 
