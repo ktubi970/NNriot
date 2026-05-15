@@ -864,6 +864,32 @@ def link_accounts(main_puuid: str, smurf_puuid: str, db_path: str = DB_PATH):
         )
 
 
+def unlink_accounts(alias_puuid: str, db_path: str = DB_PATH):
+    """Remove a smurf account link from the canonical main account."""
+    with get_connection(db_path) as conn:
+        conn.execute("DELETE FROM player_aliases WHERE alias_puuid = ?", (alias_puuid,))
+
+
+def get_all_aliases(db_path: str = DB_PATH) -> list[dict]:
+    """Retrieve all linked player aliases with their names."""
+    with get_connection(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT
+                pa.alias_puuid,
+                pa.canonical_puuid,
+                p_alias.game_name as alias_name,
+                p_alias.tag_line as alias_tag,
+                p_canon.game_name as canon_name,
+                p_canon.tag_line as canon_tag
+            FROM player_aliases pa
+            JOIN players p_alias ON pa.alias_puuid = p_alias.puuid
+            JOIN players p_canon ON pa.canonical_puuid = p_canon.puuid
+        """
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
 def get_top_players(limit: int = 10, db_path: str = DB_PATH) -> list[dict]:
     """
     Get the top players by match count.
@@ -1161,29 +1187,3 @@ if __name__ == "__main__":
     backfill_seasons()
     stats = get_db_stats()
     print(f"DB stats: {stats}")
-
-
-def unlink_accounts(alias_puuid: str, db_path: str = DB_PATH):
-    """Remove a smurf account link from the canonical main account."""
-    with get_connection(db_path) as conn:
-        conn.execute("DELETE FROM player_aliases WHERE alias_puuid = ?", (alias_puuid,))
-
-
-def get_all_aliases(db_path: str = DB_PATH) -> list[dict]:
-    """Retrieve all linked player aliases with their names."""
-    with get_connection(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT 
-                pa.alias_puuid, 
-                pa.canonical_puuid,
-                p_alias.game_name as alias_name, 
-                p_alias.tag_line as alias_tag,
-                p_canon.game_name as canon_name, 
-                p_canon.tag_line as canon_tag
-            FROM player_aliases pa
-            JOIN players p_alias ON pa.alias_puuid = p_alias.puuid
-            JOIN players p_canon ON pa.canonical_puuid = p_canon.puuid
-        """
-        ).fetchall()
-    return [dict(r) for r in rows]

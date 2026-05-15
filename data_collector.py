@@ -42,6 +42,14 @@ _TAG_TO_REGION = {
 # modes are skipped at training-record build time.
 EXCLUDED_GAME_MODES = frozenset({"CHERRY", "STRAWBERRY"})
 
+# Default training-config knobs — surfaced via /api/monitor/metrics for the UI.
+# Keep these as the single source of truth so the dashboard never drifts from
+# the collector defaults.
+DEFAULT_REGIONS = ["KR", "NA", "EUW", "EUN", "BR", "LA1", "LA2", "OCE", "JP", "RU", "TR"]
+DEFAULT_PLAYERS_PER_REGION = 500
+DEFAULT_MATCHES_PER_PLAYER = 20
+DEFAULT_LOOKBACK_DAYS = 60
+
 
 def resolve_region(tag: str) -> str:
     """

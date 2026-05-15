@@ -9,8 +9,8 @@ from feature_labels import extract_labels
 
 logger = logging.getLogger(__name__)
 
-# Limit in Bytes (50 GB)
-MAX_DB_SIZE = 50 * 1024 * 1024 * 1024
+# Limit in Bytes — defaults to 50 GB, overridable via NNRIOT_MAX_DB_SIZE_GB.
+MAX_DB_SIZE = int(os.environ.get("NNRIOT_MAX_DB_SIZE_GB", "50")) * 1024 * 1024 * 1024
 
 
 def get_db_size():

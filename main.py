@@ -2,6 +2,7 @@ import numpy as np
 import json_utils
 import plotly.graph_objects as go
 from generate_graph import build_keras_model
+from feature_labels import VECTOR_DIM
 
 
 def _main():
@@ -15,8 +16,7 @@ def _main():
     # Define labels (e.g., [1, 0] for "safe", [0, 1] for "alert")
     y_data = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
 
-    # 2. Vectorize JSON inputs
-    VECTOR_DIM = 20000
+    # 2. Vectorize JSON inputs (using shared VECTOR_DIM from feature_labels)
     x_data_sparse = json_utils.json_to_vector(json_inputs, dim=VECTOR_DIM)
     x_data = x_data_sparse.toarray()
 

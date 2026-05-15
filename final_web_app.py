@@ -31,6 +31,7 @@ import json_utils
 import live_game
 import data_collector
 import riot_api
+from feature_labels import VECTOR_DIM
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -85,7 +86,6 @@ def init_trainer():
 
 
 global_trainer, tf_available = init_trainer()
-VECTOR_DIM = 20000
 
 
 def _format_multi_output_response(preds: dict) -> dict:
@@ -1074,25 +1074,17 @@ def api_monitor_metrics():
                 "versions": sorted(checkpoint_versions),
             }
 
-        # Training configuration (from data_collector defaults)
+        # Training configuration — regions/lookback come from data_collector
+        # so the UI tracks the collector defaults. batch_size/epochs are
+        # hardcoded here to avoid importing TF-heavy continuous_trainer; if
+        # the trainer constants change, bump these to match (continuous_trainer
+        # BATCH_SIZE / EPOCHS_PER_BATCH).
         metrics["training_config"] = {
-            "regions": [
-                "KR",
-                "NA",
-                "EUW",
-                "EUN",
-                "BR",
-                "LA1",
-                "LA2",
-                "OCE",
-                "JP",
-                "RU",
-                "TR",
-            ],
-            "players_per_region": 500,
-            "matches_per_player": 20,
-            "lookback_days": 60,
-            "model_type": "ResMLP",
+            "regions": data_collector.DEFAULT_REGIONS,
+            "players_per_region": data_collector.DEFAULT_PLAYERS_PER_REGION,
+            "matches_per_player": data_collector.DEFAULT_MATCHES_PER_PLAYER,
+            "lookback_days": data_collector.DEFAULT_LOOKBACK_DAYS,
+            "model_type": "ResMLP-22",  # 22-head multi-output model
             "batch_size": 500,
             "epochs": 100,
         }

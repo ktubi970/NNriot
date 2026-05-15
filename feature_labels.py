@@ -11,6 +11,12 @@ full design.
 
 from __future__ import annotations
 
+# Hashing-vectorizer output dimensionality — single source of truth.
+# Both continuous_trainer and final_web_app import this constant so the
+# model input shape, the predictor request payload, and the training
+# pipeline can never drift.
+VECTOR_DIM = 20000
+
 # Ordered list of all label keys produced by ``extract_labels``.
 # Used by the trainer (target dict assembly) and by tests.
 LABEL_KEYS = [

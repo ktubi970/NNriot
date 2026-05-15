@@ -16,11 +16,10 @@ import time
 import logging
 import database
 import json_utils
-from feature_labels import LABEL_KEYS, ALL_LABEL_KEYS
+from feature_labels import LABEL_KEYS, ALL_LABEL_KEYS, VECTOR_DIM
 from generate_graph import build_multi_output_model
 
 # Configuration
-VECTOR_DIM = 20000
 TRAINING_INTERVAL_SECONDS = 10 * 60  # 10 minutes
 
 # Normalization stats for regression heads, derived empirically from the
