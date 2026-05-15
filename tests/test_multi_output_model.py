@@ -3,6 +3,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import numpy as np
 import pytest
+import tensorflow as tf
 from generate_graph import (
     build_multi_output_model,
     LOSS_PER_HEAD,
@@ -77,3 +78,20 @@ def test_model_trains_one_step():
     # train_on_batch returns a list with overall loss + per-head losses + per-head metrics
     # For multi-output models with 18 heads + total + metrics, expect a non-empty result
     assert result is not None
+
+
+def test_dropout_layers_present():
+    """Trunk has 4 Dropout layers."""
+    model = build_multi_output_model(input_dim=100)
+    dropout_count = sum(1 for layer in model.layers if isinstance(layer, tf.keras.layers.Dropout))
+    assert dropout_count == 4, f"Expected 4 Dropout layers, got {dropout_count}"
+
+
+def test_per_head_hidden_layers_present():
+    """Each of the 18 heads has a *_hidden Dense(64) layer before the output."""
+    model = build_multi_output_model(input_dim=100)
+    hidden_layers = [layer for layer in model.layers if layer.name.endswith("_hidden")]
+    assert len(hidden_layers) == 18, f"Expected 18 *_hidden layers, got {len(hidden_layers)}"
+    for layer in hidden_layers:
+        assert isinstance(layer, tf.keras.layers.Dense)
+        assert layer.units == 64

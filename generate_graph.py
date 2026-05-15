@@ -117,14 +117,27 @@ def build_keras_model(input_dim=100000):
     return model
 
 
-def build_multi_output_model(input_dim: int = 100000) -> tf.keras.Model:
+def _head(name: str, units: int, activation: str | None, source, hidden_size: int = 64):
+    """Build a per-head capacity layer (Dense hidden_size ReLU) before the final output Dense."""
+    h = tf.keras.layers.Dense(hidden_size, activation="relu", name=f"{name}_hidden")(source)
+    return tf.keras.layers.Dense(units, activation=activation, name=name)(h)
+
+
+def build_multi_output_model(input_dim: int = 100000, dropout_rate: float = 0.3) -> tf.keras.Model:
     """
     Build the 18-output multi-task model.
 
     Shared trunk (identical to build_keras_model):
       Input -> Dense 1024 -> ResBlock x 2 -> Dense 512 -> Dense 128 (embedding)
 
-    Per-task heads off the 128-dim embedding (18 named outputs).
+    Per-task heads off the 128-dim embedding (18 named outputs). Each head
+    has a Dense(64, relu) "*_hidden" layer before its final output Dense,
+    giving each head a bit of per-task capacity.
+
+    Dropout (default 0.3) is applied after each trunk dense layer
+    (Projection, ResBlock1_relu, ResBlock2_relu, Dense512) — 4 Dropout
+    layers total. No dropout on the embedding or on heads.
+
     See MULTI_OUTPUT_MODEL_PLAN.md section 4 for the head spec.
     """
     import feature_labels
@@ -135,38 +148,42 @@ def build_multi_output_model(input_dim: int = 100000) -> tf.keras.Model:
 
     # Projection (1024)
     x = tf.keras.layers.Dense(1024, activation="relu", name="Projection_Dense")(inputs)
+    x = tf.keras.layers.Dropout(dropout_rate, name="Projection_Dropout")(x)
 
     # ResBlock 1
     res1 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock1_layer1")(x)
     res1 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock1_layer2")(res1)
     x = tf.keras.layers.Add(name="ResBlock1_add")([x, res1])
     x = tf.keras.layers.Activation("relu", name="ResBlock1_relu")(x)
+    x = tf.keras.layers.Dropout(dropout_rate, name="ResBlock1_Dropout")(x)
 
     # ResBlock 2
     res2 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock2_layer1")(x)
     res2 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock2_layer2")(res2)
     x = tf.keras.layers.Add(name="ResBlock2_add")([x, res2])
     x = tf.keras.layers.Activation("relu", name="ResBlock2_relu")(x)
+    x = tf.keras.layers.Dropout(dropout_rate, name="ResBlock2_Dropout")(x)
 
     # Bottleneck
     x = tf.keras.layers.Dense(512, activation="relu", name="Dense512")(x)
+    x = tf.keras.layers.Dropout(dropout_rate, name="Dense512_Dropout")(x)
     embedding = tf.keras.layers.Dense(128, activation="relu", name="embedding")(x)
 
-    # Per-head outputs
+    # Per-head outputs (each gains a Dense(64, relu) *_hidden layer via _head)
     outputs = {}
     # 2-class softmax heads
     for name in ("winner", "team_b_kill_lead"):
-        outputs[name] = tf.keras.layers.Dense(2, activation="softmax", name=name)(embedding)
+        outputs[name] = _head(name=name, units=2, activation="softmax", source=embedding)
     # 3-class softmax heads
     for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
-        outputs[name] = tf.keras.layers.Dense(3, activation="softmax", name=name)(embedding)
+        outputs[name] = _head(name=name, units=3, activation="softmax", source=embedding)
     # Binary sigmoid heads
     for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
-        outputs[name] = tf.keras.layers.Dense(1, activation="sigmoid", name=name)(embedding)
+        outputs[name] = _head(name=name, units=1, activation="sigmoid", source=embedding)
     # Regression heads
     for name in ("kill_handicap", "total_kills", "team_a_kills", "team_b_kills",
                  "total_barons", "total_dragons", "total_towers"):
-        outputs[name] = tf.keras.layers.Dense(1, activation="linear", name=name)(embedding)
+        outputs[name] = _head(name=name, units=1, activation="linear", source=embedding)
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_MultiHead")
 
