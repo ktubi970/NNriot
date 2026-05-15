@@ -41,23 +41,15 @@ logging.basicConfig(
 
 
 def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
-    """
-    Given training records (each with a parsed `labels_json` dict),
-    build a dict of {head_name: ndarray} ready for model.train_on_batch.
-    """
-    # Filter out records with incomplete labels_json (corruption, partial migration).
-    # Without this, r["labels_json"][name] would raise KeyError mid-batch.
-    required_keys = set(LABEL_KEYS)
-    incomplete = [r for r in records if not required_keys.issubset(r["labels_json"].keys())]
-    if incomplete:
-        logger.warning(
-            "Skipping %d records with incomplete labels_json (missing keys)",
-            len(incomplete),
-        )
-        records = [r for r in records if required_keys.issubset(r["labels_json"].keys())]
-        if not records:
-            return {}
+    """Build a dict of {head_name: ndarray} ready for model.train_on_batch.
 
+    Assumes all records have complete labels_json (filtered by caller).
+    The ``.get(name, 0)`` defensive accesses below remain to protect against
+    future drift, but the caller (``run_training_step``) is responsible for
+    filtering incomplete records before invoking this function — otherwise
+    the produced targets would not align with the input matrix built from
+    the same record list.
+    """
     n = len(records)
     # Pre-allocate arrays per head type
     targets: dict[str, np.ndarray] = {}
@@ -170,6 +162,25 @@ class ContinuousTrainer:
         if not records:
             logger.info("All available records lack labels_json; skipping.")
             return 0
+
+        # Filter records with incomplete labels_json before building inputs/targets.
+        # Must happen BEFORE x_data_sparse is built so that x.shape[0] matches
+        # the length of each per-head target array produced by _build_targets.
+        required_keys = set(LABEL_KEYS)
+        incomplete_count = sum(
+            1 for r in records if not required_keys.issubset(r["labels_json"].keys())
+        )
+        if incomplete_count:
+            logger.warning(
+                "Skipping %d records with incomplete labels_json (missing keys)",
+                incomplete_count,
+            )
+            records = [
+                r for r in records if required_keys.issubset(r["labels_json"].keys())
+            ]
+            if not records:
+                logger.info("All records have incomplete labels; skipping training step.")
+                return 0
 
         # Prepare inputs natively via feature hasher which uses iterators & small memory overhead
         json_features = [r["feature_json"] for r in records]
