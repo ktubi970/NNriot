@@ -20,7 +20,7 @@ from feature_labels import LABEL_KEYS
 from generate_graph import build_multi_output_model
 
 # Configuration
-VECTOR_DIM = 100000
+VECTOR_DIM = 20000
 TRAINING_INTERVAL_SECONDS = 10 * 60  # 10 minutes
 # BATCH_SIZE / EPOCHS_PER_BATCH can be overridden via env vars so users can
 # do a small smoke run before kicking off a full training cycle:

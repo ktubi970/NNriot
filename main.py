@@ -14,7 +14,7 @@ json_inputs = [
 y_data = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
 
 # 2. Vectorize JSON inputs
-VECTOR_DIM = 100000
+VECTOR_DIM = 20000
 x_data_sparse = json_utils.json_to_vector(json_inputs, dim=VECTOR_DIM)
 x_data = x_data_sparse.toarray()
 

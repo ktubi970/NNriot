@@ -77,7 +77,7 @@ def init_trainer():
 
 
 global_trainer, tf_available = init_trainer()
-VECTOR_DIM = 100000
+VECTOR_DIM = 20000
 
 
 def _format_multi_output_response(preds: dict) -> dict:

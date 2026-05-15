@@ -91,7 +91,7 @@ json_inputs = [
 y_data = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
 
 # Vectorize JSON inputs
-VECTOR_DIM = 100000
+VECTOR_DIM = 20000
 x_data = json_utils.json_to_vector(json_inputs, dim=VECTOR_DIM)
 
 # Create TensorFlow session and define network
@@ -179,8 +179,8 @@ NNriot/
 
 The network uses a TensorFlow 1.x graph-based architecture with the following structure:
 
-1. **Input Layer**: 10,000 features from JSON vectorization
-2. **Projection**: Dense layer (10,000 → 1,024) with ReLU activation
+1. **Input Layer**: 20,000 features from JSON vectorization
+2. **Projection**: Dense layer (20,000 → 1,024) with ReLU activation
 3. **Residual Blocks**: Two residual blocks (1,024 → 1,024) with skip connections
 4. **Bottleneck**: Dense layers (1,024 → 512 → 128) with ReLU activation
 5. **Output**: Dense layer (128 → 2) with softmax activation for binary classification
