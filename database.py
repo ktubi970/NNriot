@@ -22,7 +22,7 @@ import functools
 DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 10
+SCHEMA_VERSION = 11
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -206,6 +206,21 @@ _MIGRATIONS = [
         [
             "ALTER TABLE training_dataset ADD COLUMN labels_json TEXT",
             "UPDATE schema_version SET version = 10",
+        ],
+    ),
+    # v10 -> v11 : add match_timelines table for Riot Match-V5 timeline data
+    (
+        10,
+        [
+            """
+            CREATE TABLE IF NOT EXISTS match_timelines (
+                match_id      TEXT PRIMARY KEY,
+                timeline_json TEXT,
+                FOREIGN KEY(match_id) REFERENCES matches(match_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_timelines_match ON match_timelines(match_id)",
+            "UPDATE schema_version SET version = 11",
         ],
     ),
 ]
@@ -394,6 +409,65 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
             )
 
     logger.debug("Batch-saved %d matches and updated champions.", len(rows))
+
+
+def save_match_timeline(match_id: str, timeline_data: dict, db_path: str = DB_PATH):
+    """Insert a timeline record (silently ignored if already exists)."""
+    if not match_id:
+        raise ValueError("match_id must not be empty.")
+    compressed = base64.b64encode(
+        gzip.compress(json.dumps(timeline_data).encode("utf-8"))
+    ).decode("ascii")
+    with get_connection(db_path) as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO match_timelines (match_id, timeline_json) VALUES (?, ?)",
+            (match_id, compressed),
+        )
+    logger.debug("Saved timeline %s.", match_id)
+
+
+def save_match_timelines_batch(timelines: list[tuple], db_path: str = DB_PATH):
+    """Bulk-insert multiple (match_id, timeline_data) tuples."""
+    rows = []
+    for match_id, timeline_data in timelines:
+        if not match_id:
+            continue
+        compressed = base64.b64encode(
+            gzip.compress(json.dumps(timeline_data).encode("utf-8"))
+        ).decode("ascii")
+        rows.append((match_id, compressed))
+    if not rows:
+        return
+    with get_connection(db_path) as conn:
+        conn.executemany(
+            "INSERT OR IGNORE INTO match_timelines (match_id, timeline_json) VALUES (?, ?)",
+            rows,
+        )
+    logger.debug("Batch-saved %d timelines.", len(rows))
+
+
+def get_match_timeline(match_id: str, db_path: str = DB_PATH) -> dict | None:
+    """Return the parsed timeline dict for a match, or None if not present."""
+    with get_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT timeline_json FROM match_timelines WHERE match_id = ? LIMIT 1",
+            (match_id,),
+        ).fetchone()
+    if not row:
+        return None
+    tj = row["timeline_json"]
+    if not tj:
+        return None
+    return json.loads(gzip.decompress(base64.b64decode(tj)).decode("utf-8"))
+
+
+def match_timeline_exists(match_id: str, db_path: str = DB_PATH) -> bool:
+    """True if a timeline is stored for this match."""
+    with get_connection(db_path) as conn:
+        row = conn.execute(
+            "SELECT 1 FROM match_timelines WHERE match_id = ? LIMIT 1", (match_id,)
+        ).fetchone()
+    return row is not None
 
 
 def _compress_labels(labels: dict | None) -> str | None:
