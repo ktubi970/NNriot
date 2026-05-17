@@ -103,42 +103,6 @@ METRICS_PER_HEAD: dict[str, list[str]] = {
 }
 
 
-def build_keras_model(input_dim=100000):
-    inputs = tf.keras.Input(shape=(input_dim,), name="Input")
-
-    # Projection
-    x = tf.keras.layers.Dense(1024, activation="relu", name="Projection_Dense")(inputs)
-
-    # ResBlock 1
-    res1 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock1_layer1")(x)
-    res1 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock1_layer2")(res1)
-    x = tf.keras.layers.Add(name="ResBlock1_add")([x, res1])
-    x = tf.keras.layers.Activation("relu", name="ResBlock1_relu")(x)
-
-    # ResBlock 2
-    res2 = tf.keras.layers.Dense(1024, activation="relu", name="ResBlock2_layer1")(x)
-    res2 = tf.keras.layers.Dense(1024, activation=None, name="ResBlock2_layer2")(res2)
-    x = tf.keras.layers.Add(name="ResBlock2_add")([x, res2])
-    x = tf.keras.layers.Activation("relu", name="ResBlock2_relu")(x)
-
-    # Bottleneck
-    x = tf.keras.layers.Dense(512, activation="relu", name="Dense512")(x)
-    x = tf.keras.layers.Dense(128, activation="relu", name="Dense128")(x)
-
-    # Output
-    outputs = tf.keras.layers.Dense(2, activation="softmax", name="Output")(x)
-
-    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_ResMLP")
-
-    model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
-        loss="categorical_crossentropy",
-        metrics=["accuracy"],
-    )
-
-    return model
-
-
 def _head(name: str, units: int, activation: str | None, source, hidden_size: int = 64):
     """Build a per-head capacity layer (Dense hidden_size ReLU) before the final output Dense."""
     h = tf.keras.layers.Dense(hidden_size, activation="relu", name=f"{name}_hidden")(source)
@@ -222,9 +186,8 @@ def build_multi_output_model(input_dim: int = 20000, dropout_rate: float = 0.3) 
 
 
 if __name__ == "__main__":
-    # Sanity build of the current multi-output model — does NOT save a checkpoint
-    # (training is handled by continuous_trainer.py). The old code saved a legacy
-    # model.keras that would shadow the real model_v2.keras checkpoint.
+    # Sanity build of the multi-output model. Does NOT save a checkpoint -
+    # training is handled by continuous_trainer.py / retrain_full.py.
     model = build_multi_output_model()
     model.summary()
     print(f"Multi-output model has {len(model.output_names)} heads.")
