@@ -3,9 +3,12 @@ import os
 import riot_api
 import database
 import time
-import json_utils
-from data_collector import resolve_region, EXCLUDED_GAME_MODES
-from feature_labels import extract_labels
+from data_collector import (
+    resolve_region,
+    EXCLUDED_GAME_MODES,
+    FETCH_TIMELINES,
+    _build_training_record,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -101,54 +104,35 @@ def run_collector():
             training_records_batch = []
 
             for mid, details in details_map.items():
-                # Process participants for crawling
+                # Pre-filter excluded modes so we don't seed the crawl queue
+                # with their participants (no useful training pool growth).
                 info = details.get("info", {})
                 if (info.get("gameMode") or "") in EXCLUDED_GAME_MODES:
                     continue
-                participants = info.get("participants", [])
 
-                for p in participants:
+                for p in info.get("participants", []):
                     # Grow the crawl pool via DB
                     p_name = p.get("riotIdGameName")
                     p_tag = p.get("riotIdTagline")
                     if p_name and p_tag:
                         database.add_to_crawl_queue(p_name, p_tag, priority=0)
 
-                # Use centralized feature extraction
-                try:
-                    matchup_feature = json_utils.extract_match_features(
-                        details, region=region
-                    )
-
-                    # Determine winner
-                    teams = info.get("teams", [])
-                    winner = 0
-                    for t in teams:
-                        if t["win"] and t["teamId"] == 200:
-                            winner = 1
-                            break
-
-                    team_a_won = any(t.get("win") and t.get("teamId") == 100 for t in teams)
-                    team_b_won = any(t.get("win") and t.get("teamId") == 200 for t in teams)
-                    if not (team_a_won or team_b_won):
-                        print(f"  Skipping match {mid}: no team marked as winner")
-                        continue
-
-                    labels = extract_labels(details)
-                    if labels is None:
-                        # Match couldn't produce labels (Arena/Swarm/malformed) — skip
-                        continue
-
-                    matches_batch.append((mid, details))
-                    training_records_batch.append((mid, matchup_feature, winner, labels))
-                except Exception as e:
-                    logger.error(f"  Error processing features for {mid}: {e}", exc_info=True)
+                record = _build_training_record(mid, details, region=region)
+                if record is None:
+                    continue
+                matches_batch.append((mid, details))
+                training_records_batch.append(record)
 
             # Flush batches
             if matches_batch:
                 database.save_matches_batch(matches_batch)
             if training_records_batch:
                 database.save_training_records_batch(training_records_batch)
+
+            if FETCH_TIMELINES and new_mids:
+                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
+                if timelines:
+                    database.save_match_timelines_batch(list(timelines.items()))
 
             database.mark_as_processed(name, tag)
             print(
