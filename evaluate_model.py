@@ -56,13 +56,14 @@ logger = logging.getLogger("evaluate_model")
 
 def _fetch_records(n: int) -> list[dict]:
     """Prefer untrained holdout rows; fall back to a random sample of trained rows."""
-    holdout = database.get_untrained_records(limit=n)
+    holdout = [r for r in database.get_untrained_records(limit=n)
+               if r.get("feature_json") and r.get("labels_json")]
     if len(holdout) >= max(50, n // 4):
         logger.info("Using %d untrained rows as a true holdout.", len(holdout))
         return holdout
     sample = database.get_random_trained_records(limit=n)
     logger.info(
-        "Only %d untrained rows; sampling %d trained rows instead (not a true holdout).",
+        "Only %d complete untrained rows; sampling %d trained rows instead (not a true holdout).",
         len(holdout), len(sample),
     )
     return sample
