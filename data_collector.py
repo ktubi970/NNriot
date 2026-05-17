@@ -43,7 +43,7 @@ _TAG_TO_REGION = {
 # modes are skipped at training-record build time.
 EXCLUDED_GAME_MODES = frozenset({"CHERRY", "STRAWBERRY"})
 
-# Default training-config knobs — surfaced via /api/monitor/metrics for the UI.
+# Default training-config knobs - surfaced via /api/monitor/metrics for the UI.
 # Keep these as the single source of truth so the dashboard never drifts from
 # the collector defaults.
 DEFAULT_REGIONS = ["KR", "NA", "EUW", "EUN", "BR", "LA1", "LA2", "OCE", "JP", "RU", "TR"]
@@ -197,7 +197,7 @@ def collect_top_leagues_data(
     all_entries = []
 
     for region_idx, region in enumerate(regions):
-        print(f"\n🌍 Region {region_idx+1}/{total_regions}: {region}")
+        print(f"\nRegion {region_idx+1}/{total_regions}: {region}")
         api = riot_api.RiotAPI(region)
 
         try:
@@ -211,17 +211,17 @@ def collect_top_leagues_data(
             all_entries.extend(region_entries)
 
         except Exception as e:
-            logger.error(f"  ❌ Error fetching {region}: {e}", exc_info=True)
+            logger.error(f"  [ERROR] Error fetching {region}: {e}", exc_info=True)
             continue
 
-    print(f"\n📊 Total players collected across all regions: {len(all_entries)}")
+    print(f"\nTotal players collected across all regions: {len(all_entries)}")
 
     for i, entry in enumerate(all_entries):
         region = entry.get("_region", "UNKNOWN")
         puuid = entry.get("puuid")
 
         if not puuid:
-            print(f"[{i+1}/{len(all_entries)}] ⚠️ Skipping entry: no PUUID found")
+            print(f"[{i+1}/{len(all_entries)}] [WARN] Skipping entry: no PUUID found")
             continue
 
         # Use region-specific API for this player
@@ -231,7 +231,7 @@ def collect_top_leagues_data(
         account_info = api.get_account_by_puuid(puuid)
         if not account_info or not account_info.get("game_name"):
             print(
-                f"[{i+1}/{len(all_entries)}] ⚠️ Skipping entry: could not fetch account name for {puuid}"
+                f"[{i+1}/{len(all_entries)}] [WARN] Skipping entry: could not fetch account name for {puuid}"
             )
             continue
 
@@ -288,13 +288,13 @@ def collect_top_leagues_data(
 def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict:
     """
     Collect match history for a list of accounts where the PUUID is already known
-    (e.g. imported from lolpros.gg). Skips the name→PUUID lookup step.
+    (e.g. imported from lolpros.gg). Skips the name->PUUID lookup step.
 
     Parameters
     ----------
     accounts : list of dicts with keys:
         - puuid   : str   (encrypted_puuid from Riot / lolpros.gg)
-        - server  : str   (e.g. "EUW", "NA", "KR") — used as region
+        - server  : str   (e.g. "EUW", "NA", "KR") - used as region
         - gamename: str
         - tagline : str
     matches_per_player : int
@@ -314,11 +314,11 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
         tag = acc.get("tagline") or server or "?"
 
         if not puuid:
-            print(f"  ⚠ Skipping account with no PUUID: {name}")
+            print(f"  [WARN] Skipping account with no PUUID: {name}")
             stats["skipped"] += 1
             continue
 
-        # Resolve region — the lolpros.gg 'server' field maps directly
+        # Resolve region - the lolpros.gg 'server' field maps directly
         try:
             region = resolve_region(server) if server else None
         except ValueError:
@@ -343,11 +343,11 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
             )
 
         if not region:
-            print(f"  ⚠ Cannot resolve region '{server}' for {name} — skipping")
+            print(f"  [WARN] Cannot resolve region '{server}' for {name} - skipping")
             stats["skipped"] += 1
             continue
 
-        print(f"  [{region}] {name}#{tag} ({puuid[:16]}…)")
+        print(f"  [{region}] {name}#{tag} ({puuid[:16]}...)")
         try:
             # Ensure player stub exists in DB
             database.save_player(puuid, name, tag)
@@ -361,7 +361,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
                 stats["processed"] += 1
                 continue
 
-            print(f"    Fetching {len(new_mids)} new matches…")
+            print(f"    Fetching {len(new_mids)} new matches...")
             details_map = api.get_match_details_batch(new_mids, max_workers=4)
 
             matches_batch = []
@@ -377,7 +377,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
             if training_batch:
                 database.save_training_records_batch(training_batch)
                 database.increment_player_matches(puuid, len(training_batch))
-                print(f"    ✓ Saved {len(training_batch)} records.")
+                print(f"    [OK] Saved {len(training_batch)} records.")
                 stats["saved"] += len(training_batch)
 
             if FETCH_TIMELINES and new_mids:
@@ -388,7 +388,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
             stats["processed"] += 1
 
         except Exception as e:
-            logger.error(f"    ✗ Error for {name}#{tag}: {e}", exc_info=True)
+            logger.error(f"    [FAIL] Error for {name}#{tag}: {e}", exc_info=True)
             stats["errors"] += 1
 
     return stats
@@ -473,7 +473,7 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
                     if training_batch:
                         database.save_training_records_batch(training_batch)
                         database.increment_player_matches(acc["puuid"], len(training_batch))
-                        add_batch_log(f"    ✓ Saved {len(training_batch)} records.")
+                        add_batch_log(f"    [OK] Saved {len(training_batch)} records.")
 
                     if FETCH_TIMELINES and new_mids:
                         timelines = p_api.get_match_timelines_batch(new_mids, max_workers=3, verbose=True)
