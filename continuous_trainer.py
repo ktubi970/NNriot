@@ -181,8 +181,6 @@ class ContinuousTrainer:
           (the 22 multi-output heads). A stale 18-head checkpoint or legacy
           single-output model is rejected.
         """
-        from feature_labels import ALL_LABEL_KEYS
-
         actual_input_dim = model.input_shape[-1]
         if actual_input_dim != VECTOR_DIM:
             raise ValueError(
@@ -323,13 +321,6 @@ class ContinuousTrainer:
             One entry per output head; e.g. ``out["winner"]`` has shape
             (n_samples, 2) and contains softmax probabilities. Regression
             heads return shape (n_samples, 1).
-
-        Notes
-        -----
-        Return type changed from ndarray to dict in P3 (multi-output model).
-        Callers that previously did ``preds[0]`` for the single softmax row
-        must be updated to use ``preds["winner"][0]``. This is a known
-        incompatibility for ``final_web_app.py`` to be fixed in P4.
         """
         return self.model.predict(x_dense, verbose=0)
 
