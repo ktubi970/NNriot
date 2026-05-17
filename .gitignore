@@ -5,9 +5,12 @@ obj/
 *.o
 *.a
 
-# Raylib binaries (if downloaded separately, but often part of project)
+# Raylib vendored files (fetched via tools/fetch_raylib.bat)
 include/raylib.h
+include/raymath.h
+include/rlgl.h
 lib/libraylib.a
+lib/RAYLIB_LICENSE.txt
 
 # Tools and builds
 tools/w64devkit/
