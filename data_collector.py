@@ -5,6 +5,7 @@ import database
 import time
 import json_utils
 import threading
+from feature_labels import extract_labels
 
 logger = logging.getLogger(__name__)
 
@@ -68,8 +69,10 @@ def _build_training_record(
     match_id: str, details: dict, region: str = None
 ) -> tuple | None:
     """
-    Parse a raw Riot match-details dict into a (match_id, feature_dict, winner_label)
-    training tuple. Returns None if the data is malformed.
+    Parse a raw Riot match-details dict into a
+    ``(match_id, feature_dict, winner_label, labels_dict)`` training tuple.
+    Returns None if the data is malformed or feature_labels.extract_labels
+    rejects the match (e.g. Arena/Swarm modes, missing winner).
     """
     try:
         # Determine winner label (Team 100 win -> 0, Team 200 win -> 1)
@@ -96,7 +99,11 @@ def _build_training_record(
             print(f"  Skipping match {match_id}: no team marked as winner")
             return None
 
-        return (match_id, feature, winner)
+        labels = extract_labels(details)
+        if labels is None:
+            return None
+
+        return (match_id, feature, winner, labels)
     except Exception as e:
         logger.error(f"  Error building training record for match {match_id}: {e}", exc_info=True)
         return None
