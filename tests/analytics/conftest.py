@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from analytics.types import EvidencePacket
 from tests.analytics.factories import classic_match as make_classic_match
 from tests.analytics.factories import seed_fact_rows
 from tests.analytics.factories import seed_model_fact_rows
@@ -75,4 +76,71 @@ def powered_analytics_db(tmp_path_factory) -> Path:
 def model_db(tmp_path_factory) -> Path:
     return seed_model_fact_rows(
         tmp_path_factory.mktemp("analytics-model") / "analytics.db"
+    )
+
+
+@pytest.fixture
+def sample_evidence() -> EvidencePacket:
+    return EvidencePacket(
+        evidence_id="a" * 64,
+        question="L'or est-il associé à la victoire en EUW ?",
+        analysis_request={
+            "intent": "explain_metric",
+            "metric": "gold",
+            "filters": {"regions": ["EUW"], "queue_ids": [420]},
+        },
+        cohort={
+            "mode": "CLASSIC",
+            "queue_ids": [420],
+            "patches": ["16.14"],
+            "regions": ["EUW"],
+            "date_range": {"start_ms": None, "end_ms": None},
+            "champion": None,
+            "role": None,
+            "widened": False,
+        },
+        sample={
+            "matches": 600,
+            "players": 300,
+            "events_by_group": {"matches": 600},
+        },
+        estimate={
+            "metric": "gold",
+            "value": 850.25,
+            "unit": "or",
+            "baseline": 0.0,
+            "effect_size": 0.42,
+            "confidence_interval_95": [710.5, 990.0],
+            "p_value": 0.001,
+            "q_value": 0.004,
+            "odds_ratio": None,
+        },
+        method={
+            "name": "paired_winner_loser_bootstrap",
+            "version": "1.0.0",
+            "seed": 20260716,
+            "bootstrap_resamples": 2000,
+            "multiple_testing": "benjamini_hochberg",
+            "candidate_family_size": 1,
+        },
+        robustness={
+            "temporal_folds": [
+                {"fold": 1, "matches": 300, "value": 820.0, "direction": 1},
+                {"fold": 2, "matches": 300, "value": 880.0, "direction": 1},
+            ],
+            "regional_effects": [],
+            "player_disjoint_check": {"available": False},
+            "passed": True,
+        },
+        recommendation={
+            "allowed": True,
+            "strength": "moderate",
+            "wording_key": "association_moderate",
+        },
+        limitations=("RETROSPECTIVE_FINAL_STATE_ASSOCIATION_ONLY",),
+        provenance={
+            "dataset_version": "b" * 64,
+            "source_match_ids_hash": "c" * 64,
+            "generated_at": "2026-07-17T12:00:00+00:00",
+        },
     )
