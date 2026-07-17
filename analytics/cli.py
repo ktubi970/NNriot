@@ -21,6 +21,8 @@ def main(argv: list[str] | None = None) -> int:
     subcommands.add_parser("health")
     train_model = subcommands.add_parser("train-model")
     train_model.add_argument("--artifacts", default="analytics_artifacts")
+    benchmark = subcommands.add_parser("benchmark")
+    benchmark.add_argument("--iterations", type=int, default=30)
     args = parser.parse_args(argv)
 
     if args.command in {"build", "update"}:
@@ -37,5 +39,15 @@ def main(argv: list[str] | None = None) -> int:
         report = train_and_evaluate(args.analytics, args.artifacts)
         print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
         return 0 if report.final_test["available"] else 2
+    if args.command == "benchmark":
+        from .benchmark import run_benchmark
+
+        report = run_benchmark(
+            args.analytics,
+            args.source,
+            iterations=args.iterations,
+        )
+        print(json.dumps(report, indent=2, ensure_ascii=False))
+        return 0 if report["passed"] else 2
     print(json.dumps(all_meta(args.analytics), indent=2, ensure_ascii=False))
     return 0

@@ -14,7 +14,12 @@ import tempfile
 from .config import AnalyticsConfig
 from .db import connect_analytics, get_meta, initialize_schema, set_meta
 from .extract import ExtractionError, ExtractionResult, extract_match
-from .source import iter_source_matches, source_fingerprint, source_snapshot
+from .source import (
+    decode_raw_json,
+    iter_source_rows,
+    source_fingerprint,
+    source_snapshot,
+)
 
 
 logger = logging.getLogger(__name__)
@@ -116,11 +121,12 @@ def _populate(
     unexplained = 0
     processed = 0
     existing = existing or set()
-    for match_id, payload in iter_source_matches(source_path):
+    for match_id, raw_json in iter_source_rows(source_path):
         if match_id in existing:
             continue
         processed += 1
         try:
+            payload = decode_raw_json(raw_json)
             result = extract_match(match_id, payload)
             _insert_result(conn, result)
             inserted += 1
@@ -129,6 +135,17 @@ def _populate(
             conn.execute(
                 "INSERT OR IGNORE INTO extraction_issues VALUES (?,?,?,?)",
                 (match_id, exc.code, exc.field, extractor_version),
+            )
+        except ValueError:
+            issue_counts["INVALID_RAW_JSON"] += 1
+            conn.execute(
+                "INSERT OR IGNORE INTO extraction_issues VALUES (?,?,?,?)",
+                (
+                    match_id,
+                    "INVALID_RAW_JSON",
+                    "raw_json",
+                    extractor_version,
+                ),
             )
         except Exception:
             # Unexpected exceptions are deliberately not serialized into the mart:

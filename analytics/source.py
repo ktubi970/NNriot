@@ -26,26 +26,31 @@ def connect_source(path: str) -> Iterator[sqlite3.Connection]:
         conn.close()
 
 
-def decode_raw_json(value: str | bytes) -> dict:
+def decode_raw_json(value: str | bytes | None) -> dict:
     """Decode either legacy plain JSON or the operational gzip/base64 format."""
 
-    if isinstance(value, bytes):
-        value = value.decode("utf-8")
-    stripped = value.lstrip()
-    if stripped.startswith(("{", "[")):
-        decoded = json.loads(stripped)
-    else:
-        compressed = base64.b64decode(value, validate=True)
-        decoded = json.loads(gzip.decompress(compressed).decode("utf-8"))
-    if not isinstance(decoded, dict):
-        raise ValueError("raw match JSON must be an object")
-    return decoded
+    try:
+        if isinstance(value, bytes):
+            value = value.decode("utf-8")
+        if not isinstance(value, str):
+            raise ValueError("raw match JSON must be text or bytes")
+        stripped = value.lstrip()
+        if stripped.startswith(("{", "[")):
+            decoded = json.loads(stripped)
+        else:
+            compressed = base64.b64decode(value, validate=True)
+            decoded = json.loads(gzip.decompress(compressed).decode("utf-8"))
+        if not isinstance(decoded, dict):
+            raise ValueError("raw match JSON must be an object")
+        return decoded
+    except (OSError, UnicodeError, ValueError) as exc:
+        raise ValueError("invalid raw match JSON") from exc
 
 
-def iter_source_matches(
+def iter_source_rows(
     path: str, after_match_id: str | None = None
-) -> Iterator[tuple[str, dict]]:
-    """Yield eligible CLASSIC matches in a deterministic order."""
+) -> Iterator[tuple[str, str | bytes | None]]:
+    """Yield undecoded CLASSIC source rows in deterministic order."""
 
     sql = "SELECT match_id,raw_json FROM matches WHERE game_mode='CLASSIC'"
     params: tuple[str, ...] = ()
@@ -55,7 +60,16 @@ def iter_source_matches(
     sql += " ORDER BY match_id"
     with connect_source(path) as conn:
         for row in conn.execute(sql, params):
-            yield str(row["match_id"]), decode_raw_json(row["raw_json"])
+            yield str(row["match_id"]), row["raw_json"]
+
+
+def iter_source_matches(
+    path: str, after_match_id: str | None = None
+) -> Iterator[tuple[str, dict]]:
+    """Yield eligible CLASSIC matches in a deterministic order."""
+
+    for match_id, raw_json in iter_source_rows(path, after_match_id):
+        yield match_id, decode_raw_json(raw_json)
 
 
 def source_fingerprint(path: str, extractor_version: str) -> dict[str, str]:

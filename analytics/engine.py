@@ -255,10 +255,12 @@ class AnalysisEngine:
         dataset_version: str,
         q_value: float,
         family_size: int,
+        read_cache: bool = True,
     ) -> EvidencePacket:
-        cached = self._cached(dataset_version, request, question)
-        if cached is not None:
-            return cached
+        if read_cache:
+            cached = self._cached(dataset_version, request, question)
+            if cached is not None:
+                return cached
         limitations: list[str] = []
         if run.spec.kind is MetricKind.BINARY and run.result.odds_ratio is None:
             limitations.append("ODDS_RATIO_UNAVAILABLE_ZERO_CELL")
@@ -290,6 +292,7 @@ class AnalysisEngine:
         request: AnalysisRequest,
         question: str,
         cohort: ResolvedCohort | None,
+        read_cache: bool = True,
     ) -> list[EvidencePacket]:
         if request.intent is Intent.RANK_CONDITIONS:
             metric_names = tuple(METRICS)
@@ -300,7 +303,7 @@ class AnalysisEngine:
 
         resolved = cohort or self.resolver.resolve(request)
         dataset_version = self._dataset_version()
-        if len(metric_names) == 1:
+        if read_cache and len(metric_names) == 1:
             cached = self._cached(dataset_version, request, question)
             if cached is not None:
                 return [cached]
@@ -327,6 +330,7 @@ class AnalysisEngine:
                 dataset_version,
                 q_value,
                 len(runs),
+                read_cache=read_cache,
             )
             for run, candidate_request, q_value in zip(
                 runs, candidate_requests, q_values
@@ -612,7 +616,11 @@ class AnalysisEngine:
         question: str,
         cohort: ResolvedCohort | None,
     ) -> list[EvidencePacket]:
-        spec = get_metric(request.metric or "")
+        if request.metric is None:
+            raise AnalyticsAbstention(
+                "UNSUPPORTED_FILTER", {"required": "metric"}
+            )
+        spec = get_metric(request.metric)
         resolved = cohort or self._resolve_regional_cohort(request)
         dataset_version = self._dataset_version()
         cached = self._cached(dataset_version, request, question)
@@ -708,3 +716,31 @@ class AnalysisEngine:
         if request.intent in {Intent.RANK_CONDITIONS, Intent.EXPLAIN_METRIC}:
             return self._standard_run(request, question, cohort)
         raise AnalyticsAbstention("UNSUPPORTED_INTENT")
+
+    def cached(
+        self,
+        request: AnalysisRequest,
+        question: str,
+    ) -> list[EvidencePacket]:
+        """Read a single cached evidence packet without executing analysis."""
+
+        dataset_version = self._dataset_version()
+        packet = self._cached(dataset_version, request, question)
+        return [] if packet is None else [packet]
+
+    def run_uncached(
+        self,
+        request: AnalysisRequest,
+        question: str,
+        cohort: ResolvedCohort | None = None,
+    ) -> list[EvidencePacket]:
+        """Execute a standard analysis while bypassing cache reads."""
+
+        if request.intent not in {Intent.RANK_CONDITIONS, Intent.EXPLAIN_METRIC}:
+            raise AnalyticsAbstention("UNSUPPORTED_INTENT")
+        return self._standard_run(
+            request,
+            question,
+            cohort,
+            read_cache=False,
+        )

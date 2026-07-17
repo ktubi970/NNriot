@@ -1,4 +1,5 @@
 import hashlib
+import sqlite3
 
 import analytics.build as build_module
 
@@ -82,6 +83,34 @@ def test_expected_extraction_error_is_audited_without_partial_rows(
         "DUPLICATE_PARTICIPANT",
         "info.participants[1].puuid",
     )
+
+
+def test_null_raw_json_is_an_audited_exclusion(source_db, tmp_path):
+    with sqlite3.connect(source_db) as conn:
+        conn.execute("DROP TABLE matches")
+        conn.execute(
+            "CREATE TABLE matches("
+            "match_id TEXT PRIMARY KEY,raw_json TEXT,game_mode TEXT,"
+            "game_creation_time INTEGER,game_duration INTEGER,season_id INTEGER)"
+        )
+        conn.execute(
+            "INSERT INTO matches VALUES ('EUW1_1',NULL,'CLASSIC',1,1800,16)"
+        )
+    target = tmp_path / "analytics.db"
+
+    report = build_analytics(str(source_db), str(target))
+
+    assert report.eligible_matches == 1
+    assert report.inserted_matches == 0
+    assert report.issue_counts == {"INVALID_RAW_JSON": 1}
+    assert report.unexplained_failures == 0
+    assert report.quality_gate_passed is True
+    with connect_analytics(str(target), readonly=True) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM match_facts").fetchone()[0] == 0
+        issue = conn.execute(
+            "SELECT issue_code,field FROM extraction_issues"
+        ).fetchone()
+    assert tuple(issue) == ("INVALID_RAW_JSON", "raw_json")
 
 
 def test_failed_full_build_keeps_last_published_database(

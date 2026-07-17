@@ -31,6 +31,23 @@ NNriot is a pure Python system designed to handle arbitrary JSON structures and 
 - **High Performance**: Optimized for low-latency match outcome analysis
 - **Production-ready**: Includes dependency management, error handling, and comprehensive testing
 
+### Explainable Analytics
+
+NNriot includes a separate, rebuildable `analytics.db` mart and a French chat
+interface at `/analytics`. It reports retrospective gameplay associations with
+sample sizes, confidence intervals, corrected q-values, robustness checks and
+traceable evidence IDs. Regional comparisons are adjusted by patch; causal,
+timeline and unsupported team claims are explicitly refused.
+
+```bash
+python -m analytics --source training_data.db --analytics analytics.db build
+python -m analytics --source training_data.db --analytics analytics.db health
+python run.py
+```
+
+See [the Analytics operating guide](docs/analytics.md) for supported questions,
+thresholds, model evaluation, benchmark commands and limitations.
+
 ## Use Cases
 
 - **JSON Risk Assessment**: Classifying JSON payloads as "safe" or "alert"

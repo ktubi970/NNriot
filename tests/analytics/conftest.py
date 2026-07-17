@@ -6,6 +6,7 @@ from pathlib import Path
 
 import pytest
 
+from analytics.build import build_analytics
 from analytics.types import EvidencePacket
 from tests.analytics.factories import classic_match as make_classic_match
 from tests.analytics.factories import seed_fact_rows
@@ -70,6 +71,26 @@ def powered_analytics_db(tmp_path_factory) -> Path:
         {"16.12": 700, "16.13": 700, "16.14": 700},
         region_shifts={"EUW": 10.0, "KR": 8.0, "NA": 9.0, "EUN": 7.0},
     )
+
+
+@pytest.fixture(scope="session")
+def powered_analytics_pair(tmp_path_factory) -> tuple[Path, Path]:
+    """Return a real source/mart pair with enough matches for benchmarking."""
+
+    root = tmp_path_factory.mktemp("analytics-benchmark")
+    source = root / "source.db"
+    analytics = root / "analytics.db"
+    matches = [
+        make_classic_match(
+            match_id=f"EUW1_{index + 1}",
+            created_ms=index + 1,
+        )
+        for index in range(600)
+    ]
+    write_source_db(source, matches)
+    report = build_analytics(str(source), str(analytics))
+    assert report.quality_gate_passed
+    return source, analytics
 
 
 @pytest.fixture(scope="session")

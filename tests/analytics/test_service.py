@@ -35,6 +35,19 @@ def test_timeline_question_abstains_explicitly(
     assert response.warnings[0]["code"] == "TIMELINE_DATA_UNAVAILABLE"
 
 
+def test_region_comparison_without_metric_asks_for_one(
+    powered_analytics_db, monkeypatch
+):
+    service = AnalyticsService(str(powered_analytics_db))
+    monkeypatch.setattr(service, "freshness", lambda: {"fresh": True})
+
+    response = service.chat("Compare EUW et KR", None, {})
+
+    assert response.abstained is True
+    assert response.warnings[0]["code"] == "UNSUPPORTED_FILTER"
+    assert response.warnings[0]["details"] == {"required": "metric"}
+
+
 def test_stale_mart_refuses_analysis(powered_analytics_db, monkeypatch):
     service = AnalyticsService(str(powered_analytics_db))
     monkeypatch.setattr(
