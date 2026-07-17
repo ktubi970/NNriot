@@ -79,6 +79,12 @@ def test_structured_filters_are_bounded_and_canonically_deduplicated():
         AnalysisFilters.from_dict({"regions": ["EUW"] * 5})
     with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
         AnalysisFilters.from_dict({"patches": "16.14"})
+    with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
+        AnalysisFilters.from_dict({"date_start_ms": 2**63})
+    with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
+        AnalysisFilters.from_dict(
+            {"date_start_ms": 20, "date_end_ms": 10}
+        )
 
 
 def test_direct_unbounded_filters_are_rejected_before_sql(cohort_db):

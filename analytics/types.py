@@ -12,6 +12,7 @@ MAX_PATCHES = 3
 MAX_QUEUE_IDS = 1
 MAX_CHAMPION_LENGTH = 64
 MAX_ROLE_LENGTH = 16
+MAX_TIMESTAMP_MS = 2**63 - 1
 
 
 def _bounded_sequence(
@@ -99,9 +100,18 @@ class AnalysisFilters:
         for key in ("date_start_ms", "date_end_ms"):
             value = data.get(key)
             if value is not None and (
-                not isinstance(value, int) or isinstance(value, bool)
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < 0
+                or value > MAX_TIMESTAMP_MS
             ):
                 raise ValueError(f"UNSUPPORTED_FILTER: {key}")
+        if (
+            data.get("date_start_ms") is not None
+            and data.get("date_end_ms") is not None
+            and data["date_start_ms"] > data["date_end_ms"]
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: date range")
         return cls(
             regions=tuple(value.upper() for value in regions),
             patches=patches,

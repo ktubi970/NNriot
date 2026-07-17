@@ -162,6 +162,9 @@ ne constitue donc jamais, seul, une preuve ni une explication causale.
 - Pas d’identité stable d’équipes esport : les profils T1, G2, Fnatic, etc.
   répondent `ESPORT_TEAM_IDENTITY_UNAVAILABLE`.
 - Pas d’affirmation causale, de garantie, de pari ou de requête SQL arbitraire.
+- Toute narration externe est limitée à trois formulations qualitatives
+  préautorisées, chacune liée à un `evidence_id`; sinon le rendu déterministe
+  est conservé avec `LLM_OUTPUT_REJECTED`.
 - Les données décrivent la sélection de matchs collectés, pas l’ensemble des
   joueurs de League of Legends. Le biais d’échantillonnage doit être conservé
   dans l’interprétation.
@@ -183,8 +186,10 @@ et 688 730 lignes joueurs, sans match ayant un nombre de lignes différent de
 
 Le SHA-256 source avant/après est resté
 `E382DD6AB1ED806AE131459657286495318C535F8A515319C400F545DED8A464`.
-Le chargement bulk et la création des index ont pris environ 4 min 11 s ; les
-deux lectures SHA-256 portent l’audit complet à environ 4 min 51 s.
+Le chargement bulk et la création des index du run audité ont pris environ
+4 min 11 s ; les deux lectures SHA-256 portent cet audit à environ 4 min 51 s.
+La publication effectue désormais une revalidation supplémentaire de la source
+après les index et immédiatement avant le remplacement atomique.
 
 Le modèle réel a utilisé 48 211 matchs en entraînement, 10 331 en validation et
 10 331 en test. `C=1.0`. Sur le test final : log-loss `0,03977`, Brier `0,01133`,
@@ -201,12 +206,13 @@ Le benchmark réel de 30 itérations a produit :
 
 | Mesure | p95 mesuré | Seuil |
 | --- | ---: | ---: |
-| Preuve en cache | 5,14 ms | < 100 ms |
-| Analyse d’une métrique sans cache | 948,93 ms | < 2 000 ms |
-| Chat déterministe sans LLM externe | 12,24 ms | < 3 000 ms |
+| Preuve en cache | 10,36 ms | < 100 ms |
+| Analyse d’une métrique sans cache | 1 419,86 ms | < 2 000 ms |
+| Chat déterministe sans LLM externe | 17,06 ms | < 3 000 ms |
 
 Contexte : Windows 11 `10.0.26200`, Python 3.13.9. Les trois seuils sont
-respectés sur le mart réel. Le service mémorise le jeton de fraîcheur pendant
-cinq secondes pour éviter de rescanner 1,33 Go à chaque message ; un contrôle
+respectés sur le mart réel. Le service réutilise le jeton de fraîcheur tant que
+les signatures de fichiers SQLite (base et journaux) n'ont pas changé ; toute
+écriture invalide donc le jeton sans fenêtre temporelle implicite. Un contrôle
 forcé reste disponible et les versions de schéma, extracteur, méthode et porte
 qualité font partie de la compatibilité.

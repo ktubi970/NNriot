@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from pathlib import Path
 import sqlite3
-import time
 
 from .cohorts import AnalyticsAbstention
 from .config import AnalyticsConfig
@@ -47,7 +47,31 @@ class AnalyticsService:
         self.engine = AnalysisEngine(analytics_path)
         self.narrative_adapter = narrative_adapter
         self._freshness_cache: dict | None = None
-        self._freshness_cached_at = 0.0
+        self._freshness_signature: tuple | None = None
+
+    @staticmethod
+    def _sqlite_signature(path: str) -> tuple:
+        signature = []
+        for suffix in ("", "-wal", "-journal"):
+            candidate = Path(path + suffix)
+            try:
+                stat = candidate.stat()
+            except FileNotFoundError:
+                signature.append(
+                    (suffix, 0, None) if suffix else (suffix, None, None)
+                )
+            else:
+                if suffix and stat.st_size == 0:
+                    signature.append((suffix, 0, None))
+                else:
+                    signature.append((suffix, stat.st_size, stat.st_mtime_ns))
+        return tuple(signature)
+
+    def _state_signature(self) -> tuple:
+        return (
+            self._sqlite_signature(self.source_path),
+            self._sqlite_signature(self.analytics_path),
+        )
 
     def health(self) -> dict:
         try:
@@ -62,12 +86,11 @@ class AnalyticsService:
             return {"ok": False, "code": "ANALYTICS_DB_STALE"}
 
     def freshness(self, force: bool = False) -> dict:
-        now = time.monotonic()
+        state_before = self._state_signature()
         if (
             not force
             and self._freshness_cache is not None
-            and now - self._freshness_cached_at
-            < self.config.freshness_ttl_seconds
+            and state_before == self._freshness_signature
         ):
             return dict(self._freshness_cache)
         metadata = all_meta(self.analytics_path)
@@ -84,14 +107,24 @@ class AnalyticsService:
             for key, value in expected.items()
             if metadata.get(key) != value
         }
+        state_after = self._state_signature()
+        if state_after != state_before:
+            mismatches["database_state"] = {
+                "expected": state_before,
+                "actual": state_after,
+            }
         result = {
             "fresh": not mismatches,
             "dataset_version": metadata.get("dataset_version"),
             "source_snapshot": source,
             "compatibility_mismatches": mismatches,
         }
-        self._freshness_cache = result
-        self._freshness_cached_at = now
+        if state_after == state_before:
+            self._freshness_cache = result
+            self._freshness_signature = state_after
+        else:
+            self._freshness_cache = None
+            self._freshness_signature = None
         return dict(result)
 
     def get_evidence(self, evidence_id: str) -> dict | None:

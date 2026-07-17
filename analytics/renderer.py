@@ -21,6 +21,11 @@ CAUSAL_OR_PREDICTIVE = re.compile(
     r"entraine|fait gagner|permet de gagner|predit|prediction|va gagner)\b",
     re.I,
 )
+ALLOWED_NARRATIVE_SENTENCES = {
+    "le signal parait coherent [evidence]",
+    "le resultat reste descriptif [evidence]",
+    "cette association reste a interpreter avec prudence [evidence]",
+}
 
 
 class NarrativeAdapter(Protocol):
@@ -69,7 +74,17 @@ def validate_narrative(
         for sentence in re.split(r"(?<=[.!?])\s+|\n+", text.strip())
         if sentence.strip()
     ]
-    if any(not EVIDENCE_REF.search(sentence) for sentence in sentences):
+    canonical_sentences = [
+        EVIDENCE_REF.sub("[evidence]", _normalized(sentence))
+        .strip()
+        .rstrip(".!?")
+        for sentence in sentences
+    ]
+    if any(
+        not EVIDENCE_REF.search(sentence)
+        or canonical not in ALLOWED_NARRATIVE_SENTENCES
+        for sentence, canonical in zip(sentences, canonical_sentences)
+    ):
         return False, "LLM_OUTPUT_REJECTED"
     return True, None
 

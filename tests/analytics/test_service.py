@@ -121,3 +121,24 @@ def test_freshness_snapshot_is_cached_for_short_request_bursts(
     assert service.freshness()["fresh"] is True
     assert service.freshness()["fresh"] is True
     assert calls == 1
+
+
+def test_freshness_cache_is_invalidated_immediately_when_source_changes(
+    powered_analytics_pair, monkeypatch
+):
+    source_db, analytics_db = powered_analytics_pair
+    original = service_module.source_snapshot
+    calls = 0
+
+    def counted(path):
+        nonlocal calls
+        calls += 1
+        return original(path)
+
+    monkeypatch.setattr(service_module, "source_snapshot", counted)
+    service = AnalyticsService(str(analytics_db), str(source_db))
+
+    assert service.freshness()["fresh"] is True
+    source_db.touch()
+    assert service.freshness()["fresh"] is True
+    assert calls == 2

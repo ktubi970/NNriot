@@ -221,6 +221,9 @@ def _full_build(
         if not report.quality_gate_passed:
             _remove_sqlite_files(temporary)
             return report
+        logger.info("Revalidating source immediately before publication")
+        if source_snapshot(source_path) != _snapshot_from(fingerprint):
+            raise RuntimeError("operational source changed during analytics build")
         logger.info("Publishing temporary mart to %s", target)
         os.replace(temporary, target)
         logger.info("Analytics mart publication complete")

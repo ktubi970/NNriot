@@ -13,6 +13,7 @@ from .types import (
     MAX_QUEUE_IDS,
     MAX_REGIONS,
     MAX_ROLE_LENGTH,
+    MAX_TIMESTAMP_MS,
     AnalysisRequest,
     ResolvedCohort,
 )
@@ -67,6 +68,20 @@ class CohortResolver:
             or len(filters.role) > MAX_ROLE_LENGTH
         ):
             raise ValueError("UNSUPPORTED_FILTER: role")
+        for value in (filters.date_start_ms, filters.date_end_ms):
+            if value is not None and (
+                not isinstance(value, int)
+                or isinstance(value, bool)
+                or value < 0
+                or value > MAX_TIMESTAMP_MS
+            ):
+                raise ValueError("UNSUPPORTED_FILTER: date")
+        if (
+            filters.date_start_ms is not None
+            and filters.date_end_ms is not None
+            and filters.date_start_ms > filters.date_end_ms
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: date range")
         if set(filters.regions) - SUPPORTED_REGIONS:
             raise ValueError("UNSUPPORTED_FILTER: region")
         if filters.role and filters.role not in SUPPORTED_ROLES:

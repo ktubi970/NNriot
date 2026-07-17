@@ -28,4 +28,3 @@ class AnalyticsConfig:
     strong_matches: int = 2000
     method_version: str = "1.0.0"
     extractor_version: str = "1.0.0"
-    freshness_ttl_seconds: float = 5.0

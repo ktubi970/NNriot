@@ -47,6 +47,20 @@ def test_causal_narrative_is_rejected_even_with_known_evidence():
     assert code == "LLM_OUTPUT_REJECTED"
 
 
+def test_causal_paraphrases_are_rejected_even_with_known_evidence():
+    for narrative in (
+        "La vision augmente les chances de victoire [ev-1].",
+        "Choisir la vision favorise la victoire [ev-1].",
+    ):
+        accepted, code = validate_narrative(
+            narrative,
+            allowed_evidence_ids={"ev-1"},
+        )
+
+        assert accepted is False
+        assert code == "LLM_OUTPUT_REJECTED"
+
+
 def test_uncited_factual_narrative_is_rejected():
     accepted, code = validate_narrative(
         "Le signal de vision paraît cohérent.",

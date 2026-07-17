@@ -2,6 +2,7 @@ import hashlib
 import sqlite3
 
 import analytics.build as build_module
+import pytest
 
 from analytics.build import build_analytics
 from analytics.cli import main
@@ -128,6 +129,33 @@ def test_failed_full_build_keeps_last_published_database(
 
     assert report.quality_gate_passed is False
     assert report.unexplained_failures == 1
+    assert _sha(target) == before
+
+
+def test_full_build_rechecks_source_after_index_creation(
+    source_db, tmp_path, monkeypatch
+):
+    target = tmp_path / "analytics.db"
+    build_analytics(str(source_db), str(target))
+    before = _sha(target)
+    original = build_module.create_secondary_indexes
+
+    def create_indexes_then_mutate_source(conn):
+        original(conn)
+        with sqlite3.connect(source_db) as source_conn:
+            source_conn.execute(
+                "UPDATE matches SET game_creation_time=game_creation_time+1"
+            )
+
+    monkeypatch.setattr(
+        build_module,
+        "create_secondary_indexes",
+        create_indexes_then_mutate_source,
+    )
+
+    with pytest.raises(RuntimeError, match="source changed"):
+        build_analytics(str(source_db), str(target))
+
     assert _sha(target) == before
 
 
