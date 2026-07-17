@@ -46,6 +46,9 @@ checkpoint
 build_maturin.log
 build.log
 *.db
+*.db-wal
+*.db-shm
+analytics_artifacts/
 *.data-00000-of-00001
 *.index
 .env
