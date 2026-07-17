@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import base64
 import gzip
+import hashlib
 import json
 from pathlib import Path
 import sqlite3
 from typing import Iterable
 
-from analytics.db import connect_analytics, initialize_schema
+from analytics.db import connect_analytics, initialize_schema, set_meta
 
 
 ROLES = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
@@ -140,6 +141,7 @@ def seed_fact_rows(
             for _ in range(patch_counts[patch]):
                 region = regions[global_index % len(regions)]
                 shift = float(shifts[region])
+                effective_shift = shift + ((global_index % 7) - 3) * 0.4
                 match_id = f"{prefixes.get(region, 'OTHER')}_{global_index + 1}"
                 winner_team = 100 if global_index % 2 == 0 else 200
                 conn.execute(
@@ -161,7 +163,7 @@ def seed_fact_rows(
 
                 for team_id in (100, 200):
                     won = team_id == winner_team
-                    signed_shift = shift if won else 0.0
+                    signed_shift = effective_shift if won else 0.0
                     values = {
                         "kills": int(20 + signed_shift),
                         "deaths": int(20 - signed_shift if won else 20),
@@ -178,7 +180,7 @@ def seed_fact_rows(
                         "towers": 8 if won else 3,
                         "inhibitors": 1 if won else 0,
                         "rift_heralds": 1 if won else 0,
-                        "atakhan": 1 if won else 0,
+                        "atakhan": global_index % 2,
                     }
                     firsts = {key: int(won) for key in (
                         "first_blood", "first_baron", "first_dragon",
@@ -229,4 +231,20 @@ def seed_fact_rows(
                         ),
                     )
                 global_index += 1
+        descriptor = json.dumps(
+            {"patch_counts": patch_counts, "region_shifts": shifts},
+            sort_keys=True,
+            separators=(",", ":"),
+        ).encode("utf-8")
+        metadata = {
+            "dataset_version": hashlib.sha256(descriptor).hexdigest(),
+            "extractor_version": "1.0.0",
+            "method_version": "1.0.0",
+            "source_schema_version": "11",
+            "source_match_count": str(sum(patch_counts.values())),
+            "source_max_creation_ms": str(global_index),
+            "quality_gate_passed": "true",
+        }
+        for key, value in metadata.items():
+            set_meta(conn, key, value)
     return path
