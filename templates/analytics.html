@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block title %}Analyse avec preuves — NNriot{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='analytics.css') }}">
+{% endblock %}
+
+{% block content %}
+<main class="analytics-shell" lang="fr">
+  <header class="analytics-hero">
+    <p class="eyebrow">Analyse rétrospective avec preuves</p>
+    <h1>Comment ces matchs sont-ils gagnés&nbsp;?</h1>
+    <p class="hero-copy">Les résultats décrivent des associations observées dans les états finaux, sans conclure à une relation causale.</p>
+    <div id="dataset-freshness" class="freshness" role="status">Vérification des données…</div>
+  </header>
+
+  <section id="suggested-questions" class="suggestions" aria-label="Questions suggérées">
+    <button type="button">Comment gagne-t-on le plus souvent&nbsp;?</button>
+    <button type="button">La vision est-elle associée à la victoire en EUW&nbsp;?</button>
+    <button type="button">Existe-t-il une différence robuste de vision entre EUW et KR&nbsp;?</button>
+  </section>
+
+  <aside id="active-cohort" class="active-cohort" aria-live="polite">Cohorte non résolue</aside>
+
+  <section id="analytics-chat" class="chat-log" aria-live="polite" aria-label="Conversation">
+    <article class="chat-message assistant-message">
+      <p>Posez une question sur les conditions de victoire, une métrique ou deux régions. Chaque résultat chiffré restera relié à sa preuve.</p>
+    </article>
+  </section>
+
+  <form id="analytics-form" class="analytics-form">
+    <label for="analytics-message">Votre question</label>
+    <div class="input-row">
+      <input id="analytics-message" name="message" autocomplete="off" required maxlength="500" placeholder="Ex. La vision est-elle associée à la victoire en EUW ?">
+      <button type="submit">Analyser</button>
+    </div>
+  </form>
+
+  <section id="analytics-warnings" class="warnings" role="alert" aria-label="Avertissements"></section>
+
+  <section class="evidence-section" aria-labelledby="evidence-heading">
+    <div class="section-heading">
+      <p class="eyebrow">Traçabilité</p>
+      <h2 id="evidence-heading">Preuves statistiques</h2>
+    </div>
+    <div id="evidence-list" class="evidence-list" aria-label="Preuves statistiques"></div>
+  </section>
+</main>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='analytics.js') }}" defer></script>
+{% endblock %}

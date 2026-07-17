@@ -38,3 +38,9 @@ def live():
 def monitor():
     """Page to monitor model performance and training statistics."""
     return render_template("monitor.html", active_page="monitor")
+
+
+@views_bp.route("/analytics")
+def analytics():
+    """Serve the retrospective evidence chat."""
+    return render_template("analytics.html", active_page="analytics")
