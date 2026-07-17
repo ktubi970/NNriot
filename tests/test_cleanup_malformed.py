@@ -36,9 +36,7 @@ def test_dry_run_reports_count_without_deleting(tmp_path):
         match = _make_classic_match(m_id)
         database.save_matches_batch([(m_id, match)], db_path=db)
         rec = _build_training_record(m_id, match)
-        from feature_labels import extract_labels
-        labels = extract_labels(match)
-        database.save_training_records_batch([rec + (labels,)], db_path=db)
+        database.save_training_records_batch([rec], db_path=db)
 
     import json as _json, gzip, base64
     for i in range(2):
@@ -72,9 +70,7 @@ def test_apply_deletes_only_null_labels_rows(tmp_path):
     match = _make_classic_match(m_id)
     database.save_matches_batch([(m_id, match)], db_path=db)
     rec = _build_training_record(m_id, match)
-    from feature_labels import extract_labels
-    labels = extract_labels(match)
-    database.save_training_records_batch([rec + (labels,)], db_path=db)
+    database.save_training_records_batch([rec], db_path=db)
 
     # 3 bad records (NULL labels_json)
     for i in range(3):

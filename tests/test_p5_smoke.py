@@ -2,7 +2,7 @@
 End-to-end smoke test for P5: synthetic match -> save -> backfill -> train one batch.
 
 Verifies:
-- DB migration to v10 works on a fresh DB
+- DB migration reaches the current schema on a fresh DB
 - save_training_record + save_match round-trips correctly
 - backfill_labels populates labels_json from raw_json
 - ContinuousTrainer can build the model, fetch records, build dict targets,
@@ -89,13 +89,13 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     import feature_labels
     from data_collector import _build_training_record
 
-    # 1. Init fresh DB at v10
+    # 1. Init fresh DB at the current schema
     database.init_db(db_path)
 
-    # Verify schema reached v10
+    # Verify schema reached the version declared by database.py
     with database.get_connection(db_path) as conn:
         v = database._get_schema_version(conn)
-    assert v == 10, f"Expected schema v10, got v{v}"
+    assert v == database.SCHEMA_VERSION
 
     # 2. Insert 12 synthetic matches with labels
     matches_batch = []
@@ -104,12 +104,13 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
         m_id = f"TEST_{i:03d}"
         match = _make_real_match(m_id, team_a_win=(i % 2 == 0), seed=i)
         matches_batch.append((m_id, match))
-        # Build training record using the existing _build_training_record + labels
+        # _build_training_record includes labels in its fourth field.
         rec = _build_training_record(m_id, match, region="TEST")
         assert rec is not None, f"Match {m_id} should produce a valid training record"
         labels = feature_labels.extract_labels(match)
         assert labels is not None, f"Match {m_id} should have extractable labels"
-        records_with_labels.append((rec[0], rec[1], rec[2], labels))
+        assert rec[3] == labels
+        records_with_labels.append(rec)
 
     database.save_matches_batch(matches_batch, db_path=db_path)
     database.save_training_records_batch(records_with_labels, db_path=db_path)
@@ -124,7 +125,7 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     # 4. Run backfill (should be no-op since labels_json is already populated)
     from backfill_labels import backfill_labels
     stats = backfill_labels(db_path)
-    assert stats["total"] == 0, f"No records should need backfill: {stats}"
+    assert stats["total_seen"] == 0, f"No records should need backfill: {stats}"
 
     # 5. Insert a 13th record WITHOUT labels (3-tuple) to test backfill
     extra_match = _make_real_match("TEST_extra", team_a_win=True, seed=99)
@@ -137,7 +138,7 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     )
 
     stats = backfill_labels(db_path)
-    assert stats["total"] == 1, f"Exactly 1 record should need backfill: {stats}"
+    assert stats["total_seen"] == 1, f"Exactly 1 record should need backfill: {stats}"
     assert stats["updated"] == 1, f"Backfill should update 1 record: {stats}"
 
     # 6. Build and run trainer for one step using mocked checkpoint
@@ -150,13 +151,31 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     # Use small input dim to keep test fast -- trainer reads VECTOR_DIM at runtime
     monkeypatch.setattr(continuous_trainer, "VECTOR_DIM", 1000)
 
-    # Make the trainer use the temp DB path even though it imports database at top.
-    # database.DB_PATH was already read at import; patch the default explicitly.
-    monkeypatch.setattr(database, "DB_PATH", db_path)
+    # Default arguments in database.py are bound when that module is imported.
+    # In the full suite it was imported before this test set NNRIOT_DB_PATH, so
+    # inject temp-DB wrappers at the three trainer/database boundaries.
+    get_untrained_records = database.get_untrained_records
+    get_random_trained_records = database.get_random_trained_records
+    mark_as_trained = database.mark_as_trained
+    monkeypatch.setattr(
+        database,
+        "get_untrained_records",
+        lambda limit=500: get_untrained_records(limit=limit, db_path=db_path),
+    )
+    monkeypatch.setattr(
+        database,
+        "get_random_trained_records",
+        lambda limit=500: get_random_trained_records(limit=limit, db_path=db_path),
+    )
+    monkeypatch.setattr(
+        database,
+        "mark_as_trained",
+        lambda record_ids: mark_as_trained(record_ids, db_path=db_path),
+    )
 
     trainer = continuous_trainer.ContinuousTrainer()
-    # Confirm model has 18 heads
-    assert len(trainer.model.output_names) == 18
+    # The model outputs must stay aligned with the canonical label registry.
+    assert set(trainer.model.output_names) == set(feature_labels.ALL_LABEL_KEYS)
 
     # 7. Run one training step
     processed = trainer.run_training_step()

@@ -30,7 +30,9 @@ def test_backfill_chunks_through_many_rows(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
 
-    # Insert 25 matches + corresponding 3-tuple training records (no labels)
+    # Insert 25 matches + corresponding 3-tuple training records (no labels).
+    # _build_training_record now returns a 4-tuple with inline labels, so strip
+    # that fourth field deliberately to exercise the legacy backfill path.
     matches = []
     records = []
     for i in range(25):
@@ -39,7 +41,7 @@ def test_backfill_chunks_through_many_rows(tmp_path):
         matches.append((m_id, match))
         rec = _build_training_record(m_id, match)
         assert rec is not None
-        records.append(rec)  # 3-tuple — no labels
+        records.append(rec[:3])
 
     database.save_matches_batch(matches, db_path=db)
     database.save_training_records_batch(records, db_path=db)
@@ -69,7 +71,7 @@ def test_backfill_idempotent(tmp_path):
     match = _make_classic_match("M_idem")
     database.save_matches_batch([("M_idem", match)], db_path=db)
     rec = _build_training_record("M_idem", match)
-    database.save_training_records_batch([rec], db_path=db)
+    database.save_training_records_batch([rec[:3]], db_path=db)
 
     stats1 = bl.backfill_labels(db_path=db, chunk_size=10)
     assert stats1["updated"] == 1
@@ -134,7 +136,7 @@ def test_backfill_breaks_on_mixed_then_malformed_tail(tmp_path):
         matches.append((m_id, match))
         rec = _build_training_record(m_id, match)
         assert rec is not None
-        records.append(rec)
+        records.append(rec[:3])
     database.save_matches_batch(matches, db_path=db)
     database.save_training_records_batch(records, db_path=db)
 
