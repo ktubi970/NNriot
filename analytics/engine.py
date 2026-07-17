@@ -16,6 +16,7 @@ from .evidence import (
     packet_from_dict,
 )
 from .registry import METRICS, MetricKind, MetricSpec, get_metric
+from .regions import RegionalObservation, compare_regions
 from .statistics import (
     StatisticalResult,
     benjamini_hochberg,
@@ -490,6 +491,210 @@ class AnalysisEngine:
         self._store(packet, dataset_version, request, question)
         return [packet]
 
+    def _resolve_regional_cohort(
+        self, request: AnalysisRequest
+    ) -> ResolvedCohort:
+        regions = request.filters.regions
+        if len(regions) != 2 or len(set(regions)) != 2 or request.metric is None:
+            raise ValueError("UNSUPPORTED_FILTER: compare_regions")
+        if request.filters.patches:
+            return self.resolver.resolve(request)
+
+        with connect_analytics(self.path, readonly=True) as conn:
+            available = [
+                str(row[0])
+                for row in conn.execute(
+                    "SELECT patch FROM match_facts WHERE queue_id=420 "
+                    "GROUP BY patch ORDER BY MAX(game_creation_ms) DESC LIMIT 3"
+                )
+            ]
+        last_cohort: ResolvedCohort | None = None
+        last_error: AnalyticsAbstention | None = None
+        for size in range(1, len(available) + 1):
+            patches = tuple(available[:size])
+            candidate = AnalysisRequest(
+                request.intent,
+                request.metric,
+                replace(request.filters, patches=patches),
+            )
+            try:
+                cohort = self.resolver.resolve(candidate)
+            except AnalyticsAbstention as exc:
+                last_error = exc
+                continue
+            last_cohort = replace(cohort, widened=size > 1)
+            region_counts = []
+            for region in regions:
+                region_request = AnalysisRequest(
+                    request.intent,
+                    request.metric,
+                    replace(candidate.filters, regions=(region,)),
+                )
+                matches, _ = self.resolver._counts(region_request, patches)
+                region_counts.append(matches)
+            if min(region_counts) >= self.config.min_matches:
+                return last_cohort
+        if last_cohort is not None:
+            return last_cohort
+        if last_error is not None:
+            raise last_error
+        raise AnalyticsAbstention("INSUFFICIENT_MATCHES", {"matches": 0})
+
+    def _regional_observations(
+        self,
+        request: AnalysisRequest,
+        cohort: ResolvedCohort,
+        spec: MetricSpec,
+    ) -> tuple[list[RegionalObservation], list[str]]:
+        where_sql, params = self.resolver.where_clause(request, cohort.patches)
+        needs_players = (
+            request.filters.champion is not None
+            or request.filters.role is not None
+        )
+        player_join = (
+            " JOIN player_facts p ON p.match_id=m.match_id" if needs_players else ""
+        )
+        column = spec.column
+        with connect_analytics(self.path, readonly=True) as conn:
+            if spec.kind is MetricKind.CONTINUOUS:
+                rows = conn.execute(
+                    "SELECT DISTINCT m.match_id,m.region,m.patch,"
+                    "m.game_creation_ms,"
+                    f"winner.{column}-loser.{column} AS metric_value "
+                    "FROM match_facts m "
+                    "JOIN team_facts winner ON winner.match_id=m.match_id "
+                    "AND winner.win=1 "
+                    "JOIN team_facts loser ON loser.match_id=m.match_id "
+                    "AND loser.win=0"
+                    + player_join
+                    + where_sql
+                    + " ORDER BY m.game_creation_ms,m.match_id",
+                    params,
+                ).fetchall()
+                observations = [
+                    RegionalObservation(
+                        region=str(row["region"]),
+                        patch=str(row["patch"]),
+                        value=float(row["metric_value"]),
+                        game_creation_ms=int(row["game_creation_ms"]),
+                        outcome=None,
+                    )
+                    for row in rows
+                ]
+            else:
+                rows = conn.execute(
+                    "SELECT DISTINCT m.match_id,m.region,m.patch,"
+                    "m.game_creation_ms,"
+                    f"blue.{column} AS metric_value,blue.win AS outcome "
+                    "FROM match_facts m "
+                    "JOIN team_facts blue ON blue.match_id=m.match_id "
+                    "AND blue.team_id=100"
+                    + player_join
+                    + where_sql
+                    + " ORDER BY m.game_creation_ms,m.match_id",
+                    params,
+                ).fetchall()
+                observations = [
+                    RegionalObservation(
+                        region=str(row["region"]),
+                        patch=str(row["patch"]),
+                        value=float(row["metric_value"]),
+                        game_creation_ms=int(row["game_creation_ms"]),
+                        outcome=int(row["outcome"]),
+                    )
+                    for row in rows
+                ]
+        return observations, [str(row["match_id"]) for row in rows]
+
+    def _compare_regions(
+        self,
+        request: AnalysisRequest,
+        question: str,
+        cohort: ResolvedCohort | None,
+    ) -> list[EvidencePacket]:
+        spec = get_metric(request.metric or "")
+        resolved = cohort or self._resolve_regional_cohort(request)
+        dataset_version = self._dataset_version()
+        cached = self._cached(dataset_version, request, question)
+        if cached is not None:
+            return [cached]
+        observations, match_ids = self._regional_observations(
+            request, resolved, spec
+        )
+        comparison = compare_regions(
+            observations,
+            seed=self.config.seed,
+            resamples=self.config.bootstrap_resamples,
+        )
+        regions = tuple(sorted(comparison.region_effects))
+        result = StatisticalResult(
+            value=comparison.raw_contrast,
+            baseline=comparison.region_effects[regions[1]],
+            effect_size=comparison.standardized_contrast,
+            confidence_interval_95=comparison.confidence_interval_95,
+            p_value=comparison.p_value,
+            events_by_group=comparison.events_by_region,
+        )
+        fold_size = len(observations) // 3
+        temporal_folds = tuple(
+            {
+                "fold": index + 1,
+                "matches": (
+                    fold_size if index < 2 else len(observations) - 2 * fold_size
+                ),
+                "value": None,
+                "direction": direction,
+            }
+            for index, direction in enumerate(comparison.temporal_directions)
+        )
+        packet = build_evidence(
+            question=question,
+            request=request,
+            cohort=resolved,
+            metric_name=f"{spec.name}_region_contrast",
+            unit=spec.unit,
+            result=result,
+            q_value=comparison.q_value,
+            temporal_folds=temporal_folds,
+            match_ids=match_ids,
+            dataset_version=dataset_version,
+            method_name="patch_standardized_region_interaction",
+            family_size=1,
+            config=self.config,
+            group_counts=tuple(comparison.events_by_region.values()),
+            win_rate_difference=(
+                comparison.raw_contrast
+                if spec.kind is MetricKind.BINARY
+                else None
+            ),
+            additional_limitations=comparison.limitations,
+        )
+        recommendation = dict(packet.recommendation)
+        allowed = recommendation["allowed"] and comparison.display_allowed
+        if not allowed:
+            recommendation = {
+                "allowed": False,
+                "strength": "none",
+                "wording_key": "descriptive_only",
+            }
+        robustness = dict(packet.robustness)
+        robustness["regional_effects"] = dict(comparison.region_effects)
+        robustness["recent_direction_matches"] = (
+            comparison.recent_direction_matches
+        )
+        robustness["passed"] = allowed
+        limitations = list(packet.limitations)
+        if not allowed and "EFFECT_NOT_ROBUST" not in limitations:
+            limitations.append("EFFECT_NOT_ROBUST")
+        packet = replace(
+            packet,
+            recommendation=recommendation,
+            robustness=robustness,
+            limitations=tuple(limitations),
+        )
+        self._store(packet, dataset_version, request, question)
+        return [packet]
+
     def run(
         self,
         request: AnalysisRequest,
@@ -498,6 +703,8 @@ class AnalysisEngine:
     ) -> list[EvidencePacket]:
         if request.intent is Intent.COMPARE_PATCHES:
             return self._compare_patches(request, question, cohort)
+        if request.intent is Intent.COMPARE_REGIONS:
+            return self._compare_regions(request, question, cohort)
         if request.intent in {Intent.RANK_CONDITIONS, Intent.EXPLAIN_METRIC}:
             return self._standard_run(request, question, cohort)
         raise AnalyticsAbstention("UNSUPPORTED_INTENT")

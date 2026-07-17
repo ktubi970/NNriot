@@ -93,3 +93,25 @@ def test_null_metric_remains_descriptive(powered_analytics_db):
 
     assert packet.recommendation["allowed"] is False
     assert "EFFECT_NOT_ROBUST" in packet.limitations
+
+
+def test_compare_regions_widens_until_each_region_is_powered(
+    powered_analytics_db,
+):
+    request = AnalysisRequest(
+        Intent.COMPARE_REGIONS,
+        "gold",
+        AnalysisFilters(regions=("EUW", "KR")),
+    )
+
+    packet = AnalysisEngine(str(powered_analytics_db)).run(
+        request,
+        question="EUW et KR gagnent-elles de la même manière ?",
+    )[0]
+
+    assert packet.estimate["metric"] == "gold_region_contrast"
+    assert packet.cohort["patches"] == ["16.14", "16.13", "16.12"]
+    assert packet.cohort["widened"] is True
+    assert min(packet.sample["events_by_group"].values()) >= 500
+    assert packet.recommendation["allowed"] is True
+    assert set(packet.robustness["regional_effects"]) == {"EUW", "KR"}
