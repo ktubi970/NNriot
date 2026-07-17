@@ -33,6 +33,12 @@ def create_app():
         template_folder="../templates",
     )
     app.config["MAX_CONTENT_LENGTH"] = 8 * 1024 * 1024  # 8 MB
+    app.config["NNRIOT_DB_PATH"] = os.getenv(
+        "NNRIOT_DB_PATH", database.DB_PATH
+    )
+    app.config["ANALYTICS_DB_PATH"] = os.getenv(
+        "NNRIOT_ANALYTICS_DB_PATH", "analytics.db"
+    )
 
     # CORS allowlist — match the previous final_web_app.py defaults.
     allowed_origins = [
@@ -54,11 +60,13 @@ def create_app():
     from .routes.api import api_bp
     from .routes.history import history_bp
     from .routes.lolpros import lolpros_bp
+    from .routes.analytics import analytics_bp
 
     app.register_blueprint(views_bp)
     app.register_blueprint(api_bp)
     app.register_blueprint(history_bp)
     app.register_blueprint(lolpros_bp)
+    app.register_blueprint(analytics_bp)
 
     return app
 
