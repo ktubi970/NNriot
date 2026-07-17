@@ -4,9 +4,11 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import sqlite3
+import time
 
 from .cohorts import AnalyticsAbstention
-from .db import EvidenceRepository, all_meta
+from .config import AnalyticsConfig
+from .db import ANALYTICS_SCHEMA_VERSION, EvidenceRepository, all_meta
 from .engine import AnalysisEngine
 from .planner import FrenchPlanner
 from .renderer import NarrativeAdapter, render_answer
@@ -37,9 +39,15 @@ class AnalyticsService:
     ):
         self.analytics_path = analytics_path
         self.source_path = source_path
+        self.config = AnalyticsConfig(
+            analytics_path=analytics_path,
+            source_path=source_path,
+        )
         self.planner = FrenchPlanner()
         self.engine = AnalysisEngine(analytics_path)
         self.narrative_adapter = narrative_adapter
+        self._freshness_cache: dict | None = None
+        self._freshness_cached_at = 0.0
 
     def health(self) -> dict:
         try:
@@ -53,15 +61,38 @@ class AnalyticsService:
         except (OSError, sqlite3.Error, ValueError):
             return {"ok": False, "code": "ANALYTICS_DB_STALE"}
 
-    def freshness(self) -> dict:
+    def freshness(self, force: bool = False) -> dict:
+        now = time.monotonic()
+        if (
+            not force
+            and self._freshness_cache is not None
+            and now - self._freshness_cached_at
+            < self.config.freshness_ttl_seconds
+        ):
+            return dict(self._freshness_cache)
         metadata = all_meta(self.analytics_path)
         source = source_snapshot(self.source_path)
-        fresh = all(metadata.get(key) == value for key, value in source.items())
-        return {
-            "fresh": fresh,
+        expected = {
+            **source,
+            "schema_version": str(ANALYTICS_SCHEMA_VERSION),
+            "extractor_version": self.config.extractor_version,
+            "method_version": self.config.method_version,
+            "quality_gate_passed": "true",
+        }
+        mismatches = {
+            key: {"expected": value, "actual": metadata.get(key)}
+            for key, value in expected.items()
+            if metadata.get(key) != value
+        }
+        result = {
+            "fresh": not mismatches,
             "dataset_version": metadata.get("dataset_version"),
             "source_snapshot": source,
+            "compatibility_mismatches": mismatches,
         }
+        self._freshness_cache = result
+        self._freshness_cached_at = now
+        return dict(result)
 
     def get_evidence(self, evidence_id: str) -> dict | None:
         return EvidenceRepository(self.analytics_path).get_by_id(evidence_id)

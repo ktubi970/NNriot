@@ -73,9 +73,12 @@ def run_benchmark(
         timings["cached_evidence"].append(
             _measure(lambda: engine.cached(request, question=QUESTION))
         )
+    for _ in range(iterations):
         timings["single_metric"].append(
             _measure(lambda: engine.run_uncached(request, question=QUESTION))
         )
+    service.freshness(force=True)
+    for _ in range(iterations):
         timings["chat_no_llm"].append(
             _measure(lambda: service.chat(QUESTION, None, {}))
         )

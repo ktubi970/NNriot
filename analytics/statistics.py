@@ -40,13 +40,24 @@ def continuous_effect(
     rng = np.random.default_rng(seed)
     draws = np.empty(resamples, dtype=float)
     permuted = np.empty(resamples, dtype=float)
-    chunk_size = 64
+    chunk_size = 128
     for start in range(0, resamples, chunk_size):
         stop = min(start + chunk_size, resamples)
         size = stop - start
-        indices = rng.integers(0, len(values), size=(size, len(values)))
+        indices = rng.integers(
+            0,
+            len(values),
+            size=(size, len(values)),
+            dtype=np.int32,
+        )
         draws[start:stop] = values[indices].mean(axis=1)
-        signs = rng.choice((-1.0, 1.0), size=(size, len(values)))
+        signs = rng.integers(
+            0,
+            2,
+            size=(size, len(values)),
+            dtype=np.int8,
+        )
+        signs = signs * 2 - 1
         permuted[start:stop] = np.abs((signs * values).mean(axis=1))
 
     ci_values = np.quantile(draws, [0.025, 0.975])

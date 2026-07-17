@@ -7,7 +7,15 @@ import re
 from .config import AnalyticsConfig
 from .db import connect_analytics
 from .registry import get_metric
-from .types import AnalysisRequest, ResolvedCohort
+from .types import (
+    MAX_CHAMPION_LENGTH,
+    MAX_PATCHES,
+    MAX_QUEUE_IDS,
+    MAX_REGIONS,
+    MAX_ROLE_LENGTH,
+    AnalysisRequest,
+    ResolvedCohort,
+)
 
 
 SUPPORTED_REGIONS = {"NA", "EUW", "EUN", "KR", "OTHER"}
@@ -33,6 +41,32 @@ class CohortResolver:
         if request.metric is not None:
             get_metric(request.metric)
         filters = request.filters
+        if (
+            len(filters.regions) > MAX_REGIONS
+            or len(filters.patches) > MAX_PATCHES
+            or len(filters.queue_ids) > MAX_QUEUE_IDS
+            or len(set(filters.regions)) != len(filters.regions)
+            or len(set(filters.patches)) != len(filters.patches)
+            or len(set(filters.queue_ids)) != len(filters.queue_ids)
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: unbounded values")
+        if any(
+            not isinstance(value, str) or len(value) > 16
+            for value in (*filters.regions, *filters.patches)
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: value length")
+        if filters.champion is not None and (
+            not isinstance(filters.champion, str)
+            or not filters.champion
+            or len(filters.champion) > MAX_CHAMPION_LENGTH
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: champion")
+        if filters.role is not None and (
+            not isinstance(filters.role, str)
+            or not filters.role
+            or len(filters.role) > MAX_ROLE_LENGTH
+        ):
+            raise ValueError("UNSUPPORTED_FILTER: role")
         if set(filters.regions) - SUPPORTED_REGIONS:
             raise ValueError("UNSUPPORTED_FILTER: region")
         if filters.role and filters.role not in SUPPORTED_ROLES:

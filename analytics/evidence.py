@@ -29,10 +29,23 @@ def classify_recommendation(
     practical = (
         win_rate_difference is not None and abs(win_rate_difference) >= 0.03
     ) or (effect_size is not None and abs(effect_size) >= 0.20)
+    overall_effect = (
+        win_rate_difference
+        if win_rate_difference is not None
+        else effect_size
+    )
+    overall_direction = (
+        1
+        if overall_effect is not None and overall_effect > 0
+        else -1
+        if overall_effect is not None and overall_effect < 0
+        else 0
+    )
     nonzero = [direction for direction in temporal_directions if direction != 0]
-    stable_two = len(nonzero) >= 2 and max(
-        nonzero.count(1), nonzero.count(-1)
-    ) >= 2
+    stable_two = (
+        overall_direction != 0
+        and nonzero.count(overall_direction) >= 2
+    )
     groups_powered = bool(group_counts) and min(group_counts) >= 100
     moderate = (
         matches >= 500
@@ -50,7 +63,6 @@ def classify_recommendation(
             "wording_key": "descriptive_only",
         }
 
-    direction = 1 if sum(nonzero) > 0 else -1
     strong_practical = (
         win_rate_difference is not None and abs(win_rate_difference) >= 0.05
     ) or (effect_size is not None and abs(effect_size) >= 0.50)
@@ -59,7 +71,7 @@ def classify_recommendation(
         and q_value <= 0.01
         and strong_practical
         and len(nonzero) == len(temporal_directions)
-        and all(value == direction for value in nonzero)
+        and all(value == overall_direction for value in nonzero)
     )
     return {
         "allowed": True,
@@ -195,6 +207,8 @@ def build_evidence(
             "request_hash": request_hash,
             "method_version": config.method_version,
             "seed": config.seed,
+            "bootstrap_resamples": config.bootstrap_resamples,
+            "candidate_family_size": family_size,
             "estimate": estimate,
         }
     )

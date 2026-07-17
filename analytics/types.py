@@ -7,6 +7,46 @@ from enum import Enum
 from typing import Any
 
 
+MAX_REGIONS = 4
+MAX_PATCHES = 3
+MAX_QUEUE_IDS = 1
+MAX_CHAMPION_LENGTH = 64
+MAX_ROLE_LENGTH = 16
+
+
+def _bounded_sequence(
+    data: dict[str, Any],
+    key: str,
+    default: tuple,
+    expected_type: type,
+    max_unique: int,
+) -> tuple:
+    raw = data.get(key, default)
+    if not isinstance(raw, (list, tuple)) or len(raw) > max(max_unique, 2):
+        raise ValueError(f"UNSUPPORTED_FILTER: {key}")
+    if any(
+        not isinstance(value, expected_type)
+        or (expected_type is int and isinstance(value, bool))
+        for value in raw
+    ):
+        raise ValueError(f"UNSUPPORTED_FILTER: {key}")
+    values = tuple(dict.fromkeys(raw))
+    if len(values) > max_unique:
+        raise ValueError(f"UNSUPPORTED_FILTER: {key}")
+    return values
+
+
+def _optional_string(
+    data: dict[str, Any], key: str, maximum: int
+) -> str | None:
+    value = data.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, str) or not value or len(value) > maximum:
+        raise ValueError(f"UNSUPPORTED_FILTER: {key}")
+    return value
+
+
 class Intent(str, Enum):
     RANK_CONDITIONS = "rank_conditions"
     EXPLAIN_METRIC = "explain_metric"
@@ -43,15 +83,39 @@ class AnalysisFilters:
 
     @classmethod
     def from_dict(cls, data: dict[str, Any] | None) -> AnalysisFilters:
-        data = data or {}
+        if data is None:
+            data = {}
+        if not isinstance(data, dict):
+            raise ValueError("UNSUPPORTED_FILTER: filters")
+        regions = _bounded_sequence(
+            data, "regions", (), str, MAX_REGIONS
+        )
+        patches = _bounded_sequence(
+            data, "patches", (), str, MAX_PATCHES
+        )
+        queue_ids = _bounded_sequence(
+            data, "queue_ids", (420,), int, MAX_QUEUE_IDS
+        )
+        for key in ("date_start_ms", "date_end_ms"):
+            value = data.get(key)
+            if value is not None and (
+                not isinstance(value, int) or isinstance(value, bool)
+            ):
+                raise ValueError(f"UNSUPPORTED_FILTER: {key}")
         return cls(
-            regions=tuple(str(value) for value in data.get("regions", ())),
-            patches=tuple(str(value) for value in data.get("patches", ())),
-            queue_ids=tuple(int(value) for value in data.get("queue_ids", (420,))),
+            regions=tuple(value.upper() for value in regions),
+            patches=patches,
+            queue_ids=queue_ids,
             date_start_ms=data.get("date_start_ms"),
             date_end_ms=data.get("date_end_ms"),
-            champion=data.get("champion"),
-            role=data.get("role"),
+            champion=_optional_string(
+                data, "champion", MAX_CHAMPION_LENGTH
+            ),
+            role=(
+                role.upper()
+                if (role := _optional_string(data, "role", MAX_ROLE_LENGTH))
+                else None
+            ),
         )
 
 

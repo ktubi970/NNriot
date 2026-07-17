@@ -44,6 +44,8 @@ class ModelReport:
     coefficients: dict[str, float]
     odds_ratios: dict[str, float]
     coefficient_intervals: dict[str, list[float]]
+    coefficient_interval_method: str
+    odds_ratio_scale: str
     direction_agreement: dict[str, str]
     player_disjoint: dict[str, Any]
     final_test: dict[str, Any]
@@ -185,6 +187,7 @@ def _coefficient_intervals(
     hessian += np.eye(transformed.shape[1]) / classifier.C
     inverse = np.linalg.pinv(hessian)
     scores = transformed * (target - probabilities)[:, None]
+    centered_scores = scores - scores.mean(axis=0, keepdims=True)
 
     rng = np.random.default_rng(seed + 10_003)
     coefficient_draws = np.empty((resamples, len(beta)), dtype=float)
@@ -195,7 +198,7 @@ def _coefficient_intervals(
         indices = rng.integers(
             0, len(target), size=(size, len(target)), dtype=np.int32
         )
-        score_sums = scores[indices].sum(axis=1)
+        score_sums = centered_scores[indices].sum(axis=1)
         coefficient_draws[start:stop] = beta + score_sums @ inverse.T
     lower = np.quantile(coefficient_draws, 0.025, axis=0)
     upper = np.quantile(coefficient_draws, 0.975, axis=0)
@@ -299,6 +302,12 @@ def train_and_evaluate(
             coefficients={},
             odds_ratios={},
             coefficient_intervals={},
+            coefficient_interval_method=(
+                "centered_influence_function_bootstrap"
+            ),
+            odds_ratio_scale=(
+                "numeric_per_training_sd;categorical_vs_encoder_baseline"
+            ),
             direction_agreement={},
             player_disjoint={
                 "available": False,
@@ -398,6 +407,10 @@ def train_and_evaluate(
         coefficients=coefficients,
         odds_ratios=odds_ratios,
         coefficient_intervals=coefficient_intervals,
+        coefficient_interval_method="centered_influence_function_bootstrap",
+        odds_ratio_scale=(
+            "numeric_per_training_sd;categorical_vs_encoder_baseline"
+        ),
         direction_agreement=direction_agreement,
         player_disjoint=grouped,
         final_test={"available": True, "code": None},

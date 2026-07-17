@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from itertools import combinations
 import math
 
 import numpy as np
@@ -14,9 +15,15 @@ from .evidence import (
     build_evidence,
     evidence_request_hash,
     packet_from_dict,
+    stable_hash,
 )
 from .registry import METRICS, MetricKind, MetricSpec, get_metric
-from .regions import RegionalObservation, compare_regions
+from .regions import (
+    RegionalComparison,
+    RegionalObservation,
+    compare_regions,
+    regional_display_allowed,
+)
 from .statistics import (
     StatisticalResult,
     benjamini_hochberg,
@@ -91,12 +98,31 @@ class AnalysisEngine:
         self.config = config or AnalyticsConfig(analytics_path=path)
         self.resolver = CohortResolver(path, self.config)
         self.repository = EvidenceRepository(path)
+        self._cohort_cache: dict[tuple[str, str], ResolvedCohort] = {}
 
     def _dataset_version(self) -> str:
         version = get_meta(self.path, "dataset_version")
         if not version:
             raise AnalyticsAbstention("ANALYTICS_DB_STALE")
         return version
+
+    def _cache_method_key(self) -> str:
+        return (
+            f"{self.config.method_version}|seed={self.config.seed}|"
+            f"bootstrap={self.config.bootstrap_resamples}"
+        )
+
+    def _resolved_cohort(
+        self,
+        request: AnalysisRequest,
+        dataset_version: str,
+    ) -> ResolvedCohort:
+        key = (dataset_version, stable_hash(request.to_dict()))
+        cached = self._cohort_cache.get(key)
+        if cached is None:
+            cached = self.resolver.resolve(request)
+            self._cohort_cache[key] = cached
+        return cached
 
     def _query_metric(
         self,
@@ -218,7 +244,7 @@ class AnalysisEngine:
         value = self.repository.get(
             dataset_version,
             evidence_request_hash(request, question),
-            self.config.method_version,
+            self._cache_method_key(),
         )
         if not value:
             return None
@@ -242,7 +268,7 @@ class AnalysisEngine:
             packet.evidence_id,
             dataset_version,
             evidence_request_hash(request, question),
-            self.config.method_version,
+            self._cache_method_key(),
             packet.to_dict(),
         )
 
@@ -256,6 +282,7 @@ class AnalysisEngine:
         q_value: float,
         family_size: int,
         read_cache: bool = True,
+        write_cache: bool = True,
     ) -> EvidencePacket:
         if read_cache:
             cached = self._cached(dataset_version, request, question)
@@ -284,7 +311,8 @@ class AnalysisEngine:
             ),
             additional_limitations=tuple(limitations),
         )
-        self._store(packet, dataset_version, request, question)
+        if write_cache:
+            self._store(packet, dataset_version, request, question)
         return packet
 
     def _standard_run(
@@ -293,6 +321,7 @@ class AnalysisEngine:
         question: str,
         cohort: ResolvedCohort | None,
         read_cache: bool = True,
+        write_cache: bool = True,
     ) -> list[EvidencePacket]:
         if request.intent is Intent.RANK_CONDITIONS:
             metric_names = tuple(METRICS)
@@ -301,12 +330,12 @@ class AnalysisEngine:
         else:
             raise AnalyticsAbstention("UNSUPPORTED_INTENT")
 
-        resolved = cohort or self.resolver.resolve(request)
         dataset_version = self._dataset_version()
         if read_cache and len(metric_names) == 1:
             cached = self._cached(dataset_version, request, question)
             if cached is not None:
                 return [cached]
+        resolved = cohort or self._resolved_cohort(request, dataset_version)
 
         runs: list[_MetricRun] = []
         candidate_requests: list[AnalysisRequest] = []
@@ -331,6 +360,7 @@ class AnalysisEngine:
                 q_value,
                 len(runs),
                 read_cache=read_cache,
+                write_cache=write_cache,
             )
             for run, candidate_request, q_value in zip(
                 runs, candidate_requests, q_values
@@ -495,14 +525,35 @@ class AnalysisEngine:
         self._store(packet, dataset_version, request, question)
         return [packet]
 
-    def _resolve_regional_cohort(
-        self, request: AnalysisRequest
-    ) -> ResolvedCohort:
+    def _regional_names(self, request: AnalysisRequest) -> tuple[str, ...]:
         regions = request.filters.regions
-        if len(regions) != 2 or len(set(regions)) != 2 or request.metric is None:
+        if not regions:
+            with connect_analytics(self.path, readonly=True) as conn:
+                regions = tuple(
+                    str(row[0])
+                    for row in conn.execute(
+                        "SELECT region FROM match_facts "
+                        "WHERE queue_id=420 AND region<>'OTHER' "
+                        "GROUP BY region HAVING COUNT(*)>=? ORDER BY region",
+                        (self.config.min_matches,),
+                    )
+                )
+        if len(regions) < 2 or len(set(regions)) != len(regions):
             raise ValueError("UNSUPPORTED_FILTER: compare_regions")
+        return regions
+
+    def _resolve_regional_cohort(
+        self, request: AnalysisRequest, regions: tuple[str, ...]
+    ) -> ResolvedCohort:
+        if request.metric is None:
+            raise ValueError("UNSUPPORTED_FILTER: compare_regions")
+        family_request = AnalysisRequest(
+            request.intent,
+            request.metric,
+            replace(request.filters, regions=regions),
+        )
         if request.filters.patches:
-            return self.resolver.resolve(request)
+            return self.resolver.resolve(family_request)
 
         with connect_analytics(self.path, readonly=True) as conn:
             available = [
@@ -519,7 +570,7 @@ class AnalysisEngine:
             candidate = AnalysisRequest(
                 request.intent,
                 request.metric,
-                replace(request.filters, patches=patches),
+                replace(family_request.filters, patches=patches),
             )
             try:
                 cohort = self.resolver.resolve(candidate)
@@ -621,23 +672,134 @@ class AnalysisEngine:
                 "UNSUPPORTED_FILTER", {"required": "metric"}
             )
         spec = get_metric(request.metric)
-        resolved = cohort or self._resolve_regional_cohort(request)
+        regions = self._regional_names(request)
+        resolved = cohort or self._resolve_regional_cohort(request, regions)
         dataset_version = self._dataset_version()
-        cached = self._cached(dataset_version, request, question)
-        if cached is not None:
-            return [cached]
-        observations, match_ids = self._regional_observations(
-            request, resolved, spec
+        pair_runs: list[
+            tuple[
+                AnalysisRequest,
+                ResolvedCohort,
+                list[RegionalObservation],
+                list[str],
+                RegionalComparison,
+            ]
+        ] = []
+        for pair in combinations(regions, 2):
+            pair_request = AnalysisRequest(
+                request.intent,
+                request.metric,
+                replace(
+                    request.filters,
+                    regions=pair,
+                    patches=resolved.patches,
+                ),
+            )
+            pair_cohort = replace(
+                self.resolver.resolve(pair_request),
+                widened=resolved.widened,
+            )
+            observations, match_ids = self._regional_observations(
+                pair_request, pair_cohort, spec
+            )
+            comparison = compare_regions(
+                observations,
+                seed=self.config.seed,
+                resamples=self.config.bootstrap_resamples,
+            )
+            pair_runs.append(
+                (
+                    pair_request,
+                    pair_cohort,
+                    observations,
+                    match_ids,
+                    comparison,
+                )
+            )
+
+        q_values = benjamini_hochberg(
+            [run[4].p_value for run in pair_runs]
         )
-        comparison = compare_regions(
+        packets: list[EvidencePacket] = []
+        family_size = len(pair_runs)
+        for (
+            pair_request,
+            pair_cohort,
             observations,
-            seed=self.config.seed,
-            resamples=self.config.bootstrap_resamples,
+            match_ids,
+            comparison,
+        ), q_value in zip(pair_runs, q_values):
+            comparison = self._regional_comparison_with_q(
+                comparison, q_value
+            )
+            packet = self._regional_packet(
+                pair_request,
+                pair_cohort,
+                question,
+                dataset_version,
+                spec,
+                observations,
+                match_ids,
+                comparison,
+                family_size,
+            )
+            pair = pair_request.filters.regions
+            cache_question = (
+                f"{question}\n[region-family:{','.join(regions)};"
+                f"pair:{pair[0]}-{pair[1]}]"
+            )
+            self._store(
+                packet,
+                dataset_version,
+                pair_request,
+                cache_question,
+            )
+            packets.append(packet)
+        return packets
+
+    def _regional_comparison_with_q(
+        self,
+        comparison: RegionalComparison,
+        q_value: float,
+    ) -> RegionalComparison:
+        limitations = list(comparison.limitations)
+        binary_powered = "SPARSE_COMPARISON_GROUP" not in limitations
+        common_patch_coverage = "PATCH_COVERAGE_MISMATCH" not in limitations
+        allowed = regional_display_allowed(
+            counts=comparison.events_by_region,
+            ci=comparison.confidence_interval_95,
+            q_value=q_value,
+            standardized_contrast=comparison.standardized_contrast,
+            raw_contrast=comparison.raw_contrast,
+            is_binary=comparison.is_binary,
+            recent_direction_matches=comparison.recent_direction_matches,
+            binary_powered=binary_powered,
+            common_patch_coverage=common_patch_coverage,
         )
-        regions = tuple(sorted(comparison.region_effects))
+        if not allowed and "EFFECT_NOT_ROBUST" not in limitations:
+            limitations.append("EFFECT_NOT_ROBUST")
+        return replace(
+            comparison,
+            q_value=float(q_value),
+            display_allowed=allowed,
+            limitations=tuple(limitations),
+        )
+
+    def _regional_packet(
+        self,
+        request: AnalysisRequest,
+        cohort: ResolvedCohort,
+        question: str,
+        dataset_version: str,
+        spec: MetricSpec,
+        observations: list[RegionalObservation],
+        match_ids: list[str],
+        comparison: RegionalComparison,
+        family_size: int,
+    ) -> EvidencePacket:
+        pair = tuple(sorted(comparison.region_effects))
         result = StatisticalResult(
             value=comparison.raw_contrast,
-            baseline=comparison.region_effects[regions[1]],
+            baseline=comparison.region_effects[pair[1]],
             effect_size=comparison.standardized_contrast,
             confidence_interval_95=comparison.confidence_interval_95,
             p_value=comparison.p_value,
@@ -658,7 +820,7 @@ class AnalysisEngine:
         packet = build_evidence(
             question=question,
             request=request,
-            cohort=resolved,
+            cohort=cohort,
             metric_name=f"{spec.name}_region_contrast",
             unit=spec.unit,
             result=result,
@@ -667,7 +829,7 @@ class AnalysisEngine:
             match_ids=match_ids,
             dataset_version=dataset_version,
             method_name="patch_standardized_region_interaction",
-            family_size=1,
+            family_size=family_size,
             config=self.config,
             group_counts=tuple(comparison.events_by_region.values()),
             win_rate_difference=(
@@ -700,8 +862,7 @@ class AnalysisEngine:
             robustness=robustness,
             limitations=tuple(limitations),
         )
-        self._store(packet, dataset_version, request, question)
-        return [packet]
+        return packet
 
     def run(
         self,
@@ -743,4 +904,5 @@ class AnalysisEngine:
             question,
             cohort,
             read_cache=False,
+            write_cache=False,
         )

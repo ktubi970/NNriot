@@ -65,5 +65,35 @@ def test_strong_supports_a_consistent_negative_direction():
     assert result["strength"] == "strong"
 
 
+def test_temporal_majority_must_match_overall_effect_direction():
+    result = classify_recommendation(
+        matches=2500,
+        players=900,
+        group_counts=(1200, 1300),
+        ci=(0.51, 0.70),
+        q_value=0.005,
+        effect_size=0.60,
+        win_rate_difference=None,
+        temporal_directions=(-1, -1, 1),
+    )
+
+    assert result["allowed"] is False
+
+
+def test_all_inverse_folds_cannot_make_evidence_strong():
+    result = classify_recommendation(
+        matches=2500,
+        players=900,
+        group_counts=(1200, 1300),
+        ci=(0.51, 0.70),
+        q_value=0.005,
+        effect_size=0.60,
+        win_rate_difference=None,
+        temporal_directions=(-1, -1, -1),
+    )
+
+    assert result["allowed"] is False
+
+
 def test_hash_is_canonical_across_dictionary_order():
     assert stable_hash({"a": 1, "b": 2}) == stable_hash({"b": 2, "a": 1})

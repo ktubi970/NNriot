@@ -15,6 +15,12 @@ def test_report_includes_baselines_calibration_and_untouched_test(
         assert len(report.metrics["logistic"]["intervals_95"][name]) == 2
     assert "gold_delta*kills_delta" in report.coefficients
     assert len(report.coefficient_intervals["gold_delta*kills_delta"]) == 2
+    assert report.coefficient_interval_method == (
+        "centered_influence_function_bootstrap"
+    )
+    assert report.odds_ratio_scale == (
+        "numeric_per_training_sd;categorical_vs_encoder_baseline"
+    )
     assert report.direction_agreement["gold_delta"] in {
         "agrees",
         "conditional_only",

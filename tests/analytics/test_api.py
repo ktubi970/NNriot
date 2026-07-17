@@ -65,6 +65,19 @@ def test_invalid_chat_payload_is_400():
     assert response.get_json()["code"] == "INVALID_REQUEST"
 
 
+def test_chat_rejects_oversized_message_before_service():
+    app = create_app()
+    app.config["TESTING"] = True
+
+    response = app.test_client().post(
+        "/api/analytics/chat",
+        json={"message": "x" * 501, "context": None, "filters": {}},
+    )
+
+    assert response.status_code == 413
+    assert response.get_json()["code"] == "REQUEST_TOO_LARGE"
+
+
 def test_health_and_evidence_contracts(monkeypatch):
     service = MagicMock()
     service.health.return_value = {"ok": False, "code": "ANALYTICS_DB_STALE"}

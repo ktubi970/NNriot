@@ -8,6 +8,8 @@ from analytics.service import AnalyticsService
 
 
 analytics_bp = Blueprint("analytics", __name__)
+MAX_CHAT_MESSAGE_LENGTH = 500
+MAX_CHAT_REQUEST_BYTES = 65_536
 
 
 def get_analytics_service() -> AnalyticsService:
@@ -23,9 +25,16 @@ def get_analytics_service() -> AnalyticsService:
 
 @analytics_bp.post("/api/analytics/chat")
 def analytics_chat():
+    if (
+        request.content_length is not None
+        and request.content_length > MAX_CHAT_REQUEST_BYTES
+    ):
+        return jsonify({"success": False, "code": "REQUEST_TOO_LARGE"}), 413
     payload = request.get_json(silent=True)
     if not isinstance(payload, dict) or not isinstance(payload.get("message"), str):
         return jsonify({"success": False, "code": "INVALID_REQUEST"}), 400
+    if len(payload["message"]) > MAX_CHAT_MESSAGE_LENGTH:
+        return jsonify({"success": False, "code": "REQUEST_TOO_LARGE"}), 413
     context = payload.get("context")
     filters = payload.get("filters", {})
     if (context is not None and not isinstance(context, dict)) or not isinstance(

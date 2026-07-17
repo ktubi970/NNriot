@@ -37,6 +37,36 @@ def test_narrative_with_unknown_evidence_reference_is_rejected():
     assert code == "LLM_OUTPUT_REJECTED"
 
 
+def test_causal_narrative_is_rejected_even_with_known_evidence():
+    accepted, code = validate_narrative(
+        "La vision garantit la victoire [ev-1].",
+        allowed_evidence_ids={"ev-1"},
+    )
+
+    assert accepted is False
+    assert code == "LLM_OUTPUT_REJECTED"
+
+
+def test_uncited_factual_narrative_is_rejected():
+    accepted, code = validate_narrative(
+        "Le signal de vision paraît cohérent.",
+        allowed_evidence_ids={"ev-1"},
+    )
+
+    assert accepted is False
+    assert code == "LLM_OUTPUT_REJECTED"
+
+
+def test_qualitative_narrative_with_known_evidence_is_allowed():
+    accepted, code = validate_narrative(
+        "Le signal paraît cohérent [ev-1].",
+        allowed_evidence_ids={"ev-1"},
+    )
+
+    assert accepted is True
+    assert code is None
+
+
 def test_rejected_adapter_keeps_deterministic_answer(sample_evidence):
     class BadAdapter:
         def narrate(self, evidence):

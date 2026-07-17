@@ -60,3 +60,33 @@ def test_where_clause_parameterizes_player_filters(cohort_db):
     assert "X' OR 1=1 --" not in sql
     assert "?" in sql
     assert "X' OR 1=1 --" in params
+
+
+def test_structured_filters_are_bounded_and_canonically_deduplicated():
+    filters = AnalysisFilters.from_dict(
+        {
+            "regions": ["EUW", "EUW"],
+            "patches": ["16.14", "16.14"],
+            "queue_ids": [420, 420],
+        }
+    )
+
+    assert filters.regions == ("EUW",)
+    assert filters.patches == ("16.14",)
+    assert filters.queue_ids == (420,)
+
+    with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
+        AnalysisFilters.from_dict({"regions": ["EUW"] * 5})
+    with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
+        AnalysisFilters.from_dict({"patches": "16.14"})
+
+
+def test_direct_unbounded_filters_are_rejected_before_sql(cohort_db):
+    request = AnalysisRequest(
+        Intent.EXPLAIN_METRIC,
+        "gold",
+        AnalysisFilters(patches=tuple(f"16.{index}" for index in range(1000))),
+    )
+
+    with pytest.raises(ValueError, match="UNSUPPORTED_FILTER"):
+        CohortResolver(str(cohort_db)).where_clause(request, request.filters.patches)

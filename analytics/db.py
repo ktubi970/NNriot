@@ -12,6 +12,31 @@ from typing import Iterator
 ANALYTICS_SCHEMA_VERSION = 1
 
 
+SECONDARY_INDEXES = (
+    "idx_match_patch_region_queue",
+    "idx_match_creation",
+    "idx_match_region",
+    "idx_team_match_win",
+    "idx_player_puuid",
+    "idx_player_champion_role",
+    "idx_evidence_lookup",
+)
+
+
+INDEX_SQL = """
+CREATE INDEX IF NOT EXISTS idx_match_patch_region_queue
+    ON match_facts(patch, region, queue_id);
+CREATE INDEX IF NOT EXISTS idx_match_creation ON match_facts(game_creation_ms);
+CREATE INDEX IF NOT EXISTS idx_match_region ON match_facts(region);
+CREATE INDEX IF NOT EXISTS idx_team_match_win ON team_facts(match_id, win);
+CREATE INDEX IF NOT EXISTS idx_player_puuid ON player_facts(puuid);
+CREATE INDEX IF NOT EXISTS idx_player_champion_role
+    ON player_facts(champion, role);
+CREATE INDEX IF NOT EXISTS idx_evidence_lookup
+    ON evidence_cache(dataset_version, request_hash, method_version);
+"""
+
+
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS analytics_meta (
     key TEXT PRIMARY KEY,
@@ -96,22 +121,12 @@ CREATE TABLE IF NOT EXISTS evidence_cache (
     UNIQUE (dataset_version, request_hash, method_version)
 );
 
-CREATE INDEX IF NOT EXISTS idx_match_patch_region_queue
-    ON match_facts(patch, region, queue_id);
-CREATE INDEX IF NOT EXISTS idx_match_creation ON match_facts(game_creation_ms);
-CREATE INDEX IF NOT EXISTS idx_match_region ON match_facts(region);
-CREATE INDEX IF NOT EXISTS idx_team_match_win ON team_facts(match_id, win);
-CREATE INDEX IF NOT EXISTS idx_player_puuid ON player_facts(puuid);
-CREATE INDEX IF NOT EXISTS idx_player_champion_role
-    ON player_facts(champion, role);
-CREATE INDEX IF NOT EXISTS idx_evidence_lookup
-    ON evidence_cache(dataset_version, request_hash, method_version);
-"""
+""" + INDEX_SQL
 
 
 @contextmanager
 def connect_analytics(
-    path: str, readonly: bool = False
+    path: str, readonly: bool = False, bulk_load: bool = False
 ) -> Iterator[sqlite3.Connection]:
     """Open the mart with transactions for writes and query-only reads."""
 
@@ -119,6 +134,12 @@ def connect_analytics(
         uri = Path(path).resolve().as_uri() + "?mode=ro"
         conn = sqlite3.connect(uri, uri=True)
         conn.execute("PRAGMA query_only=ON")
+    elif bulk_load:
+        conn = sqlite3.connect(path)
+        conn.execute("PRAGMA journal_mode=OFF")
+        conn.execute("PRAGMA synchronous=OFF")
+        conn.execute("PRAGMA locking_mode=EXCLUSIVE")
+        conn.execute("PRAGMA temp_store=MEMORY")
     else:
         conn = sqlite3.connect(path)
         conn.execute("PRAGMA journal_mode=WAL")
@@ -135,6 +156,15 @@ def connect_analytics(
         raise
     finally:
         conn.close()
+
+
+def drop_secondary_indexes(conn: sqlite3.Connection) -> None:
+    for name in SECONDARY_INDEXES:
+        conn.execute(f"DROP INDEX IF EXISTS {name}")
+
+
+def create_secondary_indexes(conn: sqlite3.Connection) -> None:
+    conn.executescript(INDEX_SQL)
 
 
 def initialize_schema(path: str) -> None:

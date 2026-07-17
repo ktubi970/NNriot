@@ -131,7 +131,10 @@ Une comparaison inter-région est standardisée par patch. Elle exige au moins
 500 matchs dans chaque région, une couverture commune des patchs, les mêmes
 portes statistique et pratique, et une direction récente identique à la
 direction globale. Pour une métrique binaire, chaque région doit aussi contenir
-au moins 100 expositions/non-expositions et 100 victoires/défaites.
+au moins 100 expositions/non-expositions et 100 victoires/défaites. Sans régions
+explicites, les régions suffisamment alimentées sont découvertes automatiquement.
+Avec trois ou quatre régions, toutes les paires sont pré-déclarées et leurs
+p-values sont corrigées ensemble par Benjamini-Hochberg avant tout affichage.
 
 ## Modèle interprétable et réseau de neurones
 
@@ -140,6 +143,10 @@ bleu moins rouge, avec contrôles région/patch et trois interactions fixées. L
 séparation principale est chronologique 70/15/15 ; `C` est choisi uniquement sur
 la validation, puis le test final produit log-loss, score de Brier, erreur de
 calibration, ROC-AUC, intervalles bootstrap, coefficients nommés et odds ratios.
+Les intervalles de coefficients utilisent un bootstrap déterministe centré par
+fonction d’influence, explicitement étiqueté dans le rapport. Les odds ratios des
+variables numériques sont exprimés par écart-type d’entraînement ; ceux des
+contrôles catégoriels sont relatifs à la référence de l’encodeur.
 La sensibilité « joueurs disjoints » ne possède aucun repli permissif : si elle
 est sous-alimentée, elle retourne `INSUFFICIENT_MATCHES`.
 
@@ -166,27 +173,40 @@ ne constitue donc jamais, seul, une preuve ni une explication causale.
 
 ## Mesures du 17 juillet 2026
 
-Le corpus local disponible lors de la vérification contenait une ligne CLASSIC,
-mais son `raw_json` était nul. Résultat réel du build : 1 match éligible, 0
-accepté, `INVALID_RAW_JSON: 1`, 0 échec inexpliqué, porte qualité validée,
-dataset `825cb1403b6f962a7a5c08aca050c71f9a7ad76efe7b02d960495dbe6fd09668`.
-Le SHA-256 de la source avant/après est resté
-`0F2CC7C0F5959BE8D1FF87219B1A363A0343CF21D3C08C33EFF9F283D3F3B0E0`.
+Le backfill réel a lu `D:\projet\NNriot\training_data.db` en lecture seule. Sur
+68 875 matchs CLASSIC éligibles, 68 873 ont été acceptés et deux exclus avec le
+code expliqué `INVALID_WINNER_COUNT`. Il n’y a eu aucun échec inexpliqué et la
+porte qualité est validée. Le mart contient exactement 137 746 lignes équipes
+et 688 730 lignes joueurs, sans match ayant un nombre de lignes différent de
+2/10. Dataset :
+`f11f8fe3eb55363deb9d8069c445ebc9553db3e81f7b97b075e6572b38ad93d6`.
 
-Le modèle réel s’est abstenu : train/validation/test = 0/0/0,
-`final_test=INSUFFICIENT_MATCHES`, contrôle joueurs disjoints indisponible et
-aucun artefact publié. Le benchmark réel s’est également abstenu avec
-`INSUFFICIENT_MATCHES`.
+Le SHA-256 source avant/après est resté
+`E382DD6AB1ED806AE131459657286495318C535F8A515319C400F545DED8A464`.
+Le chargement bulk et la création des index ont pris environ 4 min 11 s ; les
+deux lectures SHA-256 portent l’audit complet à environ 4 min 51 s.
 
-Un benchmark d’intégration de 30 itérations a donc été mesuré sur 600 matchs
-synthétiques passés par le même décodeur, extracteur, mart, moteur et service :
+Le modèle réel a utilisé 48 211 matchs en entraînement, 10 331 en validation et
+10 331 en test. `C=1.0`. Sur le test final : log-loss `0,03977`, Brier `0,01133`,
+erreur de calibration `0,00341`, ROC-AUC `0,99890` (IC 95 %
+`[0,99849 ; 0,99922]`). Le contrôle joueurs disjoints est disponible : 1 275
+matchs d’entraînement, 10 330 de test, 57 268 écartés, ROC-AUC `0,99837`.
+
+Ces performances très élevées ne sont pas une performance pré-match : le modèle
+utilise des différences d’états finaux, dont l’or, les tours et les objectifs,
+qui sont à la fois associés à la victoire et conséquences du déroulement du
+match. Le rapport reste donc strictement rétrospectif.
+
+Le benchmark réel de 30 itérations a produit :
 
 | Mesure | p95 mesuré | Seuil |
 | --- | ---: | ---: |
-| Preuve en cache | 28,82 ms | < 100 ms |
-| Analyse d’une métrique sans lecture cache | 138,75 ms | < 2 000 ms |
-| Chat déterministe sans LLM externe | 92,46 ms | < 3 000 ms |
+| Preuve en cache | 5,14 ms | < 100 ms |
+| Analyse d’une métrique sans cache | 948,93 ms | < 2 000 ms |
+| Chat déterministe sans LLM externe | 12,24 ms | < 3 000 ms |
 
 Contexte : Windows 11 `10.0.26200`, Python 3.13.9. Les trois seuils sont
-respectés ; ces latences synthétiques ne remplacent pas une mesure future sur un
-corpus réel suffisamment alimenté.
+respectés sur le mart réel. Le service mémorise le jeton de fraîcheur pendant
+cinq secondes pour éviter de rescanner 1,33 Go à chaque message ; un contrôle
+forcé reste disponible et les versions de schéma, extracteur, méthode et porte
+qualité font partie de la compatibilité.

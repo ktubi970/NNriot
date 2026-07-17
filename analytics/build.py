@@ -12,7 +12,14 @@ from pathlib import Path
 import tempfile
 
 from .config import AnalyticsConfig
-from .db import connect_analytics, get_meta, initialize_schema, set_meta
+from .db import (
+    connect_analytics,
+    create_secondary_indexes,
+    drop_secondary_indexes,
+    get_meta,
+    initialize_schema,
+    set_meta,
+)
 from .extract import ExtractionError, ExtractionResult, extract_match
 from .source import (
     decode_raw_json,
@@ -38,13 +45,17 @@ class BuildReport:
         return asdict(self)
 
 
-def _insert_result(conn, result: ExtractionResult) -> None:
-    conn.execute(
+def _insert_results(conn, results: list[ExtractionResult]) -> None:
+    """Insert an extraction batch with three bounded SQLite round trips."""
+
+    if not results:
+        return
+    conn.executemany(
         "INSERT OR REPLACE INTO match_facts VALUES "
         "(:match_id,:region,:platform_prefix,:game_version,:patch,:queue_id,"
         ":game_creation_ms,:game_duration_s,:winner_team_id,:participant_count,"
         ":source_season_id)",
-        result.match,
+        [result.match for result in results],
     )
     conn.executemany(
         "INSERT OR REPLACE INTO team_facts VALUES "
@@ -52,13 +63,13 @@ def _insert_result(conn, result: ExtractionResult) -> None:
         ":champion_damage,:vision_score,:lane_cs,:jungle_cs,:barons,:dragons,"
         ":towers,:inhibitors,:rift_heralds,:atakhan,:first_blood,:first_baron,"
         ":first_dragon,:first_tower,:first_inhibitor)",
-        result.teams,
+        [team for result in results for team in result.teams],
     )
     conn.executemany(
         "INSERT OR REPLACE INTO player_facts VALUES "
         "(:match_id,:puuid,:team_id,:side,:win,:champion,:role,:kills,:deaths,"
         ":assists,:gold,:champion_damage,:vision_score,:lane_cs,:jungle_cs)",
-        result.players,
+        [player for result in results for player in result.players],
     )
 
 
@@ -120,6 +131,7 @@ def _populate(
     issue_counts: Counter[str] = Counter()
     unexplained = 0
     processed = 0
+    pending: list[ExtractionResult] = []
     existing = existing or set()
     for match_id, raw_json in iter_source_rows(source_path):
         if match_id in existing:
@@ -128,7 +140,7 @@ def _populate(
         try:
             payload = decode_raw_json(raw_json)
             result = extract_match(match_id, payload)
-            _insert_result(conn, result)
+            pending.append(result)
             inserted += 1
         except ExtractionError as exc:
             issue_counts[exc.code] += 1
@@ -153,7 +165,19 @@ def _populate(
             unexplained += 1
             logger.exception("Unexpected analytics extraction failure for %s", match_id)
         if commit_every and processed % commit_every == 0:
+            _insert_results(conn, pending)
+            pending.clear()
             conn.commit()
+        elif len(pending) >= 500:
+            _insert_results(conn, pending)
+            pending.clear()
+        if processed % 5000 == 0:
+            logger.info(
+                "Analytics build processed %d source rows (%d accepted)",
+                processed,
+                inserted,
+            )
+    _insert_results(conn, pending)
     return inserted, issue_counts, unexplained
 
 
@@ -178,19 +202,28 @@ def _full_build(
     os.close(handle)
     temporary = Path(temporary_name)
     try:
+        logger.info("Initializing temporary analytics mart %s", temporary)
         initialize_schema(str(temporary))
-        with connect_analytics(str(temporary)) as conn:
+        with connect_analytics(str(temporary), bulk_load=True) as conn:
+            drop_secondary_indexes(conn)
+            logger.info("Starting bulk extraction from %s", source_path)
             inserted, issues, unexplained = _populate(
-                source_path, conn, config.extractor_version, commit_every=500
+                source_path, conn, config.extractor_version
             )
+            logger.info("Bulk extraction complete; validating source snapshot")
             if source_snapshot(source_path) != _snapshot_from(fingerprint):
                 raise RuntimeError("operational source changed during analytics build")
             report = _report(fingerprint, inserted, issues, unexplained)
+            logger.info("Creating analytical indexes")
+            create_secondary_indexes(conn)
             _write_metadata(conn, fingerprint, report, config, "full")
+            logger.info("Temporary mart metadata written")
         if not report.quality_gate_passed:
             _remove_sqlite_files(temporary)
             return report
+        logger.info("Publishing temporary mart to %s", target)
         os.replace(temporary, target)
+        logger.info("Analytics mart publication complete")
         return report
     except Exception:
         _remove_sqlite_files(temporary)

@@ -16,6 +16,11 @@ COMPARATIVE = re.compile(
     r"\b(superieur|inferieur|meilleur|pire|davantage|plus que|moins que)\b",
     re.I,
 )
+CAUSAL_OR_PREDICTIVE = re.compile(
+    r"\b(cause|causal|garantit|garantie|prouve|certain|assure|"
+    r"entraine|fait gagner|permet de gagner|predit|prediction|va gagner)\b",
+    re.I,
+)
 
 
 class NarrativeAdapter(Protocol):
@@ -54,9 +59,17 @@ def validate_narrative(
     if references - allowed_evidence_ids:
         return False, "LLM_OUTPUT_REJECTED"
     without_references = EVIDENCE_REF.sub("", text)
+    normalized = _normalized(without_references)
     if NUMBER.search(without_references) or COMPARATIVE.search(
-        _normalized(without_references)
-    ):
+        normalized
+    ) or CAUSAL_OR_PREDICTIVE.search(normalized):
+        return False, "LLM_OUTPUT_REJECTED"
+    sentences = [
+        sentence.strip()
+        for sentence in re.split(r"(?<=[.!?])\s+|\n+", text.strip())
+        if sentence.strip()
+    ]
+    if any(not EVIDENCE_REF.search(sentence) for sentence in sentences):
         return False, "LLM_OUTPUT_REJECTED"
     return True, None
 

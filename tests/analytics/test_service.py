@@ -1,4 +1,6 @@
+import analytics.service as service_module
 from analytics.service import AnalyticsService
+from analytics.db import connect_analytics, set_meta
 
 
 def test_supported_chat_returns_evidence_and_dataset_version(
@@ -79,3 +81,43 @@ def test_missing_mart_health_is_structured(tmp_path):
     health = AnalyticsService(str(tmp_path / "missing.db")).health()
 
     assert health == {"ok": False, "code": "ANALYTICS_DB_STALE"}
+
+
+def test_freshness_rejects_incompatible_analytics_versions(
+    powered_analytics_pair,
+):
+    source_db, analytics_db = powered_analytics_pair
+    service = AnalyticsService(str(analytics_db), str(source_db))
+    assert service.freshness()["fresh"] is True
+    with connect_analytics(str(analytics_db)) as conn:
+        set_meta(conn, "extractor_version", "0.9.0")
+
+    freshness = service.freshness(force=True)
+    with connect_analytics(str(analytics_db)) as conn:
+        set_meta(conn, "extractor_version", "1.0.0")
+
+    assert freshness["fresh"] is False
+    assert freshness["compatibility_mismatches"]["extractor_version"] == {
+        "expected": "1.0.0",
+        "actual": "0.9.0",
+    }
+
+
+def test_freshness_snapshot_is_cached_for_short_request_bursts(
+    powered_analytics_pair, monkeypatch
+):
+    source_db, analytics_db = powered_analytics_pair
+    original = service_module.source_snapshot
+    calls = 0
+
+    def counted(path):
+        nonlocal calls
+        calls += 1
+        return original(path)
+
+    monkeypatch.setattr(service_module, "source_snapshot", counted)
+    service = AnalyticsService(str(analytics_db), str(source_db))
+
+    assert service.freshness()["fresh"] is True
+    assert service.freshness()["fresh"] is True
+    assert calls == 1
