@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from tests.analytics.factories import classic_match as make_classic_match
+from tests.analytics.factories import seed_fact_rows
 from tests.analytics.factories import write_source_db
 
 
@@ -34,3 +35,27 @@ def source_db_factory(tmp_path):
 @pytest.fixture
 def source_db(source_db_factory) -> Path:
     return source_db_factory()
+
+
+@pytest.fixture(scope="session")
+def cohort_db(tmp_path_factory) -> Path:
+    return seed_fact_rows(
+        tmp_path_factory.mktemp("cohort-powered") / "analytics.db",
+        {"16.14": 500},
+    )
+
+
+@pytest.fixture(scope="session")
+def cohort_db_underpowered_latest(tmp_path_factory) -> Path:
+    return seed_fact_rows(
+        tmp_path_factory.mktemp("cohort-widened") / "analytics.db",
+        {"16.14": 200, "16.13": 400},
+    )
+
+
+@pytest.fixture(scope="session")
+def cohort_db_tiny(tmp_path_factory) -> Path:
+    return seed_fact_rows(
+        tmp_path_factory.mktemp("cohort-tiny") / "analytics.db",
+        {"16.14": 100, "16.13": 100, "16.12": 100},
+    )

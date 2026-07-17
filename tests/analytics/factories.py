@@ -9,6 +9,8 @@ from pathlib import Path
 import sqlite3
 from typing import Iterable
 
+from analytics.db import connect_analytics, initialize_schema
+
 
 ROLES = ("TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY")
 
@@ -110,4 +112,121 @@ def write_source_db(path: Path, matches: Iterable[dict]) -> Path:
                     int(str(info["gameVersion"]).split(".", 1)[0]),
                 ),
             )
+    return path
+
+
+def _patch_key(patch: str) -> tuple[int, int]:
+    major, minor = patch.split(".", 1)
+    return int(major), int(minor)
+
+
+def seed_fact_rows(
+    path: Path,
+    patch_counts: dict[str, int],
+    region_shifts: dict[str, float] | None = None,
+) -> Path:
+    """Seed deterministic, internally consistent analytical fact rows."""
+
+    path = Path(path)
+    initialize_schema(str(path))
+    shifts = region_shifts or {"EUW": 10.0}
+    regions = tuple(sorted(shifts))
+    prefixes = {"EUW": "EUW1", "EUN": "EUN1", "NA": "NA1", "KR": "KR"}
+    roles = ROLES
+    global_index = 0
+
+    with connect_analytics(str(path)) as conn:
+        for patch in sorted(patch_counts, key=_patch_key):
+            for _ in range(patch_counts[patch]):
+                region = regions[global_index % len(regions)]
+                shift = float(shifts[region])
+                match_id = f"{prefixes.get(region, 'OTHER')}_{global_index + 1}"
+                winner_team = 100 if global_index % 2 == 0 else 200
+                conn.execute(
+                    "INSERT INTO match_facts VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        match_id,
+                        region,
+                        prefixes.get(region, "OTHER"),
+                        f"{patch}.123456",
+                        patch,
+                        420,
+                        global_index + 1,
+                        1_800,
+                        winner_team,
+                        10,
+                        int(patch.split(".", 1)[0]),
+                    ),
+                )
+
+                for team_id in (100, 200):
+                    won = team_id == winner_team
+                    signed_shift = shift if won else 0.0
+                    values = {
+                        "kills": int(20 + signed_shift),
+                        "deaths": int(20 - signed_shift if won else 20),
+                        "assists": int(30 + signed_shift),
+                        "gold": int(50_000 + signed_shift * 100),
+                        "champion_damage": int(80_000 + signed_shift * 200),
+                        "vision_score": 100.0 + signed_shift,
+                        "lane_cs": int(700 + signed_shift),
+                        "jungle_cs": int(150 + signed_shift),
+                    }
+                    objectives = {
+                        "barons": 1 if won else 0,
+                        "dragons": 3 if won else 1,
+                        "towers": 8 if won else 3,
+                        "inhibitors": 1 if won else 0,
+                        "rift_heralds": 1 if won else 0,
+                        "atakhan": 1 if won else 0,
+                    }
+                    firsts = {key: int(won) for key in (
+                        "first_blood", "first_baron", "first_dragon",
+                        "first_tower", "first_inhibitor"
+                    )}
+                    conn.execute(
+                        """
+                        INSERT INTO team_facts VALUES (
+                            :match_id,:team_id,:side,:win,:kills,:deaths,:assists,
+                            :gold,:champion_damage,:vision_score,:lane_cs,:jungle_cs,
+                            :barons,:dragons,:towers,:inhibitors,:rift_heralds,:atakhan,
+                            :first_blood,:first_baron,:first_dragon,:first_tower,
+                            :first_inhibitor
+                        )
+                        """,
+                        {
+                            "match_id": match_id,
+                            "team_id": team_id,
+                            "side": "BLUE" if team_id == 100 else "RED",
+                            "win": int(won),
+                            **values,
+                            **objectives,
+                            **firsts,
+                        },
+                    )
+
+                for player_index in range(10):
+                    team_id = 100 if player_index < 5 else 200
+                    won = team_id == winner_team
+                    conn.execute(
+                        "INSERT INTO player_facts VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                        (
+                            match_id,
+                            f"player-{(global_index * 10 + player_index) % 300}",
+                            team_id,
+                            "BLUE" if team_id == 100 else "RED",
+                            int(won),
+                            f"Champion{player_index}",
+                            roles[player_index % 5],
+                            4 + int(won),
+                            4 - int(won),
+                            6 + int(won),
+                            10_000 + int(won) * 200,
+                            16_000 + int(won) * 300,
+                            20.0 + int(won),
+                            140 + int(won) * 2,
+                            30 + int(won),
+                        ),
+                    )
+                global_index += 1
     return path
