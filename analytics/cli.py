@@ -19,6 +19,8 @@ def main(argv: list[str] | None = None) -> int:
     subcommands.add_parser("build")
     subcommands.add_parser("update")
     subcommands.add_parser("health")
+    train_model = subcommands.add_parser("train-model")
+    train_model.add_argument("--artifacts", default="analytics_artifacts")
     args = parser.parse_args(argv)
 
     if args.command in {"build", "update"}:
@@ -29,5 +31,11 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
         return 0 if report.quality_gate_passed else 2
+    if args.command == "train-model":
+        from .interpretable import train_and_evaluate
+
+        report = train_and_evaluate(args.analytics, args.artifacts)
+        print(json.dumps(report.to_dict(), indent=2, ensure_ascii=False))
+        return 0 if report.final_test["available"] else 2
     print(json.dumps(all_meta(args.analytics), indent=2, ensure_ascii=False))
     return 0

@@ -8,6 +8,7 @@ import pytest
 
 from tests.analytics.factories import classic_match as make_classic_match
 from tests.analytics.factories import seed_fact_rows
+from tests.analytics.factories import seed_model_fact_rows
 from tests.analytics.factories import write_source_db
 
 
@@ -67,4 +68,11 @@ def powered_analytics_db(tmp_path_factory) -> Path:
         tmp_path_factory.mktemp("analytics-powered") / "analytics.db",
         {"16.12": 700, "16.13": 700, "16.14": 700},
         region_shifts={"EUW": 10.0, "KR": 8.0, "NA": 9.0, "EUN": 7.0},
+    )
+
+
+@pytest.fixture(scope="session")
+def model_db(tmp_path_factory) -> Path:
+    return seed_model_fact_rows(
+        tmp_path_factory.mktemp("analytics-model") / "analytics.db"
     )

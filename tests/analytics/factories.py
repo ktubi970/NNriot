@@ -248,3 +248,33 @@ def seed_fact_rows(
         for key, value in metadata.items():
             set_meta(conn, key, value)
     return path
+
+
+def seed_model_fact_rows(path: Path, match_count: int = 4000) -> Path:
+    """Seed a temporal model corpus with gold signal and null vision delta."""
+
+    first_patch = match_count // 2
+    target = seed_fact_rows(
+        path,
+        {"16.13": first_patch, "16.14": match_count - first_patch},
+        region_shifts={"EUW": 10.0},
+    )
+    with connect_analytics(str(target)) as conn:
+        rows = conn.execute(
+            "SELECT match_id,game_creation_ms FROM match_facts"
+        ).fetchall()
+        updates = []
+        for row in rows:
+            created = int(row["game_creation_ms"])
+            null_delta = float((created % 11) - 5)
+            updates.extend(
+                (
+                    (100.0 + null_delta, row["match_id"], 100),
+                    (100.0 - null_delta, row["match_id"], 200),
+                )
+            )
+        conn.executemany(
+            "UPDATE team_facts SET vision_score=? WHERE match_id=? AND team_id=?",
+            updates,
+        )
+    return target
