@@ -8,21 +8,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='design-tokens.css') }}">
   <style>
-    :root {
-      --bg:        #070b12;
-      --surface:   #0f1620;
-      --surface2:  #141e2e;
-      --border:    rgba(255,255,255,0.07);
-      --accent:    #00ff88;
-      --accent2:   #00c8ff;
-      --blue:      #3d7eff;
-      --red:       #ff4d6d;
-      --gold:      #ffc93c;
-      --text:      #e8edf5;
-      --muted:     #6b7a96;
-      --glow:      rgba(0,255,136,0.18);
-    }
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; }
     body {
@@ -33,6 +20,10 @@
       overflow-x: hidden;
     }
     h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
+    h1 { font-size: var(--fluid-h1); }
+    h2 { font-size: var(--fluid-h2); }
+    h3 { font-size: var(--fluid-h3); }
+    h4 { font-size: var(--fluid-h4); }
 
     /* ── NAVBAR ── */
     .navbar {

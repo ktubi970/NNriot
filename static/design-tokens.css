@@ -1,0 +1,32 @@
+/**
+ * NNriot Design System Tokens
+ * Centralized CSS custom properties for colors, fluid typography, spacing & radii.
+ */
+:root {
+  /* ── COLOR PALETTE TOKENS ── */
+  --bg:        #070b12;
+  --surface:   #0f1620;
+  --surface2:  #141e2e;
+  --border:    rgba(255,255,255,0.07);
+  --accent:    #00ff88;
+  --accent2:   #00c8ff;
+  --blue:      #3d7eff;
+  --red:       #ff4d6d;
+  --gold:      #ffc93c;
+  --text:      #e8edf5;
+  --muted:     #6b7a96;
+  --glow:      rgba(0,255,136,0.18);
+
+  /* ── FLUID TYPOGRAPHY CLAMP SCALES ── */
+  --fluid-h1:   clamp(2.25rem, 1.25rem + 3.2vw, 4.25rem);
+  --fluid-h2:   clamp(1.75rem, 1.10rem + 2.2vw, 3.00rem);
+  --fluid-h3:   clamp(1.35rem, 1.00rem + 1.2vw, 2.15rem);
+  --fluid-h4:   clamp(1.15rem, 0.95rem + 0.6vw, 1.50rem);
+  --fluid-body: clamp(0.95rem, 0.90rem + 0.25vw, 1.125rem);
+
+  /* ── SPACING & BORDER RADIUS TOKENS ── */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+}

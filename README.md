@@ -1,5 +1,10 @@
 # NNriot
 
+[![CI](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml/badge.svg)](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
+[![Framework: TensorFlow 2.x](https://img.shields.io/badge/Framework-TensorFlow%202.x-orange.svg)](https://www.tensorflow.org/)
+
 A pure Python machine learning system for processing JSON data and predicting outcomes. NNriot demonstrates a sophisticated approach to handling variable-structure JSON inputs for machine learning tasks using feature hashing and deep neural networks.
 
 ## Overview
@@ -429,10 +434,13 @@ A comprehensive Flask-based web application is available for League of Legends m
 - **Error Handling**: Comprehensive error messages and validation
 - **Professional Styling**: Dark theme with League of Legends-inspired colors
 
-## Future Enhancements
+## Community & Governance
 
-- Support for TensorFlow 2.x eager execution
-- Additional JSON preprocessing techniques
-- More sophisticated neural network architectures
-- Web API for JSON classification service
-- Real-time streaming JSON processing
+- **Contributing**: Contributions are welcome! Please read [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) before submitting pull requests.
+- **Security Policy**: For reporting security vulnerabilities, please refer to [.github/SECURITY.md](.github/SECURITY.md).
+- **Issue Templates**: Use our standard [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md) or [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md) templates when filing issues.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+

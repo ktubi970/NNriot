@@ -15,7 +15,7 @@
 }
 .analytics-hero h1 {
   margin: 10px 0 16px;
-  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-size: var(--fluid-h1);
   line-height: .98;
   letter-spacing: -.04em;
   background: linear-gradient(120deg, #fff 10%, var(--accent2));

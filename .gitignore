@@ -45,17 +45,32 @@ checkpoint
 # Project specific
 build_maturin.log
 build.log
+build_maturin_utf8.log
+*.log
 *.db
 *.db-wal
 *.db-shm
+*.backup*
 analytics_artifacts/
 *.data-00000-of-00001
 *.index
 .env
 loss_plot.html
-build_maturin_utf8.log
 .worktrees/
 .superpowers/
-model.keras
-model_v2.keras
+*.keras
+*.h5
 BACKLOG.md
+
+# Metrics & Benchmark Dumps
+metrics_*.json
+retrain_full_metrics_*.json
+focused_train_history_*.json
+out.txt
+out_verbose.txt
+
+# Temporary Scratch Folders
+graphify-out/
+claude-skills-tmp-2/
+scratch/
+

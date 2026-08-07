@@ -499,10 +499,10 @@ if __name__ == "__main__":
     # Supported entries map (region codes accepted by RiotAPI constructor):
     #  KR, NA, EUW, EUN, BR, LA1, LA2, OCE, JP, RU, TR
     # regions = ["KR", "NA", "EUW", "EUN", "BR", "LA1", "LA2", "OCE", "JP", "RU", "TR"]
-    regions = ["NA", "EUW", "EUN"]
+    regions = ["KR","NA", "EUW", "EUN"]
     collect_top_leagues_data(
         regions=regions,
-        total_players_per_region=500,  # 500 players per region
-        matches_per_player=20,  # 20 matches per player
+        total_players_per_region=1500,  # 500 players per region
+        matches_per_player=200,  # 20 matches per player
         days_back=60,  # Last 60 days of matches
     )
