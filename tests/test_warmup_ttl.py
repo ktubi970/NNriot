@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import datetime as _dt
 import pytest
-import database
+from core import database
 
 
 def test_get_stale_puuids_empty_list(tmp_path):

@@ -3,9 +3,9 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import database
-import backfill_labels as bl
-from data_collector import _build_training_record
+from core import database
+from scripts import backfill_labels as bl
+from scripts.data_collector import _build_training_record
 
 
 def _make_classic_match(match_id, team_a_win=True):

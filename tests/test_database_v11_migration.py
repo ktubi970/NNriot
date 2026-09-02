@@ -3,7 +3,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import database
+from core import database
 
 
 def test_v11_migration_creates_match_timelines_table(tmp_path):

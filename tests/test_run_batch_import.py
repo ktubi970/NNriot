@@ -1,11 +1,11 @@
 import pytest
 from unittest.mock import patch, mock_open, call
-import run_batch_import
+from scripts import run_batch_import
 
-@patch("run_batch_import.data_collector.collect_batch_with_smurfs")
-@patch("run_batch_import.time.sleep")
-@patch("import_liquipedia.resolve_pro_name")
-@patch("run_batch_import.os.path.exists")
+@patch("scripts.run_batch_import.data_collector.collect_batch_with_smurfs")
+@patch("scripts.run_batch_import.time.sleep")
+@patch("scripts.import_liquipedia.resolve_pro_name")
+@patch("scripts.run_batch_import.os.path.exists")
 def test_main_resolves_pro_names(mock_exists, mock_resolve, mock_sleep, mock_collect, monkeypatch):
     mock_exists.return_value = True
     
@@ -20,7 +20,7 @@ def test_main_resolves_pro_names(mock_exists, mock_resolve, mock_sleep, mock_col
         return None
     mock_resolve.side_effect = side_effect
     
-    with patch("run_batch_import.open", mocked_open):
+    with patch("scripts.run_batch_import.open", mocked_open):
         run_batch_import.main()
         
     # Check the players passed to collect_batch_with_smurfs

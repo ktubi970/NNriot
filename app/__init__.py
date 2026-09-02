@@ -9,7 +9,7 @@ import logging
 from flask import Flask
 from flask_cors import CORS
 
-import database
+from core import database
 
 
 def create_app():

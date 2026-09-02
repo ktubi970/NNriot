@@ -1,788 +1,70 @@
-<!DOCTYPE html>
-<html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>NNriot | Custom Match Predictor</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Inter:wght@400;700&display=swap"
-        rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root {
-            --bg:        #070b12;
-            --surface:   #0f1620;
-            --surface2:  #141e2e;
-            --border:    rgba(255,255,255,0.07);
-            --accent:    #00ff88;
-            --accent2:   #00c8ff;
-            --blue:      #3d7eff;
-            --red:       #ff4d6d;
-            --gold:      #ffc93c;
-            --text:      #e8edf5;
-            --muted:     #6b7a96;
-            --glow:      rgba(0,255,136,0.18);
-            
-            /* Legacy mappings for predictor compatibility */
-            --bg-color: var(--bg);
-            --card-bg: var(--surface);
-            --blue-side: var(--blue);
-            --red-side: var(--red);
-            --text-main: var(--text);
-            --text-dim: var(--muted);
-            --glass: rgba(255, 255, 255, 0.05);
-            --glass-border: var(--border);
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg);
-            color: var(--text);
-            overflow-x: hidden;
-            min-height: 100vh;
-        }
-
-        h1, h2, h3, h4 { font-family: 'Outfit', sans-serif; }
-
-        .navbar {
-            position: sticky; top: 0; z-index: 999;
-            background: rgba(7,11,18,0.85);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-            padding: 0 40px;
-            height: 64px;
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .nav-logo {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem; font-weight: 900;
-            color: #fff; text-decoration: none;
-            display: flex; align-items: center; gap: 4px;
-        }
-        .nav-logo em { color: var(--accent); font-style: normal; }
-        .nav-links { display: flex; gap: 32px; align-items: center; }
-        .nav-link {
-            color: var(--muted); text-decoration: none;
-            font-size: 0.9rem; font-weight: 600;
-            transition: color 0.2s;
-            position: relative; padding-bottom: 2px;
-        }
-        .nav-link:hover { color: #fff; }
-        .nav-link.active { color: var(--accent); }
-        .nav-link.active::after {
-            content: ''; position: absolute; bottom: -4px; left: 0; right: 0;
-            height: 2px; background: var(--accent); border-radius: 2px;
-        }
-        .nav-cta {
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            color: #070b12; font-family: 'Outfit', sans-serif;
-            font-weight: 800; font-size: 0.85rem;
-            padding: 8px 20px; border-radius: 8px;
-            text-decoration: none; letter-spacing: 0.5px;
-            box-shadow: 0 0 20px var(--glow);
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 60px;
-        }
-
-        header h1 {
-            font-size: 3rem;
-            font-weight: 800;
-            background: linear-gradient(135deg, #fff 0%, #00ff88 100%);
-            -webkit-background-clip: text;
-            background-clip: text;
-            -webkit-text-fill-color: transparent;
-            margin-bottom: 10px;
-        }
-
-        header p {
-            color: var(--text-dim);
-            font-size: 1.1rem;
-        }
-
-        .predictor-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 40px;
-            margin-bottom: 60px;
-            position: relative;
-        }
-
-        .predictor-grid::after {
-            content: "VS";
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            font-family: 'Outfit', sans-serif;
-            font-size: 4rem;
-            font-weight: 900;
-            color: rgba(255, 255, 255, 0.03);
-            pointer-events: none;
-            z-index: 0;
-        }
-
-        .team-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 30px;
-            border: 1px solid var(--glass-border);
-            position: relative;
-            z-index: 1;
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-
-        .team-card.blue {
-            border-top: 5px solid var(--blue-side);
-            box-shadow: 0 10px 30px rgba(0, 123, 255, 0.1);
-        }
-
-        .team-card.red {
-            border-top: 5px solid var(--red-side);
-            box-shadow: 0 10px 30px rgba(255, 77, 77, 0.1);
-        }
-
-        .team-header {
-            margin-bottom: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .team-header h2 {
-            font-size: 1.8rem;
-        }
-
-        .player-slots {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-
-        .player-slot {
-            position: relative;
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            transition: border-color 0.2s;
-        }
-
-        .player-slot:focus-within {
-            border-color: rgba(255, 255, 255, 0.3);
-        }
-
-        .label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: var(--text-dim);
-            font-weight: 700;
-        }
-
-        .search-container {
-            position: relative;
-        }
-
-        .search-input {
-            width: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            padding: 10px 15px;
-            color: white;
-            font-family: inherit;
-            font-size: 1rem;
-            outline: none;
-        }
-
-        .dropdown {
-            position: absolute;
-            top: 100%;
-            left: 0;
-            right: 0;
-            background: #1a2332;
-            border: 1px solid var(--glass-border);
-            border-radius: 8px;
-            margin-top: 5px;
-            max-height: 200px;
-            overflow-y: auto;
-            z-index: 100;
-            display: none;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
-        }
-
-        .dropdown-item {
-            padding: 10px 15px;
-            cursor: pointer;
-            transition: background 0.2s;
-            border-bottom: 1px solid var(--glass-border);
-        }
-
-        .dropdown-item:last-child {
-            border-bottom: none;
-        }
-
-        .dropdown-item:hover,
-        .dropdown-item.keyboard-active {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .dropdown-item.keyboard-active {
-            outline: 1px solid rgba(0,255,136,0.3);
-        }
-
-        .dropdown-item .name {
-            font-weight: 600;
-            display: block;
-        }
-
-        .dropdown-item .meta {
-            font-size: 0.8rem;
-            color: var(--text-dim);
-        }
-
-        .selected-player {
-            display: none;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .selected-player .info {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        .player-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: var(--glass);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            font-family: 'Outfit';
-            border: 1px solid var(--glass-border);
-        }
-
-        .remove-btn {
-            background: none;
-            border: none;
-            color: var(--text-dim);
-            cursor: pointer;
-            font-size: 1.2rem;
-            padding: 5px;
-            transition: color 0.2s;
-        }
-
-        .remove-btn:hover {
-            color: #ff4d4d;
-        }
-
-        .actions {
-            text-align: center;
-            margin-top: 40px;
-        }
-
-        .predict-btn {
-            background: linear-gradient(135deg, #00ff88 0%, #00d4ff 100%);
-            color: #0a0e14;
-            border: none;
-            padding: 18px 60px;
-            font-size: 1.3rem;
-            font-weight: 800;
-            font-family: 'Outfit';
-            border-radius: 50px;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            box-shadow: 0 10px 30px rgba(0, 255, 136, 0.3);
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-
-        .predict-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0, 255, 136, 0.4);
-        }
-
-        .predict-btn:active {
-            transform: translateY(1px);
-        }
-
-        .predict-btn:disabled {
-            background: #333;
-            color: #666;
-            cursor: not-allowed;
-            box-shadow: none;
-        }
-
-        #results-container {
-            margin-top: 60px;
-            display: none;
-            animation: fadeIn 0.5s ease;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .result-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 800px;
-            margin: 0 auto;
-            border: 1px solid var(--glass-border);
-            text-align: center;
-        }
-
-        .winner-display {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 20px;
-            font-family: 'Outfit';
-        }
-
-        .blue-win {
-            color: var(--blue-side);
-        }
-
-        .red-win {
-            color: var(--red-side);
-        }
-
-        .prob-bar-container {
-            height: 20px;
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 10px;
-            overflow: hidden;
-            margin: 30px 0;
-            display: flex;
-            border: 1px solid var(--glass-border);
-        }
-
-        .prob-bar-blue {
-            height: 100%;
-            background: var(--blue-side);
-            transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-            position: relative;
-        }
-
-        .prob-bar-red {
-            height: 100%;
-            background: var(--red-side);
-            transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
-            position: relative;
-        }
-
-        .prob-labels {
-            display: flex;
-            justify-content: space-between;
-            font-weight: bold;
-            font-family: 'Outfit';
-            font-size: 1.2rem;
-        }
-
-        .confidence-chip {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            background: var(--glass);
-            border: 1px solid var(--glass-border);
-            font-size: 0.9rem;
-            color: var(--accent);
-            margin-top: 20px;
-        }
-
-        .reasoning-container {
-            margin-top: 30px;
-            padding: 20px;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            border-left: 4px solid var(--accent);
-            text-align: left;
-            font-size: 0.95rem;
-            line-height: 1.6;
-            color: #d1d8e0;
-            display: none;
-        }
-
-        .reasoning-container h3 {
-            margin-bottom: 15px;
-            color: white;
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .reasoning-container h3::before {
-            content: "✨";
-        }
-
-        nav {
-            margin-bottom: 30px;
-        }
-
-        .back-link {
-            color: var(--text-dim);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.9rem;
-            transition: color 0.2s;
-        }
-
-        .back-link:hover {
-            color: white;
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            display: none;
-            width: 40px;
-            height: 40px;
-            margin: 20px auto;
-            border: 4px solid rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-            border-top-color: var(--accent);
-            animation: spin 1s ease-in-out infinite;
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* Navigation Bar Styles */
-        .navbar {
-            position: sticky;
-            top: 0;
-            width: 100%;
-            background: rgba(10, 14, 20, 0.8);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--glass-border);
-            z-index: 1000;
-            padding: 15px 0;
-        }
-
-        .nav-container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 0 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-logo {
-            font-family: 'Outfit', sans-serif;
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: white;
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .nav-logo span {
-            color: var(--accent);
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 30px;
-        }
-
-        .nav-link {
-            color: var(--text-dim);
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: color 0.2s, transform 0.2s;
-            position: relative;
-        }
-
-        .nav-link:hover {
-            color: white;
-            transform: translateY(-1px);
-        }
-
-        .nav-link.active {
-            color: var(--accent);
-        }
-
-        .nav-link.active::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background: var(--accent);
-            border-radius: 2px;
-        }
-
-        .quick-btn {
-            background: linear-gradient(135deg, #1a4d8f 0%, #0a2e5c 100%);
-            color: white;
-            border: 1px solid var(--glass-border);
-            padding: 10px 20px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.95rem;
-            transition: all 0.2s;
-            font-family: inherit;
-        }
-
-        .quick-btn:hover {
-            background: linear-gradient(135deg, #2561a8 0%, #1a3d7a 100%);
-            border-color: rgba(0, 255, 136, 0.3);
-            transform: translateY(-2px);
-        }
-
-        .quick-select {
-            background: var(--card-bg);
-            color: white;
-            border: 1px solid var(--glass-border);
-            padding: 10px 15px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-weight: 500;
-            font-size: 0.95rem;
-            font-family: inherit;
-            transition: all 0.2s;
-            appearance: none;
-            padding-right: 30px;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 8px center;
-            background-size: 18px;
-            padding-right: 35px;
-        }
-
-        .quick-select:hover {
-            border-color: rgba(0, 255, 136, 0.3);
-        }
-
-        @media (max-width: 900px) {
-            .predictor-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .predictor-grid::after {
-                display: none;
-            }
-        }
-
-        /* ── Multi-output betting markets ─────────────────────────────── */
-        .markets-container {
-            margin-top: 24px;
-            padding: 20px;
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-        }
-
-        .markets-title {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 800;
-            font-size: 1.3rem;
-            color: var(--accent);
-            margin: 0 0 16px 0;
-            letter-spacing: 0.05em;
-        }
-
-        .market-section {
-            margin-bottom: 24px;
-            padding: 16px;
-            background: var(--surface2);
-            border-radius: 8px;
-        }
-
-        .market-section h4 {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            font-size: 1.05rem;
-            color: var(--text);
-            margin: 0 0 12px 0;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            border-bottom: 1px solid var(--border);
-            padding-bottom: 8px;
-        }
-
-        .market-row {
-            display: grid;
-            grid-template-columns: 1fr auto auto;
-            align-items: center;
-            gap: 12px;
-            padding: 6px 0;
-            font-size: 0.95rem;
-        }
-
-        .market-label {
-            color: var(--muted);
-            font-weight: 400;
-        }
-
-        .market-numeric {
-            font-family: 'Outfit', monospace;
-            font-weight: 700;
-            font-size: 1.1rem;
-            color: var(--text);
-            min-width: 60px;
-            text-align: right;
-        }
-
-        .market-pct {
-            font-family: 'Outfit', monospace;
-            font-weight: 600;
-            font-size: 0.95rem;
-            color: var(--accent);
-            min-width: 50px;
-            text-align: right;
-        }
-
-        .market-bar-wrap {
-            width: 180px;
-            height: 8px;
-            background: rgba(255,255,255,0.05);
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .market-bar {
-            height: 100%;
-            width: 0%;
-            background: var(--accent);
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-
-        .market-bar-blue {
-            background: var(--blue);
-        }
-
-        .market-bar-red {
-            background: var(--red);
-        }
-
-        .market-bar-muted {
-            background: var(--muted);
-        }
-
-        .market-bar-gold {
-            background: var(--gold);
-        }
-
-        .market-first-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 12px;
-        }
-
-        .market-first-card {
-            background: var(--surface);
-            border-radius: 6px;
-            padding: 12px;
-        }
-
-        .market-first-title {
-            font-family: 'Outfit', sans-serif;
-            font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--accent2);
-            margin-bottom: 8px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        .market-first-bars {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-
-        .market-first-bar {
-            display: grid;
-            grid-template-columns: 36px 1fr 40px;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.85rem;
-            color: var(--muted);
-        }
-
-        .market-first-bar .market-bar-wrap {
-            width: 100%;
-            height: 6px;
-        }
-
-        @media (max-width: 768px) {
-            .market-first-grid { grid-template-columns: 1fr; }
-            .market-row { grid-template-columns: 1fr auto; }
-            .market-bar-wrap { width: 100%; }
-        }
-    </style>
-</head>
-
-<body>
-    <nav class="navbar">
-        <a href="/" class="nav-logo">NN<em>RIOT</em></a>
-        <div class="nav-links">
-            <a href="/" class="nav-link">Dashboard</a>
-            <a href="/explorer" class="nav-link">Explorer</a>
-            <a href="/predictor" class="nav-link active">Predictor</a>
-            <a href="/live" class="nav-link">Live</a>
-            <a href="/smurfs" class="nav-link">Smurfs</a>
-            <a href="/monitor" class="nav-link">Monitor</a>
-            <a href="/predictor" class="nav-cta">⚡ Predict</a>
-        </div>
-    </nav>
-
-    <div class="container">
-
-        <header>
-            <h1>CUSTOM MATCH PREDICTOR</h1>
-            <p>Assemble your dream 5v5 matchup and discover the model's win probability.</p>
-        </header>
+{% extends "layout.html" %}
+
+{% block title %}Custom Match Predictor ? NNriot{% endblock %}
+
+{% block styles %}
+<style type="text/tailwindcss">
+  @layer components {
+    .container { @apply w-full max-w-none; }
+    .quick-btn { @apply px-4 py-2 rounded-lg bg-surface2 hover:bg-gray-700 text-white font-medium text-sm transition-colors border border-gray-700; }
+    .quick-select { @apply px-4 py-2 rounded-lg bg-surface2 text-white border border-gray-700 outline-none; }
+    .predictor-grid { @apply grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8; }
+    .team-card { @apply p-6 rounded-2xl glass-panel relative overflow-hidden; }
+    .team-card.blue { @apply border-blue-900/50 shadow-[0_0_30px_rgba(59,130,246,0.1)]; }
+    .team-card.red { @apply border-red-900/50 shadow-[0_0_30px_rgba(239,68,68,0.1)]; }
+    .team-header { @apply flex items-center justify-between mb-6 pb-4 border-b border-gray-800; }
+    .team-header h2 { @apply text-2xl font-display font-black tracking-widest; }
+    .team-card.blue h2 { @apply text-blue-500; }
+    .team-card.red h2 { @apply text-red-500; }
+    
+    .player-slots { @apply space-y-4; }
+    .player-slot { @apply p-4 rounded-xl bg-dark/50 border border-gray-800 flex items-center gap-4 hover:border-gray-600 transition-colors; }
+    .player-slot .label { @apply text-xs font-bold text-gray-500 uppercase w-12 text-center; }
+    
+    .search-container { @apply flex-1 relative; }
+    .search-input { @apply w-full bg-surface border border-gray-700 rounded-lg px-4 py-2.5 text-white outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all; }
+    .dropdown { @apply absolute top-full left-0 w-full mt-1 bg-surface border border-gray-700 rounded-lg shadow-xl z-50 max-h-60 overflow-y-auto hidden; }
+    .dropdown-item { @apply p-3 hover:bg-gray-800 cursor-pointer flex items-center gap-3 border-b border-gray-800/50 last:border-0; }
+    .dropdown-item img { @apply w-8 h-8 rounded-full bg-gray-800; }
+    .dropdown-item-name { @apply font-bold text-white; }
+    .dropdown-item-tag { @apply text-sm text-gray-500; }
+    
+    .selected-player { @apply flex-1 flex items-center justify-between hidden; }
+    .selected-player .info { @apply flex items-center gap-3; }
+    .player-avatar { @apply w-10 h-10 rounded-full bg-gray-800 flex items-center justify-center text-sm font-bold border-2 border-gray-700; }
+    .remove-btn { @apply w-8 h-8 flex items-center justify-center rounded-full hover:bg-red-500/20 text-red-500 transition-colors text-xl font-light; }
+    
+    .actions { @apply flex flex-col items-center gap-4 my-12; }
+    .predict-btn { @apply px-12 py-4 rounded-xl font-black text-xl tracking-wider uppercase transition-all duration-300; }
+    .predict-btn:not(:disabled) { @apply bg-primary text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] hover:bg-emerald-400 hover:scale-105; }
+    .predict-btn:disabled { @apply bg-gray-800 text-gray-600 cursor-not-allowed; }
+    
+    .spinner { @apply w-10 h-10 border-4 border-gray-800 border-t-primary rounded-full animate-spin hidden; }
+    
+    #results-container { @apply hidden; }
+    .result-card { @apply p-8 rounded-2xl glass-panel max-w-3xl mx-auto text-center relative overflow-hidden; }
+    .winner-display { @apply text-4xl font-black tracking-tight mb-8; }
+    .prob-labels { @apply flex justify-between text-2xl font-bold mb-4 font-display; }
+    .prob-bar-container { @apply h-6 rounded-full bg-gray-800 flex overflow-hidden shadow-inner mb-6; }
+    .prob-bar-blue { @apply bg-blue-500 transition-all duration-1000 ease-out; }
+    .prob-bar-red { @apply bg-red-500 transition-all duration-1000 ease-out; }
+    .confidence-chip { @apply inline-block px-4 py-1.5 rounded-full bg-surface2 text-gray-400 text-sm font-bold border border-gray-700; }
+    .keyboard-active { @apply bg-gray-700 !important; }
+    
+    /* Missing style fixes for JS compatibility */
+    .prediction-error { @apply text-red-500 font-bold mt-4; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-10 text-center">
+  <h1 class="text-4xl font-display font-black text-white mb-2 tracking-tight">CUSTOM MATCH PREDICTOR</h1>
+  <p class="text-gray-400">Assemble your dream 5v5 matchup and discover the model's win probability.</p>
+</div>
+<div class="container">
+
+        
 
         <!-- Quick Actions Bar -->
         <div style="display: flex; justify-content: center; gap: 15px; margin-bottom: 40px; flex-wrap: wrap;">
@@ -1003,6 +285,8 @@
         <script>
             const bluePuuids = [null, null, null, null, null];
             const redPuuids = [null, null, null, null, null];
+            const bluePlayers = [null, null, null, null, null];
+            const redPlayers = [null, null, null, null, null];
 
             // Removed fetchChampions
 
@@ -1105,13 +389,15 @@
                 select.value = '';
             }
 
-            async function fillRandomTeams() {
-                const btn = event.target.closest('.quick-btn');
-                const originalText = btn.innerHTML;
+            async function fillRandomTeams(event) {
+                const btn = (event && event.target) ? event.target.closest('.quick-btn') : document.querySelector('button[onclick*="fillRandomTeams"]');
+                const originalText = btn ? btn.innerHTML : '';
                 
                 try {
-                    btn.disabled = true;
-                    btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
+                    if (btn) {
+                        btn.disabled = true;
+                        btn.innerHTML = '<span style="display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,0.2);border-top-color:white;border-radius:50%;animation:spin 0.7s linear infinite;margin-right:8px;"></span> Loading…';
+                    }
                     
                     const response = await fetch('/api/players/random?limit=10');
                     if (!response.ok) throw new Error('API Error');
@@ -1132,8 +418,10 @@
                     console.error(e);
                     alert('Failed to load random teams. Is the data collector running?');
                 } finally {
-                    btn.disabled = false;
-                    btn.innerHTML = originalText;
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.innerHTML = originalText;
+                    }
                 }
             }
 
@@ -1141,11 +429,22 @@
                 const tempPuuids = [...bluePuuids];
                 bluePuuids.splice(0, 5, ...redPuuids);
                 redPuuids.splice(0, 5, ...tempPuuids);
+
+                const tempPlayers = [...bluePlayers];
+                bluePlayers.splice(0, 5, ...redPlayers);
+                redPlayers.splice(0, 5, ...tempPlayers);
                 
-                // Re-render all slots
                 for (let i = 0; i < 5; i++) {
-                    updateSlotDisplay('blue', i);
-                    updateSlotDisplay('red', i);
+                    if (bluePlayers[i]) {
+                        selectPlayer('blue', i, bluePlayers[i].puuid, bluePlayers[i].name, bluePlayers[i].tag);
+                    } else {
+                        clearSlot('blue', i);
+                    }
+                    if (redPlayers[i]) {
+                        selectPlayer('red', i, redPlayers[i].puuid, redPlayers[i].name, redPlayers[i].tag);
+                    } else {
+                        clearSlot('red', i);
+                    }
                 }
             }
 
@@ -1201,6 +500,8 @@
                 for (let i = 0; i < 5; i++) {
                     bluePuuids[i] = null;
                     redPuuids[i] = null;
+                    bluePlayers[i] = null;
+                    redPlayers[i] = null;
                     
                     document.getElementById(`search-cont-blue-${i}`).style.display = 'block';
                     document.getElementById(`selected-blue-${i}`).style.display = 'none';
@@ -1330,22 +631,32 @@
             }
 
             function selectPlayer(team, index, puuid, name, tag) {
-                if (team === 'blue') bluePuuids[index] = puuid;
-                else redPuuids[index] = puuid;
+                if (team === 'blue') {
+                    bluePuuids[index] = puuid;
+                    bluePlayers[index] = { puuid, name, tag };
+                } else {
+                    redPuuids[index] = puuid;
+                    redPlayers[index] = { puuid, name, tag };
+                }
 
                 document.getElementById(`dropdown-${team}-${index}`).style.display    = 'none';
                 document.getElementById(`search-cont-${team}-${index}`).style.display = 'none';
                 document.getElementById(`selected-${team}-${index}`).style.display    = 'flex';
                 document.getElementById(`name-${team}-${index}`).textContent          = name;
                 document.getElementById(`tag-${team}-${index}`).textContent           = `#${tag}`;
-                document.getElementById(`avatar-${team}-${index}`).textContent        = name.charAt(0).toUpperCase();
+                document.getElementById(`avatar-${team}-${index}`).textContent        = (name || '?').charAt(0).toUpperCase();
 
                 checkValidity();
             }
 
             function clearSlot(team, index) {
-                if (team === 'blue') bluePuuids[index] = null;
-                else redPuuids[index] = null;
+                if (team === 'blue') {
+                    bluePuuids[index] = null;
+                    bluePlayers[index] = null;
+                } else {
+                    redPuuids[index] = null;
+                    redPlayers[index] = null;
+                }
 
                 document.getElementById(`search-cont-${team}-${index}`).style.display = 'block';
                 document.getElementById(`selected-${team}-${index}`).style.display    = 'none';
@@ -1528,47 +839,49 @@
                 checkValidity();
             }
 
-            function importLiveMatch() {
-                const raw = sessionStorage.getItem('live_match_data');
-                if (!raw) {
-                    const name = prompt("Enter summoner name to track:");
-                    const tag = prompt("Enter tag (e.g. KR1):", "EUW1");
-                    if (name && tag) {
-                        window.location.href = `/live?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`;
+            
+            async function importLiveMatch() {
+                const name = prompt("Enter summoner name to track:");
+                const tag = prompt("Enter tag (e.g. KR1):", "EUW1");
+                
+                if (!name || !tag) return;
+                
+                try {
+                    document.getElementById('import-live-btn').innerText = 'Loading...';
+                    const res = await fetch(`/api/spectator/active?name=${encodeURIComponent(name)}&tag=${encodeURIComponent(tag)}`);
+                    const data = await res.json();
+                    
+                    if (!data.success) {
+                        alert(data.error || "Failed to find live match.");
+                        document.getElementById('import-live-btn').innerText = 'Import Live';
+                        return;
                     }
-                    return;
+                    
+                    const blue = data.game_data.participants.filter(p => p.teamId === 100);
+                    const red  = data.game_data.participants.filter(p => p.teamId === 200);
+
+                    clearAllSlots();
+                    
+                    const fillSlot = (team, i, p) => {
+                        // The old selectPlayerFromData takes: (team, index, puuid, gameName, tagLine, championName)
+                        selectPlayerFromData(team, i, p.puuid || p.summonerId, p.summonerName || "Unknown", "TAG", p.championName || p.championId);
+                    };
+                    
+                    blue.forEach((p, i) => { if (i < 5) fillSlot('blue', i, p); });
+                    red.forEach((p, i) => { if (i < 5) fillSlot('red', i, p); });
+                    
+                    alert("Successfully imported live match participants.");
+                } catch (err) {
+                    console.error(err);
+                    alert("Error loading live match.");
+                } finally {
+                    document.getElementById('import-live-btn').innerText = 'Import Live';
                 }
-
-                const data = JSON.parse(raw);
-                const blue = data.participants.filter(p => p.teamId === 100);
-                const red  = data.participants.filter(p => p.teamId === 200);
-
-                clearAllSlots();
-                blue.forEach((p, i) => {
-                    if (i < 5) selectPlayerFromData('blue', i, p.puuid, p.summonerName, "", p.championName);
-                });
-                red.forEach((p, i) => {
-                    if (i < 5) selectPlayerFromData('red', i, p.puuid, p.summonerName, "", p.championName);
-                });
-
-                // Clear after import to avoid re-triggering
-                sessionStorage.removeItem('live_match_data');
-                alert("Successfully imported live match participants.");
-            }
-
-            // check for session data
-            if (sessionStorage.getItem('live_match_data')) {
-                setTimeout(() => {
-                    if (confirm("Found a live match from the tracker. Import it now?")) {
-                        importLiveMatch();
-                    }
-                }, 500);
             }
 
             renderSlots();
             loadHotPlayers();
         </script>
     </div>
-</body>
 
-</html>
+{% endblock %}

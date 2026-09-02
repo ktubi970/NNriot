@@ -4,13 +4,13 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pytest
 import tensorflow as tf
-from generate_graph import (
+from core.generate_graph import (
     build_multi_output_model,
     LOSS_PER_HEAD,
     LOSS_WEIGHTS,
     METRICS_PER_HEAD,
 )
-from feature_labels import LABEL_KEYS, TIMELINE_LABEL_KEYS, ALL_LABEL_KEYS
+from core.feature_labels import LABEL_KEYS, TIMELINE_LABEL_KEYS, ALL_LABEL_KEYS
 
 
 def test_constants_cover_label_keys():

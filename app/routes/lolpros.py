@@ -5,8 +5,8 @@ import threading
 
 from flask import Blueprint, request, jsonify
 
-import database
-import data_collector
+from core import database
+from scripts import data_collector
 
 from .. import core
 

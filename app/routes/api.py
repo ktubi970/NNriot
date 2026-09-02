@@ -16,12 +16,17 @@ import logging
 
 from flask import Blueprint, request, jsonify, current_app
 
-import database
-import live_game
-import data_collector
-import riot_api
-import json_utils
-from feature_labels import VECTOR_DIM
+from core import database
+from scripts import live_game
+from scripts import data_collector
+from core import riot_api
+from core import json_utils
+from ..services.player_service import PlayerService
+from ..services.system_service import SystemService
+
+_player_service = PlayerService()
+_system_service = SystemService()
+from core.feature_labels import VECTOR_DIM
 
 from .. import core
 
@@ -34,17 +39,13 @@ logger = logging.getLogger(__name__)
 @api_bp.route("/api/status", methods=["GET"])
 def api_status():
     """API endpoint to check system status."""
-    import tensorflow as tf
-
-    tf_version = "N/A"
-    try:
-        tf_version = tf.__version__
-    except Exception:
-        pass
+    import sys
+    tf_mod = sys.modules.get("tensorflow")
+    tf_version = getattr(tf_mod, "__version__", "N/A") if tf_mod else "N/A"
 
     return jsonify(
         {
-            "model_loaded": core.tf_available and core.global_trainer is not None,
+            "model_loaded": bool(core.tf_available and core.global_trainer is not None),
             "tensorflow_version": tf_version,
             "input_dimension": VECTOR_DIM if core.tf_available else "N/A",
             "output_classes": 2,
@@ -59,88 +60,11 @@ def api_status():
 
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
-    """Returns database health metrics for the stats strip."""
     try:
-        stats = database.get_db_stats()
-        return jsonify(
-            {
-                "players": stats.get("players", 0),
-                "matches": stats.get("matches", 0),
-                "training_records": stats.get("training_records", 0),
-                "trained_records": stats.get("trained_records", 0),
-                "untrained_records": stats.get("untrained_records", 0),
-                "trained_ratio": stats.get("trained_ratio", 0),
-                "success": True,
-                "ok": True,
-            }
-        )
+        response, status = _system_service.get_db_health()
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-# ── Explorer ────────────────────────────────────────────────────────────────
-
-@api_bp.route("/api/explorer/stats", methods=["GET"])
-def api_explorer_stats():
-    """API endpoint to get database statistics."""
-    try:
-        stats = database.get_db_stats()
-        # Add human readable size
-        db_path = database.DB_PATH
-        if os.path.exists(db_path):
-            size_mb = os.path.getsize(db_path) / (1024 * 1024)
-            stats["db_size_mb"] = round(size_mb, 2)
-        else:
-            stats["db_size_mb"] = 0.0
-
-        return jsonify(stats)
-    except Exception as e:
-        logger.error(f"Explorer stats error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/matches", methods=["GET"])
-def api_explorer_matches():
-    """API endpoint to get paginated match records."""
-    try:
-        page = int(request.args.get("page", 1))
-        limit = int(request.args.get("limit", 20))
-
-        # Ensure reasonable limits
-        limit = max(1, min(100, limit))
-        page = max(1, page)
-        offset = (page - 1) * limit
-
-        records = database.get_recent_training_records(limit=limit, offset=offset)
-        total_records = database.get_training_count()
-
-        return jsonify(
-            {
-                "success": True,
-                "page": page,
-                "limit": limit,
-                "total_records": total_records,
-                "total_pages": (total_records + limit - 1) // limit,
-                "records": records,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Explorer matches error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/match/<match_id>", methods=["GET"])
-def api_explorer_match_details(match_id):
-    """API endpoint to get full raw details for a specific match."""
-    try:
-        raw_match = database.get_raw_match(match_id)
-        if not raw_match:
-            return jsonify({"error": "Match not found"}), 404
-
-        return jsonify({"success": True, "match": raw_match})
-    except Exception as e:
-        logger.error(f"Explorer match details error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
@@ -148,10 +72,9 @@ def api_explorer_match_details(match_id):
 
 @api_bp.route("/api/players/aliases", methods=["GET"])
 def api_players_aliases():
-    """Retrieve all linked player aliases."""
     try:
-        aliases = database.get_all_aliases()
-        return jsonify(aliases)
+        response, status = _player_service.get_all_aliases()
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Error fetching aliases: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -159,13 +82,10 @@ def api_players_aliases():
 
 @api_bp.route("/api/players/unlink", methods=["DELETE"])
 def api_players_unlink():
-    """Unlink an alias from its canonical account."""
     try:
         alias_puuid = request.args.get("alias_puuid")
-        if not alias_puuid:
-            return jsonify({"error": "alias_puuid is required"}), 400
-        database.unlink_accounts(alias_puuid)
-        return jsonify({"success": True})
+        response, status = _player_service.unlink_accounts(alias_puuid)
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Error unlinking accounts: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -173,15 +93,11 @@ def api_players_unlink():
 
 @api_bp.route("/api/players/search", methods=["GET"])
 def api_players_search():
-    """Search for existing players in the local database by name."""
     try:
         q = request.args.get("q", "").strip()
         limit = request.args.get("limit", 10, type=int)
-        if len(q) < 2:
-            return jsonify([])
-
-        players = database.search_players(q, limit=limit)
-        return jsonify(players)
+        response, status = _player_service.search_players(q, limit)
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Player search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -189,15 +105,10 @@ def api_players_search():
 
 @api_bp.route("/api/players/random", methods=["GET"])
 def api_players_random():
-    """Return a random sample of players from the database."""
-    limit = request.args.get("limit", 10, type=int)
-    # Sample from a pool of high-match-count players so results are actually
-    # varied but still skewed toward players the model has data on.
-    pool_size = max(limit * 20, 200)
     try:
-        pool = database.get_top_players(limit=pool_size)
-        sample = random.sample(pool, min(limit, len(pool)))
-        return jsonify(sample)
+        limit = request.args.get("limit", 10, type=int)
+        response, status = _player_service.get_random_players(limit)
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -205,12 +116,10 @@ def api_players_random():
 
 @api_bp.route("/api/players/top", methods=["GET"])
 def api_players_top():
-    """API endpoint to get top players by match count."""
-    limit = request.args.get("limit", 10, type=int)
-
     try:
-        players = database.get_top_players(limit=limit)
-        return jsonify(players)
+        limit = request.args.get("limit", 10, type=int)
+        response, status = _player_service.get_top_players(limit)
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Top players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -218,19 +127,12 @@ def api_players_top():
 
 @api_bp.route("/api/players/link", methods=["POST"])
 def api_link_players():
-    """Link a smurf/alias account to a canonical main account."""
     try:
         data = request.get_json()
         main_puuid = data.get("canonical_puuid")
         smurf_puuid = data.get("alias_puuid")
-        if not main_puuid or not smurf_puuid:
-            return (
-                jsonify({"error": "canonical_puuid and alias_puuid are required"}),
-                400,
-            )
-
-        database.link_accounts(main_puuid, smurf_puuid)
-        return jsonify({"success": True, "message": "Accounts completely linked."})
+        response, status = _player_service.link_accounts(main_puuid, smurf_puuid)
+        return jsonify(response), status
     except Exception as e:
         logger.error(f"Link accounts error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -655,7 +557,7 @@ def api_spectator_active():
 
         # Enhance participants with local database info (puuid and stats)
         # We need to resolve each participant
-        from data_collector import resolve_region
+        from scripts.data_collector import resolve_region
 
         region = resolve_region(tag)
         participants = game_data.get("participants", [])

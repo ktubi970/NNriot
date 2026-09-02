@@ -32,14 +32,14 @@ def _fake_timeline_response():
 
 
 def test_get_match_timeline_success():
-    from riot_api import RiotAPI
+    from core.riot_api import RiotAPI
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = _fake_timeline_response()
     mock_resp.headers = {}
 
-    with patch("riot_api.requests.get", return_value=mock_resp):
+    with patch("core.riot_api.requests.get", return_value=mock_resp):
         result = api.get_match_timeline("EUW1_1234567890")
 
     assert result is not None
@@ -48,27 +48,27 @@ def test_get_match_timeline_success():
 
 
 def test_get_match_timeline_404_returns_none():
-    from riot_api import RiotAPI
+    from core.riot_api import RiotAPI
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()
     mock_resp.status_code = 404
     mock_resp.headers = {}
 
-    with patch("riot_api.requests.get", return_value=mock_resp):
+    with patch("core.riot_api.requests.get", return_value=mock_resp):
         result = api.get_match_timeline("MISSING_MATCH")
 
     assert result is None
 
 
 def test_get_match_timelines_batch():
-    from riot_api import RiotAPI
+    from core.riot_api import RiotAPI
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()
     mock_resp.status_code = 200
     mock_resp.json.return_value = _fake_timeline_response()
     mock_resp.headers = {}
 
-    with patch("riot_api.requests.get", return_value=mock_resp):
+    with patch("core.riot_api.requests.get", return_value=mock_resp):
         results = api.get_match_timelines_batch(["M1", "M2", "M3"])
 
     assert len(results) == 3
