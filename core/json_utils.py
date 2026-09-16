@@ -72,6 +72,57 @@ def extract_match_features(
         raise ValueError(f"Failed to extract features from match data: {e}")
 
 
+def extract_pre_match_features(
+    match_details: Dict[str, Any], region: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Extract strictly PRE-MATCH features (champions, roles, player career priors).
+    Guaranteed zero post-game leakage (no final gold, no match kills/deaths).
+    """
+    try:
+        info = match_details.get("info", match_details)
+        participants = info.get("participants", [])
+
+        team_a, team_b = [], []
+
+        for p in participants:
+            p_data = {
+                "champion": p.get("championName") or p.get("champion_name", "UNKNOWN"),
+                "role": p.get("teamPosition") or p.get("role", "UNKNOWN"),
+            }
+            if "career_win_rate" in p:
+                p_data["career_win_rate"] = float(p["career_win_rate"])
+            if "career_matches" in p:
+                p_data["career_matches"] = int(p["career_matches"])
+
+            team_id = p.get("teamId") or p.get("team_id", 100)
+            if team_id == 100:
+                team_a.append(p_data)
+            else:
+                team_b.append(p_data)
+
+        game_version = info.get("gameVersion") or info.get("game_version", "UNKNOWN")
+        season_id = None
+        if game_version and game_version != "UNKNOWN":
+            try:
+                season_id = int(game_version.split(".")[0])
+            except (ValueError, IndexError):
+                pass
+
+        feature = {
+            "team_a": team_a,
+            "team_b": team_b,
+            "game_mode": info.get("gameMode") or info.get("game_mode", "CLASSIC"),
+            "game_version": game_version,
+            "season_id": season_id,
+        }
+        if region:
+            feature["region"] = region
+        return feature
+    except Exception as e:
+        raise ValueError(f"Failed to extract pre-match features: {e}")
+
+
 def flatten_json(
     y: Union[Dict, List], separator: str = ".", max_depth: int = 10
 ) -> Dict[str, Any]:
@@ -330,7 +381,10 @@ def json_to_vector(json_data, dim=100000):
 
 
 if __name__ == "__main__":
-    import test_data
+    import os
+    import sys
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    from tests import test_data
 
     # Quick test with enhanced features - League of Legends match data
     test_json = test_data.get_extended_test_data()
