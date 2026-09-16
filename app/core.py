@@ -60,6 +60,7 @@ def _format_multi_output_response(preds: dict) -> dict:
 
     response = {
         "success": True,
+        "is_pre_match": True,
         "winner": {
             "team_a": round(p_a, 3), "team_b": round(p_b, 3),
             "predicted": "B" if p_b > p_a else "A", "confidence": round(max(p_a, p_b), 3),
@@ -71,7 +72,8 @@ def _format_multi_output_response(preds: dict) -> dict:
         "kills": {
             "total": round(_denorm("total_kills"), 1), "team_a": round(_denorm("team_a_kills"), 1),
             "team_b": round(_denorm("team_b_kills"), 1), "handicap": round(_denorm("kill_handicap"), 1),
-            "odd_probability": round(_scalar("kills_odd"), 3),
+            "odd_probability": 0.5,
+            "odd_is_coinflip": True,
         },
         "first": {
             event: {"team_a": round(a, 3), "team_b": round(b, 3), "none": round(n, 3)}

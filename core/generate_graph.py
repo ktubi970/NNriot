@@ -48,7 +48,7 @@ LOSS_PER_HEAD: dict[str, str] = {
 LOSS_WEIGHTS: dict[str, float] = {
     "winner":            1.0,
     "team_b_kill_lead":  1.0,
-    "kills_odd":         0.5,
+    "kills_odd":         0.0,
     "first_blood":       0.7,
     "first_baron":       0.7,
     "first_inhibitor":   0.7,
