@@ -11,6 +11,12 @@ A pure Python machine learning system for processing JSON data and predicting ou
 
 NNriot is a pure Python system designed to handle arbitrary JSON structures and learn from them to make predictions on new, potentially different JSON schemas. The system uses feature hashing for efficient vectorization and TensorFlow for neural network operations.
 
+## Honesty & Veracity Guarantees
+
+- **Strict Pre-Match Boundary:** Pre-match predictions rely *solely* on champion drafts, role assignments, and historical career priors. Post-game data leakage (e.g., gold earned, match KDA) has been strictly eliminated.
+- **Realistic Accuracy:** Our realistic pre-match prediction accuracy is ~52-56%. This is a true baseline without cheating, distinguishing it from retrospective match analysis.
+- **Calibration & Coin Flips:** The model includes a calibration guard (uncalibrated models yield a 503 instead of random predictions). Untrainable 50/50 markets (like `kills_odd`) are explicitly disclaimed as random coin flips.
+
 ## Architecture
 
 ### Core Components & Design Patterns

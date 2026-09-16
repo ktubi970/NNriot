@@ -4,6 +4,12 @@
 
 NNriot is a comprehensive machine learning system for League of Legends match outcome prediction using enhanced JSON vectorization and deep neural networks. The project demonstrates advanced techniques for handling variable-structure JSON data in machine learning applications.
 
+## 🛡️ Honesty & Veracity Guarantees
+
+- **Strict Pre-Match Boundary:** Pre-match predictions rely *solely* on champion drafts, role assignments, and historical career priors. Post-game data leakage (like `goldEarned` or match KDA) has been strictly eliminated.
+- **Realistic Accuracy:** Realistic pre-match prediction accuracy is around 52-56% (a true baseline without cheating), distinguishing it from retrospective match analysis.
+- **Calibration & Coin Flips:** The new model calibration guard ensures uncalibrated models yield a 503 instead of random predictions. Untrainable 50/50 markets (like `kills_odd`) are explicitly disclaimed as random coin flips.
+
 ## 🏗️ Project Architecture
 
 ### Core Components
