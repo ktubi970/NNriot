@@ -1,10 +1,11 @@
+import collections
 import logging
 import os
 import requests
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dotenv import load_dotenv
+from dotenv import load_dotenv, dotenv_values
 
 # Load environment variables
 load_dotenv(override=True)
@@ -12,12 +13,54 @@ load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 
+class RiotRateLimiter:
+    """
+    Thread-safe sliding-window rate limiter designed specifically for Riot's rate limits:
+    - 20 requests per 1 second
+    - 100 requests per 120 seconds
+    """
+
+    def __init__(self, per_second: int = 18, per_2min: int = 95):
+        self.per_second = per_second
+        self.per_2min = per_2min
+        self.lock = threading.Lock()
+        self.timestamps_1s = collections.deque()
+        self.timestamps_120s = collections.deque()
+
+    def acquire(self):
+        if os.environ.get("RIOT_DISABLE_RATE_LIMIT") == "1":
+            return
+
+        while True:
+            wait_time = 0.0
+            with self.lock:
+                now = time.time()
+                while self.timestamps_1s and now - self.timestamps_1s[0] >= 1.0:
+                    self.timestamps_1s.popleft()
+                while self.timestamps_120s and now - self.timestamps_120s[0] >= 120.0:
+                    self.timestamps_120s.popleft()
+
+                if len(self.timestamps_1s) >= self.per_second:
+                    wait_time = max(wait_time, 1.0 - (now - self.timestamps_1s[0]) + 0.05)
+                if len(self.timestamps_120s) >= self.per_2min:
+                    wait_time = max(wait_time, 120.0 - (now - self.timestamps_120s[0]) + 0.2)
+
+                if wait_time <= 0:
+                    self.timestamps_1s.append(now)
+                    self.timestamps_120s.append(now)
+                    return
+
+            if wait_time > 0:
+                time.sleep(wait_time)
+
+
 class RiotAPI:
     # Class-level tracking to share call counts across instances/threads
     _total_calls = 0
     _lock = threading.Lock()
     _last_limits = {}  # Tracks {region: {app_limit: x, app_count: y, methods: {}}}
-    
+    _limiter = RiotRateLimiter(per_second=18, per_2min=95)
+
     def __init__(self, region="KR"):
         self.api_key = os.getenv("RIOT_API_KEY")
         if not self.api_key:
@@ -80,13 +123,28 @@ class RiotAPI:
             f"https://{self.platform_routes[self.region]}.api.riotgames.com"
         )
 
+    def reload_key(self) -> str | None:
+        """Reload RIOT_API_KEY from .env file when developer key expires."""
+        try:
+            vals = dotenv_values(".env")
+            new_key = vals.get("RIOT_API_KEY")
+            if new_key and new_key != self.api_key:
+                self.api_key = new_key
+                os.environ["RIOT_API_KEY"] = new_key
+                return new_key
+        except Exception as e:
+            logger.error("Error reading .env during key reload: %s", e)
+        return None
+
     def _get_headers(self):
         return {"X-Riot-Token": self.api_key}
 
     def _make_request(self, url, max_retries=3):
         """Helper to cleanly make requests with automatic retries for rate limits (429) & server errors."""
-        headers = self._get_headers()
         for attempt in range(max_retries):
+            # Proactively enforce sliding-window rate limit
+            RiotAPI._limiter.acquire()
+            headers = self._get_headers()
             try:
                 response = requests.get(url, headers=headers, timeout=15)
                 
@@ -103,6 +161,17 @@ class RiotAPI:
                         f"Rate limited (429). Waiting for {retry_after} seconds... (Attempt {attempt+1}/{max_retries})"
                     )
                     time.sleep(retry_after)
+                    continue
+                elif response.status_code in (401, 403):
+                    print(f"\n[ALERT] Riot API key returned HTTP {response.status_code}. The key is likely expired!")
+                    print("[INFO] Please update RIOT_API_KEY in your .env file.")
+                    print("[INFO] Crawler is waiting and will auto-resume once .env is updated (checking every 15s)...")
+                    while True:
+                        time.sleep(15)
+                        new_key = self.reload_key()
+                        if new_key:
+                            print("[SUCCESS] New RIOT_API_KEY detected in .env! Resuming requests...")
+                            break
                     continue
                 elif response.status_code >= 500:
                     print(
@@ -170,16 +239,23 @@ class RiotAPI:
             return {"game_name": data.get("gameName"), "tag_line": data.get("tagLine")}
         return None
 
-    def get_match_ids(self, puuid, count=20, start_time=None, end_time=None):
-        """Match-V5: Get a list of match IDs for a PUUID with optional time filtering."""
-        query_params = f"start=0&count={count}"
+    def get_match_ids(
+        self, puuid, count=20, start_time=None, end_time=None, queue=None, type=None
+    ):
+        """Match-V5: Get a list of match IDs for a PUUID with optional queue, type, and time filtering."""
+        params = ["start=0", f"count={count}"]
 
+        if queue is not None:
+            params.append(f"queue={queue}")
+        if type:
+            params.append(f"type={type}")
         if start_time:
             # Riot API expects Unix timestamp in seconds
-            query_params += f"&startTime={int(start_time)}"
+            params.append(f"startTime={int(start_time)}")
         if end_time:
-            query_params += f"&endTime={int(end_time)}"
+            params.append(f"endTime={int(end_time)}")
 
+        query_params = "&".join(params)
         url = f"{self.regional_url}/lol/match/v5/matches/by-puuid/{puuid}/ids?{query_params}"
         response = self._make_request(url)
         if response and response.status_code == 200:

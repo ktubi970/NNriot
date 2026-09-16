@@ -58,6 +58,7 @@ analytics_artifacts/
 *.index
 .env
 loss_plot.html
+crawler_frontier*.json
 .worktrees/
 .superpowers/
 *.keras
