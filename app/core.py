@@ -45,9 +45,6 @@ def init_trainer_async():
     t = threading.Thread(target=_bg_load_trainer, daemon=True)
     t.start()
 
-# Start background loading instead of blocking import
-init_trainer_async()
-
 def _format_multi_output_response(preds: dict) -> dict:
     from scripts.continuous_trainer import REGRESSION_STATS
 
@@ -102,6 +99,14 @@ def final_predict_match_outcome(match_data: dict) -> dict:
         if trainer_loading:
             return {"error": "TensorFlow model is still loading... Please wait a minute and try again."}
         return {"error": "TensorFlow model is not loaded or available"}
+
+    trainer_model = getattr(global_trainer, "model", None)
+    if getattr(trainer_model, "is_calibrated", True) is False or getattr(global_trainer, "is_calibrated", True) is False:
+        return {
+            "error": "Model checkpoint is uncalibrated (untrained weights). Please train the model via 'cli.py train' before requesting predictions.",
+            "uncalibrated": True,
+        }
+
     try:
         feature_dict = json_utils.extract_match_features(match_data)
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)

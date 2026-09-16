@@ -10,6 +10,7 @@ import logging
 import tensorflow as tf
 
 from core.generate_graph import build_multi_output_model, build_keras_model
+from core.feature_labels import VECTOR_DIM
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class ModelFactory:
     """Factory for creating and loading NNriot models."""
     
     @staticmethod
-    def get_model(version: str = "v2", input_dim: int = 20000, force_rebuild: bool = False, checkpoint_dir: str = ".", checkpoint_path: str = None):
+    def get_model(version: str = "v2", input_dim: int = VECTOR_DIM, force_rebuild: bool = False, checkpoint_dir: str = ".", checkpoint_path: str = None):
         """
         Retrieves a trained model or builds a fresh architecture if none exists.
         
@@ -57,6 +58,7 @@ class ModelFactory:
                     if actual_heads != expected_heads:
                         raise ValueError(f"Heads mismatch. Missing: {expected_heads - actual_heads}")
                 
+                candidate.is_calibrated = True
                 logger.info("Model %s restored from %s.", version, path)
                 return candidate, path
             except Exception as e:
@@ -65,4 +67,5 @@ class ModelFactory:
         # Rebuild
         logger.info("Building fresh %s architecture...", version)
         model = builder(input_dim=input_dim)
+        model.is_calibrated = False
         return model, path
