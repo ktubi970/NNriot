@@ -61,8 +61,8 @@ def api_status():
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
     try:
-        response, status = _system_service.get_db_health()
-        return jsonify(response), status
+        result = _system_service.get_db_health()
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -73,8 +73,8 @@ def api_db_health():
 @api_bp.route("/api/players/aliases", methods=["GET"])
 def api_players_aliases():
     try:
-        response, status = _player_service.get_all_aliases()
-        return jsonify(response), status
+        result = _player_service.get_all_aliases()
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching aliases: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -84,8 +84,10 @@ def api_players_aliases():
 def api_players_unlink():
     try:
         alias_puuid = request.args.get("alias_puuid")
-        response, status = _player_service.unlink_accounts(alias_puuid)
-        return jsonify(response), status
+        result = _player_service.unlink_accounts(alias_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error unlinking accounts: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -94,10 +96,10 @@ def api_players_unlink():
 @api_bp.route("/api/players/search", methods=["GET"])
 def api_players_search():
     try:
-        q = request.args.get("q", "").strip()
+        q = (request.args.get("q") or request.args.get("query") or "").strip()
         limit = request.args.get("limit", 10, type=int)
-        response, status = _player_service.search_players(q, limit)
-        return jsonify(response), status
+        result = _player_service.search_players(q, limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Player search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -107,8 +109,8 @@ def api_players_search():
 def api_players_random():
     try:
         limit = request.args.get("limit", 10, type=int)
-        response, status = _player_service.get_random_players(limit)
-        return jsonify(response), status
+        result = _player_service.get_random_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -118,8 +120,8 @@ def api_players_random():
 def api_players_top():
     try:
         limit = request.args.get("limit", 10, type=int)
-        response, status = _player_service.get_top_players(limit)
-        return jsonify(response), status
+        result = _player_service.get_top_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Top players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -128,11 +130,15 @@ def api_players_top():
 @api_bp.route("/api/players/link", methods=["POST"])
 def api_link_players():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         main_puuid = data.get("canonical_puuid")
         smurf_puuid = data.get("alias_puuid")
-        response, status = _player_service.link_accounts(main_puuid, smurf_puuid)
-        return jsonify(response), status
+        result = _player_service.link_accounts(main_puuid, smurf_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Link accounts error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -156,8 +162,10 @@ def api_stream_process_frame():
             503,
         )
     try:
-        data = request.get_json()
-        if not data or "image" not in data:
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
+        if "image" not in data:
             return jsonify({"error": "No image data provided"}), 400
 
         # Decode base64 image
@@ -352,7 +360,9 @@ def api_predict():
 def api_predict_custom():
     """API endpoint for custom 5v5 match prediction based on selected players and champions."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         blue_team_data = data.get("blue_team", [])  # List of {puuid}
         red_team_data = data.get("red_team", [])  # List of {puuid}
 
@@ -412,41 +422,34 @@ def api_predict_custom():
         if not core.tf_available or core.global_trainer is None:
             return jsonify({"error": "TensorFlow model is not loaded"}), 503
 
-        # Construct a synthetic match structure for feature extraction
+        trainer_model = getattr(core.global_trainer, "model", None)
+        if (trainer_model is not None and getattr(trainer_model, "is_calibrated", True) is False) or getattr(core.global_trainer, "is_calibrated", True) is False:
+            return jsonify({
+                "error": "Model checkpoint is uncalibrated (untrained weights). Please train the model via 'cli.py train' before requesting predictions.",
+                "uncalibrated": True,
+            }), 503
+
+        # Construct a synthetic match structure for pre-match feature extraction
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 100,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 100,
+                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
+                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+            })
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 200,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 200,
+                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
+                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+            })
 
         match_data = {
             "info": {
@@ -455,8 +458,8 @@ def api_predict_custom():
             }
         }
 
-        # Use centralized feature extraction
-        feature_dict = json_utils.extract_match_features(match_data)
+        # Use centralized pre-match feature extraction
+        feature_dict = json_utils.extract_pre_match_features(match_data)
 
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
         dense_vec = sparse_vec.toarray()
@@ -479,6 +482,8 @@ def api_predict_custom():
             "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
             "blue_win_probability": blue_prob_nn,
             "red_win_probability":  red_prob_nn,
+            "blue_win_prob": blue_prob_nn,
+            "red_win_prob": red_prob_nn,
             "explanation": "Multi-head NN analysis complete.",
             "llm_active": False,
             # Include the full multi-output dict for clients that want it

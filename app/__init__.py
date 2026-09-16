@@ -50,10 +50,9 @@ def create_app():
     ]
     CORS(app, origins=allowed_origins)
 
-    # Import core at app creation to ensure the trainer is loaded eagerly
-    # (matches previous final_web_app.py behavior: trainer ready by the
-    # time the first request comes in).
-    from . import core  # noqa: F401
+    if not app.config.get("TESTING"):
+        from . import core
+        core.init_trainer_async()
 
     # Register blueprints
     from .routes.views import views_bp
