@@ -8,6 +8,7 @@ without having to reach into individual route module globals.
 import os
 import re
 import glob
+import uuid
 import random
 import time
 import base64
@@ -188,8 +189,10 @@ def api_stream_process_frame():
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir)
 
-        # Save image
-        filepath = os.path.join(screenshot_dir, "latest_capture.jpg")
+        # Save image with unique filename to prevent overwrite collisions
+        frame_id = uuid.uuid4().hex[:8]
+        filename = f"capture_{frame_id}.jpg"
+        filepath = os.path.join(screenshot_dir, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
 
@@ -237,7 +240,7 @@ def api_stream_process_frame():
         return jsonify(
             {
                 "success": True,
-                "screenshot_url": "/static/screenshots/latest_capture.jpg",
+                "screenshot_url": f"/static/screenshots/{filename}",
                 "roster": mock_roster,
             }
         )
@@ -253,22 +256,11 @@ def api_train_manual():
     """API endpoint to trigger a single training step manually."""
     try:
         if not core.tf_available or core.global_trainer is None:
-            # Fallback for demonstration/UI testing if model isn't truly loaded
-            # in this environment
-            untrained = database.get_untrained_records(limit=10)
-            if untrained:
-                record_ids = [r["id"] for r in untrained]
-                database.mark_as_trained(record_ids)
-                return jsonify(
-                    {
-                        "success": True,
-                        "records_processed": len(untrained),
-                        "message": f"Simulation: Processed {len(untrained)} new records.",
-                    }
-                )
-            return jsonify({"error": "No untrained data available for simulation"}), 404
+            return jsonify({
+                "success": False,
+                "error": "TensorFlow model is not loaded or available. Real training step cannot run.",
+            }), 503
 
-        # Run a real training step
         records_processed = core.global_trainer.run_training_step()
 
         return jsonify(
@@ -280,7 +272,7 @@ def api_train_manual():
         )
     except Exception as e:
         logger.error(f"Manual train error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @api_bp.route("/api/train", methods=["POST"])
