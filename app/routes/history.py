@@ -3,7 +3,7 @@ import os
 import threading
 import logging
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 from scripts import data_collector
 from core import database
@@ -18,7 +18,9 @@ logger = logging.getLogger(__name__)
 def api_history_collect():
     """API endpoint to trigger background collection for a specific player."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         game_name = data.get("game_name")
         tag_line = data.get("tag_line")
         count = data.get("count", 10)
@@ -69,7 +71,9 @@ def api_history_collect():
 def api_history_collect_batch():
     """API endpoint to trigger background collection for multiple players."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         players = data.get("players", [])
 
         if not players:
@@ -128,7 +132,9 @@ def api_history_status():
 @history_bp.route("/api/batch/collect", methods=["POST"])
 def api_batch_collect():
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         players_raw = data.get("players", "")
         sources = data.get("sources", ["lolpros"])
         count = data.get("count", 50)
@@ -172,10 +178,9 @@ def api_batch_collect():
 @history_bp.route("/api/batch/status", methods=["GET"])
 def api_batch_status():
     with data_collector.batch_lock:
-        # Create a copy to send
+        # Create a copy to send with a bounded window of logs
         status_copy = dict(data_collector.batch_status)
-        # Clear logs after sending them to save bandwidth
-        data_collector.batch_status["logs"] = []
+        status_copy["logs"] = list(data_collector.batch_status.get("logs", []))[-100:]
     return jsonify(status_copy)
 
 
@@ -210,7 +215,6 @@ def api_db_stats():
 @history_bp.route("/api/player/history", methods=["GET"])
 def api_player_history():
     """Fetch rich match history for a player with optional live Riot API synchronization."""
-    import random
     from core import riot_api
 
     name = request.args.get("name", "Faker").strip()
@@ -218,6 +222,11 @@ def api_player_history():
     count = request.args.get("count", 10, type=int)
     sync_riot = request.args.get("sync_riot", "0") == "1"
 
+    db_path = (
+        os.getenv("NNRIOT_DB_PATH")
+        or current_app.config.get("NNRIOT_DB_PATH")
+        or database.DB_PATH
+    )
     riot_key = os.getenv("RIOT_API_KEY")
 
     # 1. Live Riot API Fetch if requested and key is present
@@ -227,87 +236,90 @@ def api_player_history():
             api = riot_api.RiotAPI(region)
             puuid = api.get_puuid(name, tag)
             if puuid:
+                database.save_player(puuid, name, tag, db_path=db_path)
                 match_ids = api.get_match_ids(puuid, count=count)
-                new_mids = [mid for mid in match_ids if not database.get_raw_match(mid)]
+                new_mids = [
+                    mid
+                    for mid in match_ids
+                    if not database.get_raw_match(mid, db_path=db_path)
+                ]
                 if new_mids:
                     details_map = api.get_match_details_batch(new_mids, max_workers=3)
                     matches_batch = []
                     training_batch = []
                     for mid, det in details_map.items():
                         matches_batch.append((mid, det))
-                        rec = data_collector._build_training_record(mid, det, region=region)
+                        rec = data_collector._build_training_record(
+                            mid, det, region=region
+                        )
                         if rec:
                             training_batch.append(rec)
                     if matches_batch:
-                        database.save_matches_batch(matches_batch)
+                        database.save_matches_batch(matches_batch, db_path=db_path)
                     if training_batch:
-                        database.save_training_records_batch(training_batch)
+                        database.save_training_records_batch(
+                            training_batch, db_path=db_path
+                        )
+        except riot_api.RiotAuthError as e:
+            logger.warning(f"Live Riot sync auth failed: {e}")
         except Exception as e:
             logger.warning(f"Live Riot sync failed: {e}", exc_info=True)
 
-    # 2. Build Structured Match Performance Records
-    champions_pool = [
-        ("Ahri", "MID"), ("Azir", "MID"), ("Sylas", "MID"), ("Orianna", "MID"),
-        ("Aatrox", "TOP"), ("Renekton", "TOP"), ("K'Sante", "TOP"),
-        ("Lee Sin", "JUNGLE"), ("Sejuani", "JUNGLE"), ("Viego", "JUNGLE"),
-        ("Jinx", "ADC"), ("Ezreal", "ADC"), ("Kai'Sa", "ADC"), ("Varus", "ADC"),
-        ("Thresh", "SUPPORT"), ("Leona", "SUPPORT"), ("Nautilus", "SUPPORT"),
-    ]
+    # 2. Query real player and match history from DB
+    target_player = database.get_player_by_name_tag(name, tag, db_path=db_path)
+    if not target_player:
+        player_rows = database.search_players(name, limit=5, db_path=db_path)
+        target_player = next(
+            (p for p in player_rows if p.get("tag_line", "").upper() == tag.upper()),
+            None,
+        )
+        if not target_player and player_rows:
+            target_player = next(
+                (
+                    p
+                    for p in player_rows
+                    if p.get("game_name", "").lower() == name.lower()
+                ),
+                None,
+            )
 
-    random.seed(abs(hash(name + tag)) % 10000)
+    puuid = target_player["puuid"] if target_player else None
+
     matches = []
-    wins_count = 0
+    stats = None
+    if puuid:
+        matches = database.get_player_match_history(puuid, limit=count, db_path=db_path)
+        stats = database.get_player_stats(puuid, db_path=db_path)
 
-    for i in range(count):
-        champ_name, role = random.choice(champions_pool)
-        is_win = random.random() < 0.62
-        if is_win:
-            wins_count += 1
-            kills = random.randint(4, 14)
-            deaths = random.randint(0, 4)
-            assists = random.randint(5, 18)
-        else:
-            kills = random.randint(1, 6)
-            deaths = random.randint(3, 8)
-            assists = random.randint(2, 9)
+    wins_count = sum(1 for m in matches if m["win"])
+    total_games = (
+        len(matches) if not stats else stats.get("total_matches", len(matches))
+    )
+    winrate = (
+        round((wins_count / max(1, len(matches))) * 100, 1) if matches else 0.0
+    )
+    avg_kda = (
+        str(round(stats.get("avg_kda", 0.0), 2))
+        if stats
+        else (
+            "0.0"
+            if not matches
+            else str(round(sum(float(m["kda"]) for m in matches) / len(matches), 2))
+        )
+    )
 
-        kda_ratio = round((kills + assists) / max(1, deaths), 2)
-        dur_mins = random.randint(22, 38)
-        dur_secs = random.randint(10, 59)
-        cs = round(dur_mins * random.uniform(7.8, 10.2))
-        gold = round(cs * 20 + kills * 300 + assists * 100 + dur_mins * 120)
-
-        matches.append({
-            "match_id": f"{tag.upper()}_{random.randint(7000000000, 7999999999)}",
-            "champion": champ_name,
-            "role": role,
-            "win": is_win,
-            "kills": kills,
-            "deaths": deaths,
-            "assists": assists,
-            "kda": f"{kda_ratio}",
-            "cs": cs,
-            "cs_per_min": f"{(cs / dur_mins):.1f}",
-            "gold": gold,
-            "duration": f"{dur_mins}:{dur_secs:02d}",
-            "game_mode": "RANKED_SOLO_5x5",
-            "time_ago": f"Il y a {i * 3 + random.randint(1, 4)}h" if i < 4 else f"Il y a {i // 2 + 1} jours",
-            "items": [3089, 3157, 3020, 6655, 4645, 3364],
-        })
-
-    winrate = round((wins_count / max(1, count)) * 100, 1)
-
-    return jsonify({
-        "success": True,
-        "player": {
-            "name": name,
-            "tag": tag,
-            "tier": "CHALLENGER",
-            "lp": 1240,
-            "winrate": winrate,
-            "total_games": 380,
-            "avg_kda": "4.2",
-            "is_pro": True,
-        },
-        "matches": matches,
-    })
+    return jsonify(
+        {
+            "success": True,
+            "player": {
+                "name": name,
+                "tag": tag,
+                "puuid": puuid,
+                "winrate": winrate,
+                "total_games": total_games,
+                "avg_kda": avg_kda,
+                "has_data": len(matches) > 0,
+            },
+            "matches": matches,
+        }
+    )
