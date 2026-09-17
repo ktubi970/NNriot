@@ -95,7 +95,7 @@ export async function searchPlayers(query: string, role?: Role): Promise<PlayerS
   // 1. Try Backend Local Database Search
   if (normalizedQuery.length >= 2) {
     try {
-      const res = await fetch(`${API_BASE}/api/players/search?query=${encodeURIComponent(query)}`);
+      const res = await fetch(`${API_BASE}/api/players/search?q=${encodeURIComponent(query)}`);
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -217,15 +217,22 @@ export async function predictMatch(
       const data = await res.json();
       const latency = Math.round(performance.now() - start);
 
-      const blueProb = data.blue_win_prob ?? data.blue_probability ?? (data.winner?.team_a ? data.winner.team_a / 100 : 0.52);
+      const blueProb = data.blue_win_probability ?? data.blue_win_prob ?? data.blue_probability ?? (data.multi_output?.winner?.team_a ? data.multi_output.winner.team_a / 100 : 0.50);
       const redProb = 1 - blueProb;
+
+      const blueExpectedKills = data.multi_output?.kills?.team_a != null
+        ? Math.round(data.multi_output.kills.team_a)
+        : (data.blue_kills ?? Math.round(18 + (blueProb - 0.5) * 15));
+      const redExpectedKills = data.multi_output?.kills?.team_b != null
+        ? Math.round(data.multi_output.kills.team_b)
+        : (data.red_kills ?? Math.round(16 - (blueProb - 0.5) * 15));
 
       return {
         blueWinProb: Number(blueProb.toFixed(3)),
         redWinProb: Number(redProb.toFixed(3)),
         confidence: data.confidence ?? 0.86,
-        blueExpectedKills: data.blue_kills ?? Math.round(18 + (blueProb - 0.5) * 15),
-        redExpectedKills: data.red_kills ?? Math.round(16 - (blueProb - 0.5) * 15),
+        blueExpectedKills,
+        redExpectedKills,
         expectedDuration: data.expected_duration || '31:45',
         features: generateFeatureContributions(blueSlots, redSlots, blueProb),
         latencyMs: latency,

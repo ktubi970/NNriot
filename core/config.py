@@ -9,7 +9,7 @@ FLASK_DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 HOST = os.getenv("HOST", "127.0.0.1")
 PORT = int(os.getenv("PORT", 5000))
 CORS_ORIGINS = [
-    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",") if o.strip()
+    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000,http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()
 ]
 
 # Database Configuration

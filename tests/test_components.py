@@ -4,7 +4,10 @@ Test script to verify NNriot components work without Rust extension.
 This allows testing the Python components independently.
 """
 
+import os
 import sys
+
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import traceback
 
 
@@ -114,7 +117,7 @@ def test_tensorflow():
         print(f"[OK] TensorFlow model generation successful - {model.name} (Heads: {len(model.outputs)})")
         return True
     except ImportError as e:
-        print(f"⏭️ TensorFlow import skipped (not installed in this env): {e}")
+        print(f"[SKIP] TensorFlow import skipped (not installed in this env): {e}")
         return "SKIP"
     except Exception as e:
         print(f"[FAIL] TensorFlow graph failed: {e}")
@@ -128,7 +131,7 @@ def test_plotly():
         print("[OK] Plotly import successful")
         return True
     except ImportError as e:
-        print(f"⏭️ Plotly skipped: {e}")
+        print(f"[SKIP] Plotly skipped: {e}")
         return "SKIP"
     except Exception as e:
         print(f"[FAIL] Plotly import failed: {e}")
@@ -145,7 +148,7 @@ def test_numpy():
         print(f"[OK] NumPy working - Array shape: {arr.shape}")
         return True
     except ImportError as e:
-        print(f"⏭️ NumPy skipped: {e}")
+        print(f"[SKIP] NumPy skipped: {e}")
         return "SKIP"
     except Exception as e:
         print(f"[FAIL] NumPy failed: {e}")
@@ -159,7 +162,7 @@ def test_riot_api():
         print("[OK] Riot API module imported")
         return True
     except ImportError as e:
-        print(f"⏭️ Riot API skipped: {e}")
+        print(f"[SKIP] Riot API skipped: {e}")
         return "SKIP"
     except Exception as e:
         print(f"[FAIL] Riot API import failed: {e}")
@@ -173,7 +176,7 @@ def test_nnriot_import():
         print("[OK] nnriot module imported (Rust extension working)")
         return True
     except ImportError as e:
-        print(f"⏭️ nnriot import skipped (expected without Rust): {e}")
+        print(f"[SKIP] nnriot import skipped (expected without Rust): {e}")
         return "SKIP"
     except Exception as e:
         print(f"[FAIL] nnriot import failed with unexpected error: {e}")
@@ -221,7 +224,7 @@ def main():
             marker = "[OK] PASS"
             passed += 1
         elif status == "SKIP":
-            marker = "⏭️ SKIP"
+            marker = "[SKIP] SKIP"
             skipped += 1
         else:
             marker = "[FAIL] FAIL"
@@ -231,9 +234,9 @@ def main():
     print(f"\nOverall: {passed} passed, {skipped} skipped, {failed} failed (Total: {total})")
 
     if failed == 0:
-        print("🎉 All components working or gracefully skipped! Ready to build Rust extension.")
+        print("[OK] All components working or gracefully skipped! Ready to build Rust extension.")
     else:
-        print("⚠️  Some components failed. Check the errors above.")
+        print("[WARN] Some components failed. Check the errors above.")
 
     return failed == 0
 

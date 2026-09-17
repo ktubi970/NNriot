@@ -16,6 +16,12 @@ def index():
     return render_template("index.html", active_page="index")
 
 
+@views_bp.route("/dashboard")
+def dashboard():
+    """Explicit endpoint to serve the classic Jinja2 Dashboard."""
+    return render_template("index.html", active_page="dashboard")
+
+
 @views_bp.route("/predictor")
 def predictor():
     return render_template("predictor.html", active_page="predictor")

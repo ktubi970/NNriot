@@ -20,6 +20,6 @@ test.describe('NNriot Backend API', () => {
     });
 
     // An incomplete team lineup should return bad request
-    expect([400, 422, 500]).toContain(response.status());
+    expect([400, 422]).toContain(response.status());
   });
 });

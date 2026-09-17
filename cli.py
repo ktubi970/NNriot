@@ -10,6 +10,8 @@ def run_web():
     from core import config
     print(f"Starting Flask web app on http://{config.HOST}:{config.PORT}...")
     from app import app
+    from app.core import init_trainer_async
+    init_trainer_async()
     app.run(
         debug=config.FLASK_DEBUG,
         host=config.HOST,

@@ -32,7 +32,7 @@ export class DashboardPage {
   }
 
   async goto() {
-    await this.page.goto('/');
+    await this.page.goto('/dashboard');
   }
 
   async clickLaunchPredictor() {
