@@ -13,6 +13,14 @@ load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 
+class RiotAuthError(Exception):
+    """Raised when Riot API rejects the API key (HTTP 401 or 403)."""
+    pass
+
+
+_ORIG_REQUESTS_GET = requests.get
+
+
 class RiotRateLimiter:
     """
     Thread-safe sliding-window rate limiter designed specifically for Riot's rate limits:
@@ -65,6 +73,8 @@ class RiotAPI:
         self.api_key = os.getenv("RIOT_API_KEY")
         if not self.api_key:
             raise ValueError("RIOT_API_KEY not found in .env file")
+
+        self.session = requests.Session()
 
         # Region mappings for routing values
         self.region_routes = {
@@ -146,7 +156,10 @@ class RiotAPI:
             RiotAPI._limiter.acquire()
             headers = self._get_headers()
             try:
-                response = requests.get(url, headers=headers, timeout=15)
+                if requests.get != _ORIG_REQUESTS_GET:
+                    response = requests.get(url, headers=headers, timeout=15)
+                else:
+                    response = self.session.get(url, headers=headers, timeout=15)
                 
                 # Proactively track rate limit headers
                 self._update_rate_limits(response.headers)
@@ -157,30 +170,38 @@ class RiotAPI:
                     return response
                 elif response.status_code == 429:
                     retry_after = int(response.headers.get("Retry-After", 5))
-                    print(
-                        f"Rate limited (429). Waiting for {retry_after} seconds... (Attempt {attempt+1}/{max_retries})"
+                    logger.warning(
+                        "Rate limited (429). Waiting for %s seconds... (Attempt %s/%s)",
+                        retry_after,
+                        attempt + 1,
+                        max_retries,
                     )
                     time.sleep(retry_after)
                     continue
                 elif response.status_code in (401, 403):
-                    print(f"\n[ALERT] Riot API key returned HTTP {response.status_code}. The key is likely expired!")
-                    print("[INFO] Please update RIOT_API_KEY in your .env file.")
-                    print("[INFO] Crawler is waiting and will auto-resume once .env is updated (checking every 15s)...")
-                    while True:
-                        time.sleep(15)
-                        new_key = self.reload_key()
-                        if new_key:
-                            print("[SUCCESS] New RIOT_API_KEY detected in .env! Resuming requests...")
-                            break
-                    continue
+                    logger.warning(
+                        "Riot API returned HTTP %s (expired or invalid key). Attempting key reload from .env...",
+                        response.status_code,
+                    )
+                    new_key = self.reload_key()
+                    if new_key and new_key != headers.get("X-Riot-Token"):
+                        logger.info("New RIOT_API_KEY reloaded from .env. Retrying request...")
+                        continue
+                    raise RiotAuthError(
+                        f"Riot API token rejected with HTTP {response.status_code}. "
+                        "Please update RIOT_API_KEY in your .env file."
+                    )
                 elif response.status_code >= 500:
-                    print(
-                        f"Server error {response.status_code}. Retrying in 5 seconds... (Attempt {attempt+1}/{max_retries})"
+                    logger.warning(
+                        "Server error %s. Retrying in 5 seconds... (Attempt %s/%s)",
+                        response.status_code,
+                        attempt + 1,
+                        max_retries,
                     )
                     time.sleep(5)
                     continue
                 else:
-                    print(f"API Error {response.status_code} for URL: {url}")
+                    logger.warning("API Error %s for URL: %s", response.status_code, url)
                     return response
             except requests.exceptions.RequestException as e:
                 logger.error(
@@ -196,7 +217,7 @@ class RiotAPI:
                 )
                 time.sleep(5)
 
-        print(f"Failed to fetch {url} after {max_retries} attempts.")
+        logger.error("Failed to fetch %s after %s attempts.", url, max_retries)
         return None
 
     def _update_rate_limits(self, headers):
@@ -287,7 +308,7 @@ class RiotAPI:
                     if data:
                         results[mid] = data
                         if verbose:
-                            print(f"      [{completed}/{total}] Téléchargement : {mid}")
+                            logger.info("      [%s/%s] Téléchargement : %s", completed, total, mid)
                 except Exception as e:
                     logger.error(f"      Error fetching match {mid}: {e}", exc_info=True)
         return results
@@ -327,7 +348,7 @@ class RiotAPI:
                     if data:
                         results[mid] = data
                         if verbose:
-                            print(f"      [{completed}/{total}] Timeline: {mid}")
+                            logger.info("      [%s/%s] Timeline: %s", completed, total, mid)
                 except Exception as e:
                     logger.error(f"Error fetching timeline for {mid}: {e}", exc_info=True)
         return results
@@ -381,17 +402,17 @@ class RiotAPI:
         all_entries = []
 
         # 1. Fetch Challenger
-        print("Fetching Challenger players...")
+        logger.info("Fetching Challenger players...")
         all_entries.extend(self.get_top_league("challenger"))
 
         # 2. Fetch Grandmaster if needed
         if len(all_entries) < total_count:
-            print("Fetching Grandmaster players...")
+            logger.info("Fetching Grandmaster players...")
             all_entries.extend(self.get_top_league("grandmaster"))
 
         # 3. Fetch Master if needed
         if len(all_entries) < total_count:
-            print("Fetching Master players...")
+            logger.info("Fetching Master players...")
             all_entries.extend(self.get_top_league("master"))
 
         # Sort by league points to get the absolute best
