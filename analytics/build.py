@@ -216,6 +216,8 @@ def _full_build(
             report = _report(fingerprint, inserted, issues, unexplained)
             logger.info("Creating analytical indexes")
             create_secondary_indexes(conn)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
             _write_metadata(conn, fingerprint, report, config, "full")
             logger.info("Temporary mart metadata written")
         if not report.quality_gate_passed:
@@ -224,6 +226,16 @@ def _full_build(
         logger.info("Revalidating source immediately before publication")
         if source_snapshot(source_path) != _snapshot_from(fingerprint):
             raise RuntimeError("operational source changed during analytics build")
+        for suffix in ("-wal", "-shm"):
+            temp_wal = Path(f"{temporary}{suffix}")
+            target_wal = Path(f"{target}{suffix}")
+            if temp_wal.exists():
+                os.replace(temp_wal, target_wal)
+            else:
+                try:
+                    target_wal.unlink()
+                except FileNotFoundError:
+                    pass
         logger.info("Publishing temporary mart to %s", target)
         os.replace(temporary, target)
         logger.info("Analytics mart publication complete")
