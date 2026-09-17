@@ -63,7 +63,12 @@ def api_status():
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
     try:
-        result = _system_service.get_db_health()
+        db_path = (
+            current_app.config.get("NNRIOT_DB_PATH")
+            or os.getenv("NNRIOT_DB_PATH")
+            or database.DB_PATH
+        )
+        result = _system_service.get_full_telemetry(db_path=db_path)
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
@@ -619,43 +624,17 @@ def api_sample_match():
 def api_monitor_metrics():
     """API endpoint to get model performance and training metrics."""
     try:
-        metrics = {
-            "database_stats": {},
-            "training_records": 0,
-            "players": 0,
-            "matches": 0,
-            "model_checkpoint": None,
-            "training_config": {},
-        }
+        db_path = (
+            current_app.config.get("NNRIOT_DB_PATH")
+            or os.getenv("NNRIOT_DB_PATH")
+            or database.DB_PATH
+        )
+        telemetry = _system_service.get_full_telemetry(db_path=db_path)
+        regions = _system_service.get_region_distribution(db_path=db_path)
 
-        # Get database statistics using context manager
-        with database.get_connection() as conn:
-            # Count training records
-            count_records = conn.execute(
-                "SELECT COUNT(*) FROM training_dataset"
-            ).fetchone()[0]
-            metrics["training_records"] = count_records
-
-            # Count unique players
-            count_players = conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]
-            metrics["players"] = count_players
-
-            # Count matches
-            count_matches = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-            metrics["matches"] = count_matches
-
-            # Get region distribution
-            regions = conn.execute(
-                """
-                SELECT
-                    SUBSTR(match_id, 1, INSTR(match_id, '_') - 1) as region,
-                    COUNT(*) as count
-                FROM matches
-                GROUP BY region
-                ORDER BY count DESC
-            """
-            ).fetchall()
-            metrics["regions"] = {r[0]: r[1] for r in regions}
+        metrics = dict(telemetry)
+        metrics["database_stats"] = dict(telemetry)
+        metrics["regions"] = regions
 
         # Check for model checkpoints
         checkpoint_files = glob.glob(

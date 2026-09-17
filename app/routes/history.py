@@ -8,6 +8,9 @@ from flask import Blueprint, request, jsonify, current_app
 from scripts import data_collector
 from core import database
 from core.task_runner import global_task_runner
+from ..services.system_service import SystemService
+
+_system_service = SystemService()
 
 from .. import core
 
@@ -205,25 +208,24 @@ def api_batch_status():
 def api_db_stats():
     """Returns database telemetry and match ingestion counts."""
     try:
-        stats = database.get_db_stats()
-        crawl_stats = database.get_crawl_queue_stats()
+        db_path = (
+            current_app.config.get("NNRIOT_DB_PATH")
+            or os.getenv("NNRIOT_DB_PATH")
+            or database.DB_PATH
+        )
+        telemetry = _system_service.get_full_telemetry(db_path=db_path)
         riot_key = os.getenv("RIOT_API_KEY")
-        
-        db_path = os.getenv("NNRIOT_DB_PATH", "training_data.db")
-        db_size_mb = 0
-        if os.path.exists(db_path):
-            db_size_mb = round(os.path.getsize(db_path) / (1024 * 1024), 1)
 
-        return jsonify({
-            "success": True,
-            "total_matches": stats.get("total_matches", 0),
-            "total_training": stats.get("total_training", 0),
-            "untrained_records": stats.get("untrained_records", 0),
-            "total_players": stats.get("total_players", 0),
-            "crawl_queue_pending": crawl_stats.get("pending", 0),
-            "db_size_mb": db_size_mb,
+        response = dict(telemetry)
+        response.update({
+            "total_matches": telemetry.get("matches", 0),
+            "total_training": telemetry.get("training_records", 0),
+            "total_players": telemetry.get("players", 0),
+            "crawl_queue_pending": telemetry.get("crawl_queue_pending", 0),
+            "db_size_mb": telemetry.get("db_size_mb", 0.0),
             "riot_api_configured": bool(riot_key and len(riot_key) > 10),
         })
+        return jsonify(response)
     except Exception as e:
         logger.error(f"DB stats error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
