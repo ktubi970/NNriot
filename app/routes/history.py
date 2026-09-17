@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify, current_app
 
 from scripts import data_collector
 from core import database
+from core.task_runner import global_task_runner
 
 from .. import core
 
@@ -58,10 +59,9 @@ def api_history_collect():
                     core.collection_status["status"] = "error"
                     core.collection_status["error"] = str(e)
 
-        thread = threading.Thread(target=run_collection, daemon=True)
-        thread.start()
+        job_id = global_task_runner.submit_task("history_collect", run_collection)
 
-        return jsonify({"success": True, "message": "Collection started"})
+        return jsonify({"success": True, "message": "Collection started", "job_id": job_id})
     except Exception as e:
         logger.error(f"History collect error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -113,10 +113,9 @@ def api_history_collect_batch():
                     core.collection_status["status"] = "error"
                     core.collection_status["error"] = str(e)
 
-        thread = threading.Thread(target=run_collection, daemon=True)
-        thread.start()
+        job_id = global_task_runner.submit_task("history_collect_batch", run_collection)
 
-        return jsonify({"success": True, "message": "Batch collection started"})
+        return jsonify({"success": True, "message": "Batch collection started", "job_id": job_id})
     except Exception as e:
         logger.error(f"History batch collect error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -126,7 +125,14 @@ def api_history_collect_batch():
 def api_history_status():
     """API endpoint to check the status of the current collection job."""
     with core.collection_lock:
-        return jsonify(core.collection_status)
+        status_copy = dict(core.collection_status)
+    latest_job = (
+        global_task_runner.get_latest_by_type("history_collect")
+        or global_task_runner.get_latest_by_type("history_collect_batch")
+    )
+    if latest_job and "job_id" not in status_copy:
+        status_copy["job_id"] = latest_job["job_id"]
+    return jsonify(status_copy)
 
 
 @history_bp.route("/api/batch/collect", methods=["POST"])
@@ -156,18 +162,20 @@ def api_batch_collect():
             if data_collector.batch_status["status"] == "running":
                 return jsonify({"error": "A batch job is already running"}), 409
 
-        thread = threading.Thread(
-            target=data_collector.collect_batch_with_smurfs,
-            args=(player_list, sources, count),
-            daemon=True,
+        job_id = global_task_runner.submit_task(
+            "batch_collect",
+            data_collector.collect_batch_with_smurfs,
+            player_list,
+            sources,
+            count,
         )
-        thread.start()
 
         return jsonify(
             {
                 "success": True,
                 "message": "Batch started",
                 "players_count": len(player_list),
+                "job_id": job_id,
             }
         )
     except Exception as e:
@@ -181,6 +189,9 @@ def api_batch_status():
         # Create a copy to send with a bounded window of logs
         status_copy = dict(data_collector.batch_status)
         status_copy["logs"] = list(data_collector.batch_status.get("logs", []))[-100:]
+    latest_job = global_task_runner.get_latest_by_type("batch_collect")
+    if latest_job and "job_id" not in status_copy:
+        status_copy["job_id"] = latest_job["job_id"]
     return jsonify(status_copy)
 
 

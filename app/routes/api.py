@@ -21,6 +21,7 @@ from scripts import live_game
 from scripts import data_collector
 from core import riot_api
 from core import json_utils
+from core.task_runner import global_task_runner
 from ..services.player_service import PlayerService
 from ..services.system_service import SystemService
 
@@ -66,6 +67,14 @@ def api_db_health():
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
+
+
+@api_bp.route("/api/jobs/<job_id>", methods=["GET"])
+def api_get_job_status(job_id):
+    status = global_task_runner.get_status(job_id)
+    if not status:
+        return jsonify({"success": False, "error": "Job not found"}), 404
+    return jsonify({"success": True, "job": status}), 200
 
 
 # ── Players ─────────────────────────────────────────────────────────────────
@@ -307,9 +316,7 @@ def api_train():
                 time.sleep(training_time)
                 logger.info("Mock background training completed.")
 
-        thread = threading.Thread(target=background_train)
-        thread.daemon = True
-        thread.start()
+        job_id = global_task_runner.submit_task("training", background_train)
 
         return jsonify(
             {
@@ -317,6 +324,7 @@ def api_train():
                 "message": "Training job started in the background",
                 "training_samples_queued": len(matches),
                 "queued_time": round(time.time() - start_time, 2),
+                "job_id": job_id,
             }
         )
 
@@ -411,7 +419,7 @@ def api_predict_custom():
                         except Exception:
                             logger.error("Warm-up refresh failed", exc_info=True)
 
-                    threading.Thread(target=_refresh_stale, daemon=True).start()
+                    global_task_runner.submit_task("warmup_refresh", _refresh_stale)
         except Exception:
             logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
 
@@ -593,7 +601,7 @@ def api_spectator_active():
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
 
-            threading.Thread(target=auto_collect_task, daemon=True).start()
+            global_task_runner.submit_task("auto_collect", auto_collect_task)
 
         return jsonify({"success": True, "game": game_data})
 
