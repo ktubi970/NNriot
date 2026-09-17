@@ -1541,6 +1541,39 @@ def backfill_seasons(db_path: str = DB_PATH):
         logger.info("No valid season data found in matches.")
 
 
+def purge_polluted_training_data(db_path: str = DB_PATH) -> dict:
+    """
+    Remove non-CLASSIC matches and dummy test fixtures from training_dataset
+    and delete TEST_MATCH from matches.
+    """
+    with get_connection(db_path) as conn:
+        # Delete training records for TEST_MATCH or non-CLASSIC game modes
+        cur = conn.execute(
+            """
+            DELETE FROM training_dataset
+            WHERE match_id = 'TEST_MATCH'
+               OR match_id IN (
+                   SELECT match_id FROM matches WHERE game_mode != 'CLASSIC' OR game_mode IS NULL OR game_mode = ''
+               )
+            """
+        )
+        deleted_training = cur.rowcount
+
+        # Delete TEST_MATCH from matches table
+        cur2 = conn.execute("DELETE FROM matches WHERE match_id = 'TEST_MATCH'")
+        deleted_test = cur2.rowcount
+
+    logger.info(
+        "Purged %d polluted training records and %d test matches.",
+        deleted_training,
+        deleted_test,
+    )
+    return {
+        "deleted_polluted_training_records": deleted_training,
+        "deleted_test_matches": deleted_test,
+    }
+
+
 if __name__ == "__main__":
     init_db()
     backfill_seasons()
