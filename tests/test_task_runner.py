@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -100,7 +100,16 @@ def test_api_train_returns_job_id(monkeypatch):
 
     monkeypatch.setattr(app_core, "tf_available", False)
     payload = {"matches": [{"matchId": "EUW1_12345"}]}
-    resp = client.post("/api/train", json=payload)
+    
+    # 1. Veracity: Without ?simulate=true, fail-fast with 503
+    resp_fail = client.post("/api/train", json=payload)
+    assert resp_fail.status_code == 503
+    data_fail = resp_fail.get_json()
+    assert data_fail["success"] is False
+    assert "unavailable" in data_fail["error"]
+
+    # 2. With ?simulate=true, explicit mock simulation allowed
+    resp = client.post("/api/train?simulate=true", json=payload)
     assert resp.status_code == 200
     data = resp.get_json()
     assert data["success"] is True
@@ -110,6 +119,21 @@ def test_api_train_returns_job_id(monkeypatch):
     job_status = global_task_runner.get_status(data["job_id"])
     assert job_status is not None
     assert job_status["type"] == "training"
+
+
+def test_task_runner_handles_non_serializable_result():
+    runner = TaskRunner(max_workers=1)
+    
+    class UnserializableObject:
+        def __str__(self):
+            return "<UnserializableObjectInstance>"
+
+    job_id = runner.submit_task("custom", lambda: UnserializableObject())
+    time.sleep(0.1)
+    status = runner.get_status(job_id)
+    assert status["status"] == "completed"
+    assert status["result"] == "<UnserializableObjectInstance>"
+    runner.shutdown(wait=True)
 
 
 def test_history_and_batch_endpoints_with_task_runner(monkeypatch):

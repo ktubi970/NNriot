@@ -53,10 +53,16 @@ class TaskRunner:
                 self.jobs[job_id]["started_at"] = time.time()
             try:
                 result = fn(*args, **kwargs)
+                try:
+                    import json
+                    json.dumps(result)
+                    safe_result = result
+                except (TypeError, OverflowError):
+                    safe_result = str(result)
                 with self.lock:
                     self.jobs[job_id]["status"] = "completed"
                     self.jobs[job_id]["completed_at"] = time.time()
-                    self.jobs[job_id]["result"] = result
+                    self.jobs[job_id]["result"] = safe_result
             except Exception as exc:
                 logger.error("Task %s (%s) failed: %s", job_id, task_type, exc, exc_info=True)
                 with self.lock:

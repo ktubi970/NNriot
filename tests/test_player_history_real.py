@@ -90,3 +90,119 @@ def test_player_history_sync_riot_auth_error(client, tmp_path):
             data = resp.get_json()
             assert data["success"] is False
             assert "error" in data
+
+
+def test_player_history_finds_matches_beyond_recency_scan(client, tmp_path):
+    """
+    Verifies that a player's match history is retrieved accurately even if
+    hundreds of newer matches from other players exist in the database,
+    preventing the critical recency truncation bug.
+    """
+    test_db = str(tmp_path / "test_recency.db")
+    database.init_db(test_db)
+    
+    target_puuid = "target-puuid-777"
+    database.save_player(target_puuid, "DeepPlayer", "EUW", db_path=test_db)
+
+    # 1. Insert target player's match at an older timestamp
+    older_match = {
+        "metadata": {"matchId": "EUW1_0000000001"},
+        "info": {
+            "gameMode": "CLASSIC",
+            "gameCreation": 1600000000000,
+            "gameDuration": 1500,
+            "participants": [
+                {
+                    "puuid": target_puuid,
+                    "championName": "Syndra",
+                    "teamPosition": "MIDDLE",
+                    "win": True,
+                    "kills": 10,
+                    "deaths": 1,
+                    "assists": 8,
+                    "totalMinionsKilled": 180,
+                    "goldEarned": 12000,
+                }
+            ],
+        },
+    }
+    database.save_match("EUW1_0000000001", older_match, db_path=test_db)
+
+    # 2. Bulk insert 220 newer matches for other players
+    other_matches = []
+    for i in range(220):
+        m = {
+            "metadata": {"matchId": f"EUW1_OTHER_{i}"},
+            "info": {
+                "gameMode": "CLASSIC",
+                "gameCreation": 1700000000000 + i * 1000,
+                "gameDuration": 1200,
+                "participants": [
+                    {
+                        "puuid": f"other-puuid-{i}",
+                        "championName": "Garen",
+                        "teamPosition": "TOP",
+                        "win": False,
+                        "kills": 0,
+                        "deaths": 5,
+                        "assists": 0,
+                    }
+                ],
+            },
+        }
+        other_matches.append((f"EUW1_OTHER_{i}", m))
+    database.save_matches_batch(other_matches, db_path=test_db)
+
+    # 3. Query player history with count=5
+    with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db}):
+        resp = client.get("/api/player/history?name=DeepPlayer&tag=EUW&count=5")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert len(data["matches"]) == 1
+        assert data["matches"][0]["champion"] == "Syndra"
+        assert data["matches"][0]["kills"] == 10
+        assert data["matches"][0]["match_id"] == "EUW1_0000000001"
+
+
+def test_backfill_match_participants(tmp_path):
+    test_db = str(tmp_path / "test_backfill.db")
+    database.init_db(test_db)
+
+    # Insert a match directly via raw SQL without match_participants
+    import base64, gzip, json
+    raw = {
+        "info": {
+            "gameMode": "CLASSIC",
+            "gameCreation": 1650000000000,
+            "gameDuration": 1600,
+            "participants": [
+                {
+                    "puuid": "backfill-puuid",
+                    "championName": "Zed",
+                    "teamPosition": "MIDDLE",
+                    "win": True,
+                    "kills": 12,
+                    "deaths": 3,
+                    "assists": 4,
+                }
+            ],
+        }
+    }
+    blob = base64.b64encode(gzip.compress(json.dumps(raw).encode("utf-8"))).decode("ascii")
+    with database.get_connection(test_db) as conn:
+        conn.execute(
+            "INSERT INTO matches (match_id, raw_json, game_mode, game_creation_time, game_duration) VALUES (?, ?, ?, ?, ?)",
+            ("EUW1_RAW_ONLY", blob, "CLASSIC", 1650000000000, 1600),
+        )
+
+    # Run backfill
+    count = database.backfill_match_participants(limit=10, db_path=test_db)
+    assert count == 1
+
+    # Verify participant is now queryable
+    matches = database.get_player_match_history("backfill-puuid", db_path=test_db)
+    assert len(matches) == 1
+    assert matches[0]["champion"] == "Zed"
+    assert matches[0]["kills"] == 12
+

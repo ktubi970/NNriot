@@ -8,12 +8,12 @@ from core import database
 
 
 @pytest.fixture
-def client(tmp_path):
+def client(tmp_path, monkeypatch):
     test_db = str(tmp_path / "telemetry.db")
     database.init_db(test_db)
     database.save_player("p1", "TestPlayer", "EUW", db_path=test_db)
-    flask_app.config["TESTING"] = True
-    flask_app.config["NNRIOT_DB_PATH"] = test_db
+    monkeypatch.setitem(flask_app.config, "TESTING", True)
+    monkeypatch.setitem(flask_app.config, "NNRIOT_DB_PATH", test_db)
     return flask_app.test_client()
 
 

@@ -23,7 +23,7 @@ from contextlib import contextmanager
 DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 11
+SCHEMA_VERSION = 12
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -224,6 +224,35 @@ _MIGRATIONS = [
             "UPDATE schema_version SET version = 11",
         ],
     ),
+    # v11 -> v12 : add match_participants table for fast indexed player history
+    (
+        11,
+        [
+            """
+            CREATE TABLE IF NOT EXISTS match_participants (
+                match_id           TEXT NOT NULL,
+                puuid              TEXT NOT NULL,
+                champion_name      TEXT,
+                team_position      TEXT,
+                win                INTEGER,
+                kills              INTEGER,
+                deaths             INTEGER,
+                assists            INTEGER,
+                total_cs           INTEGER,
+                gold_earned        INTEGER,
+                game_creation_time INTEGER,
+                game_duration      INTEGER,
+                game_mode          TEXT,
+                items_json         TEXT,
+                PRIMARY KEY (match_id, puuid),
+                FOREIGN KEY(match_id) REFERENCES matches(match_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_match_participants_puuid ON match_participants(puuid, game_creation_time DESC)",
+            "CREATE INDEX IF NOT EXISTS idx_match_participants_match ON match_participants(match_id)",
+            "UPDATE schema_version SET version = 12",
+        ],
+    ),
 ]
 
 
@@ -340,14 +369,50 @@ def save_match(match_id: str, raw_data: dict, db_path: str = DB_PATH):
             ),
         )
 
-        # Update champion registry
+        # Update champion registry and participant records
         participants = info.get("participants", [])
+        p_rows = []
         for p in participants:
             c_name = p.get("championName")
             if c_name:
                 conn.execute(
                     "INSERT OR IGNORE INTO champions (name) VALUES (?)", (c_name,)
                 )
+            p_puuid = p.get("puuid")
+            if p_puuid:
+                items = [p.get(f"item{i}", 0) for i in range(7)]
+                p_rows.append(
+                    (
+                        match_id,
+                        p_puuid,
+                        c_name or "Unknown",
+                        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
+                        1 if p.get("win") else 0,
+                        p.get("kills", 0),
+                        p.get("deaths", 0),
+                        p.get("assists", 0),
+                        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
+                        p.get("goldEarned", 0),
+                        info.get("gameCreation"),
+                        info.get("gameDuration"),
+                        info.get("gameMode", "CLASSIC"),
+                        json.dumps(items),
+                    )
+                )
+
+        if p_rows:
+            try:
+                conn.executemany(
+                    """
+                    INSERT OR IGNORE INTO match_participants
+                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
+                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    p_rows,
+                )
+            except sqlite3.OperationalError:
+                pass
 
     logger.debug("Saved match %s.", match_id)
 
@@ -359,6 +424,7 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
     """
     rows = []
     unique_champions = set()
+    all_p_rows = []
     for match_id, raw_data in matches:
         if not match_id:
             continue
@@ -385,11 +451,32 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
             )
         )
 
-        # Collect champions for batch insert
+        # Collect champions and participants for batch insert
         for p in info.get("participants", []):
             c_name = p.get("championName")
             if c_name:
                 unique_champions.add(c_name)
+            p_puuid = p.get("puuid")
+            if p_puuid:
+                items = [p.get(f"item{i}", 0) for i in range(7)]
+                all_p_rows.append(
+                    (
+                        match_id,
+                        p_puuid,
+                        c_name or "Unknown",
+                        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
+                        1 if p.get("win") else 0,
+                        p.get("kills", 0),
+                        p.get("deaths", 0),
+                        p.get("assists", 0),
+                        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
+                        p.get("goldEarned", 0),
+                        info.get("gameCreation"),
+                        info.get("gameDuration"),
+                        info.get("gameMode", "CLASSIC"),
+                        json.dumps(items),
+                    )
+                )
 
     if not rows:
         return
@@ -408,6 +495,19 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
                 "INSERT OR IGNORE INTO champions (name) VALUES (?)",
                 [(c,) for c in unique_champions],
             )
+        if all_p_rows:
+            try:
+                conn.executemany(
+                    """
+                    INSERT OR IGNORE INTO match_participants
+                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
+                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    all_p_rows,
+                )
+            except sqlite3.OperationalError:
+                pass
 
     logger.debug("Batch-saved %d matches and updated champions.", len(rows))
 
@@ -830,15 +930,72 @@ def get_player_match_history(
     puuid: str, limit: int = 10, max_scan: int = 200, db_path: str = DB_PATH
 ) -> list[dict]:
     """
-    Retrieve actual match records for a player by streaming recent matches
-    and inspecting participant data. Bounded to `max_scan` matches to prevent
-    excessive memory consumption and decompression latency.
+    Retrieve actual match records for a player.
+    Prefers the indexed match_participants table for O(1) performance.
+    Falls back to bounded raw_json decompression scan if match_participants
+    has no records for this player (e.g. historical data before migration),
+    and populates match_participants on the fly (write-through cache).
     """
     if not puuid:
         return []
 
     matches = []
     with get_connection(db_path) as conn:
+        # Check if match_participants table exists and query it
+        try:
+            p_rows = conn.execute(
+                """
+                SELECT match_id, champion_name, team_position, win, kills, deaths, assists,
+                       total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json
+                FROM match_participants
+                WHERE puuid = ?
+                ORDER BY game_creation_time DESC
+                LIMIT ?
+                """,
+                (puuid, limit),
+            ).fetchall()
+
+            for r in p_rows:
+                dur_secs = r["game_duration"] or 0
+                dur_mins = max(1, dur_secs // 60)
+                kills = r["kills"] or 0
+                deaths = r["deaths"] or 0
+                assists = r["assists"] or 0
+                kda = round((kills + assists) / max(1, deaths), 2)
+                cs = r["total_cs"] or 0
+                items = json.loads(r["items_json"]) if r["items_json"] else [0] * 7
+
+                matches.append(
+                    {
+                        "match_id": r["match_id"],
+                        "champion": r["champion_name"] or "Unknown",
+                        "role": r["team_position"] or "UNKNOWN",
+                        "win": bool(r["win"]),
+                        "kills": kills,
+                        "deaths": deaths,
+                        "assists": assists,
+                        "kda": str(kda),
+                        "cs": cs,
+                        "cs_per_min": f"{(cs / dur_mins):.1f}",
+                        "gold": r["gold_earned"] or 0,
+                        "duration": f"{dur_mins}:{dur_secs % 60:02d}",
+                        "game_mode": r["game_mode"] or "CLASSIC",
+                        "game_creation_time": r["game_creation_time"] or 0,
+                        "items": items,
+                    }
+                )
+
+            if len(matches) >= limit:
+                return matches
+        except sqlite3.OperationalError:
+            # Table might not exist in old unmigrated test DBs
+            pass
+
+        # If we got matches from match_participants, return them
+        if matches:
+            return matches
+
+        # Fallback: scan recent matches and populate match_participants on the fly
         cursor = conn.execute(
             """
             SELECT match_id, raw_json, game_mode, game_creation_time, game_duration
@@ -849,6 +1006,7 @@ def get_player_match_history(
             (max_scan,),
         )
 
+        p_inserts = []
         while True:
             chunk = cursor.fetchmany(50)
             if not chunk:
@@ -872,33 +1030,137 @@ def get_player_match_history(
                 cs = p_data.get("totalMinionsKilled", 0) + p_data.get("neutralMinionsKilled", 0)
                 items = [p_data.get(f"item{i}", 0) for i in range(7)]
                 game_creation = r["game_creation_time"] or info.get("gameCreation", 0)
+                champ = p_data.get("championName", "Unknown")
+                role = p_data.get("teamPosition") or p_data.get("individualPosition", "UNKNOWN")
+                win_val = bool(p_data.get("win", False))
+                gold = p_data.get("goldEarned", 0)
+                gmode = r["game_mode"] or info.get("gameMode", "CLASSIC")
 
                 matches.append(
                     {
                         "match_id": r["match_id"],
-                        "champion": p_data.get("championName", "Unknown"),
-                        "role": p_data.get("teamPosition")
-                        or p_data.get("individualPosition", "UNKNOWN"),
-                        "win": bool(p_data.get("win", False)),
+                        "champion": champ,
+                        "role": role,
+                        "win": win_val,
                         "kills": kills,
                         "deaths": deaths,
                         "assists": assists,
                         "kda": str(kda),
                         "cs": cs,
                         "cs_per_min": f"{(cs / dur_mins):.1f}",
-                        "gold": p_data.get("goldEarned", 0),
+                        "gold": gold,
                         "duration": f"{dur_mins}:{dur_secs % 60:02d}",
-                        "game_mode": r["game_mode"] or info.get("gameMode", "CLASSIC"),
+                        "game_mode": gmode,
                         "game_creation_time": game_creation,
                         "items": items,
                     }
+                )
+                p_inserts.append(
+                    (
+                        r["match_id"],
+                        puuid,
+                        champ,
+                        role,
+                        1 if win_val else 0,
+                        kills,
+                        deaths,
+                        assists,
+                        cs,
+                        gold,
+                        game_creation,
+                        dur_secs,
+                        gmode,
+                        json.dumps(items),
+                    )
                 )
                 if len(matches) >= limit:
                     break
             if len(matches) >= limit:
                 break
 
+        # Cache extracted matches into match_participants if table exists
+        if p_inserts:
+            try:
+                conn.executemany(
+                    """
+                    INSERT OR IGNORE INTO match_participants
+                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
+                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    p_inserts,
+                )
+            except sqlite3.OperationalError:
+                pass
+
     return matches
+
+
+def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH) -> int:
+    """
+    Backfill match_participants from compressed raw_json in matches table.
+    Returns the number of matches backfilled.
+    """
+    with get_connection(db_path) as conn:
+        rows = conn.execute(
+            """
+            SELECT m.match_id, m.raw_json, m.game_mode, m.game_creation_time, m.game_duration
+            FROM matches m
+            LEFT JOIN match_participants mp ON m.match_id = mp.match_id
+            WHERE mp.match_id IS NULL
+            ORDER BY m.game_creation_time DESC
+            LIMIT ?
+            """,
+            (limit,),
+        ).fetchall()
+
+        if not rows:
+            return 0
+
+        p_rows = []
+        for r in rows:
+            raw = _decode_compressed_json(r["raw_json"])
+            if not raw:
+                continue
+            info = raw.get("info", {})
+            for p in info.get("participants", []):
+                p_puuid = p.get("puuid")
+                if not p_puuid:
+                    continue
+                items = [p.get(f"item{i}", 0) for i in range(7)]
+                p_rows.append(
+                    (
+                        r["match_id"],
+                        p_puuid,
+                        p.get("championName", "Unknown"),
+                        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
+                        1 if p.get("win") else 0,
+                        p.get("kills", 0),
+                        p.get("deaths", 0),
+                        p.get("assists", 0),
+                        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
+                        p.get("goldEarned", 0),
+                        r["game_creation_time"] or info.get("gameCreation"),
+                        r["game_duration"] or info.get("gameDuration"),
+                        r["game_mode"] or info.get("gameMode", "CLASSIC"),
+                        json.dumps(items),
+                    )
+                )
+
+        if p_rows:
+            try:
+                conn.executemany(
+                    """
+                    INSERT OR IGNORE INTO match_participants
+                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
+                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    p_rows,
+                )
+            except sqlite3.OperationalError:
+                pass
+        return len(rows)
 
 
 def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,

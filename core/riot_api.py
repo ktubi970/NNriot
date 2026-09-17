@@ -5,7 +5,7 @@ import requests
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from dotenv import load_dotenv, dotenv_values
+from dotenv import load_dotenv, dotenv_values, find_dotenv
 
 # Load environment variables
 load_dotenv(override=True)
@@ -144,7 +144,8 @@ class RiotAPI:
     def reload_key(self) -> str | None:
         """Reload RIOT_API_KEY from .env file when developer key expires."""
         try:
-            vals = dotenv_values(".env")
+            env_file = find_dotenv(usecwd=True) or ".env"
+            vals = dotenv_values(env_file)
             new_key = vals.get("RIOT_API_KEY")
             if new_key and new_key != self.api_key:
                 self.api_key = new_key

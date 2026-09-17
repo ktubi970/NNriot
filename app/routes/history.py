@@ -252,33 +252,33 @@ def api_player_history():
     if sync_riot and riot_key:
         try:
             region = data_collector.resolve_region(tag)
-            api = riot_api.RiotAPI(region)
-            puuid = api.get_puuid(name, tag)
-            if puuid:
-                database.save_player(puuid, name, tag, db_path=db_path)
-                match_ids = api.get_match_ids(puuid, count=count)
-                new_mids = [
-                    mid
-                    for mid in match_ids
-                    if not database.get_raw_match(mid, db_path=db_path)
-                ]
-                if new_mids:
-                    details_map = api.get_match_details_batch(new_mids, max_workers=3)
-                    matches_batch = []
-                    training_batch = []
-                    for mid, det in details_map.items():
-                        matches_batch.append((mid, det))
-                        rec = data_collector._build_training_record(
-                            mid, det, region=region
-                        )
-                        if rec:
-                            training_batch.append(rec)
-                    if matches_batch:
-                        database.save_matches_batch(matches_batch, db_path=db_path)
-                    if training_batch:
-                        database.save_training_records_batch(
-                            training_batch, db_path=db_path
-                        )
+            with riot_api.RiotAPI(region) as api:
+                puuid = api.get_puuid(name, tag)
+                if puuid:
+                    database.save_player(puuid, name, tag, db_path=db_path)
+                    match_ids = api.get_match_ids(puuid, count=count)
+                    new_mids = [
+                        mid
+                        for mid in match_ids
+                        if not database.get_raw_match(mid, db_path=db_path)
+                    ]
+                    if new_mids:
+                        details_map = api.get_match_details_batch(new_mids, max_workers=3)
+                        matches_batch = []
+                        training_batch = []
+                        for mid, det in details_map.items():
+                            matches_batch.append((mid, det))
+                            rec = data_collector._build_training_record(
+                                mid, det, region=region
+                            )
+                            if rec:
+                                training_batch.append(rec)
+                        if matches_batch:
+                            database.save_matches_batch(matches_batch, db_path=db_path)
+                        if training_batch:
+                            database.save_training_records_batch(
+                                training_batch, db_path=db_path
+                            )
         except riot_api.RiotAuthError as e:
             logger.warning(f"Live Riot sync auth failed: {e}")
             return jsonify({

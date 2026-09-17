@@ -195,11 +195,28 @@ def api_stream_process_frame():
             os.makedirs(screenshot_dir)
 
         # Save image with unique filename to prevent overwrite collisions
-        frame_id = uuid.uuid4().hex[:8]
+        frame_id = uuid.uuid4().hex
         filename = f"capture_{frame_id}.jpg"
         filepath = os.path.join(screenshot_dir, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
+
+        # Retention janitor: prune oldest screenshots if exceeding threshold
+        try:
+            entries = [
+                os.path.join(screenshot_dir, f)
+                for f in os.listdir(screenshot_dir)
+                if f.startswith("capture_") and f.endswith(".jpg")
+            ]
+            if len(entries) > 50:
+                entries.sort(key=lambda p: os.path.getmtime(p))
+                for old_file in entries[:-50]:
+                    try:
+                        os.remove(old_file)
+                    except OSError:
+                        pass
+        except Exception:
+            pass
 
         # DYNAMIC OCR RESULTS (PICK 10 RANDOM FROM DB)
         try:
@@ -294,6 +311,19 @@ def api_train():
 
         if not matches:
             return jsonify({"error": "No matches provided for training"}), 400
+
+        # Enforce veracity: fail fast if TF is unavailable unless ?simulate=true is requested
+        if not core.tf_available or core.global_trainer is None:
+            if request.args.get("simulate", "false").lower() != "true":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Model trainer is unavailable. TensorFlow or model weights could not be loaded. Pass ?simulate=true for mock testing.",
+                        }
+                    ),
+                    503,
+                )
 
         # Setup background thread training process
         start_time = time.time()
