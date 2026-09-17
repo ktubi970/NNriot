@@ -12,9 +12,8 @@ class AnalyticsConfig:
         default_factory=lambda: os.getenv("NNRIOT_DB_PATH", "training_data.db")
     )
     analytics_path: str = field(
-        default_factory=lambda: os.getenv(
-            "NNRIOT_ANALYTICS_DB_PATH", "analytics.db"
-        )
+        default_factory=lambda: os.getenv("NNRIOT_ANALYTICS_DB_PATH")
+        or os.getenv("ANALYTICS_DB_PATH", "analytics.db")
     )
     seed: int = field(
         default_factory=lambda: int(

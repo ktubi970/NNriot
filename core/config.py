@@ -14,7 +14,7 @@ CORS_ORIGINS = [
 
 # Database Configuration
 DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
-ANALYTICS_DB_PATH = os.environ.get("ANALYTICS_DB_PATH", "analytics/data/analytics.db")
+ANALYTICS_DB_PATH = os.environ.get("NNRIOT_ANALYTICS_DB_PATH") or os.environ.get("ANALYTICS_DB_PATH", "analytics.db")
 MAX_DB_SIZE = int(os.environ.get("NNRIOT_MAX_DB_SIZE_GB", "50")) * 1024 * 1024 * 1024
 
 # Riot API Configuration

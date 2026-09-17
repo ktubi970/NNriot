@@ -36,8 +36,9 @@ def create_app():
     app.config["NNRIOT_DB_PATH"] = os.getenv(
         "NNRIOT_DB_PATH", database.DB_PATH
     )
-    app.config["ANALYTICS_DB_PATH"] = os.getenv(
-        "NNRIOT_ANALYTICS_DB_PATH", "analytics.db"
+    app.config["ANALYTICS_DB_PATH"] = (
+        os.getenv("NNRIOT_ANALYTICS_DB_PATH")
+        or os.getenv("ANALYTICS_DB_PATH", "analytics.db")
     )
 
     # CORS allowlist — match the previous final_web_app.py defaults.
