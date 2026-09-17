@@ -31,7 +31,7 @@ def test_get_match_ids_supports_queue_and_type():
     mock_resp.json.return_value = ["EUW1_123", "EUW1_456"]
     mock_resp.headers = {}
 
-    with patch("core.riot_api.requests.get", return_value=mock_resp) as mock_get:
+    with patch.object(api.session, "get", return_value=mock_resp) as mock_get:
         res = api.get_match_ids("fake_puuid", count=10, queue=420, type="ranked")
 
     assert res == ["EUW1_123", "EUW1_456"]

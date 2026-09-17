@@ -18,9 +18,6 @@ class RiotAuthError(Exception):
     pass
 
 
-_ORIG_REQUESTS_GET = requests.get
-
-
 class RiotRateLimiter:
     """
     Thread-safe sliding-window rate limiter designed specifically for Riot's rate limits:
@@ -133,6 +130,17 @@ class RiotAPI:
             f"https://{self.platform_routes[self.region]}.api.riotgames.com"
         )
 
+    def close(self):
+        """Close the underlying requests.Session."""
+        if hasattr(self, "session") and self.session:
+            self.session.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.close()
+
     def reload_key(self) -> str | None:
         """Reload RIOT_API_KEY from .env file when developer key expires."""
         try:
@@ -156,10 +164,7 @@ class RiotAPI:
             RiotAPI._limiter.acquire()
             headers = self._get_headers()
             try:
-                if requests.get != _ORIG_REQUESTS_GET:
-                    response = requests.get(url, headers=headers, timeout=15)
-                else:
-                    response = self.session.get(url, headers=headers, timeout=15)
+                response = self.session.get(url, headers=headers, timeout=15)
                 
                 # Proactively track rate limit headers
                 self._update_rate_limits(response.headers)
@@ -183,8 +188,8 @@ class RiotAPI:
                         "Riot API returned HTTP %s (expired or invalid key). Attempting key reload from .env...",
                         response.status_code,
                     )
-                    new_key = self.reload_key()
-                    if new_key and new_key != headers.get("X-Riot-Token"):
+                    self.reload_key()
+                    if self.api_key and self.api_key != headers.get("X-Riot-Token"):
                         logger.info("New RIOT_API_KEY reloaded from .env. Retrying request...")
                         continue
                     raise RiotAuthError(
