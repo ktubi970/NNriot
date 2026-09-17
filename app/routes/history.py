@@ -262,6 +262,11 @@ def api_player_history():
                         )
         except riot_api.RiotAuthError as e:
             logger.warning(f"Live Riot sync auth failed: {e}")
+            return jsonify({
+                "success": False,
+                "error": "Riot API authentication failed (API key expired or invalid)",
+                "details": str(e),
+            }), 503
         except Exception as e:
             logger.warning(f"Live Riot sync failed: {e}", exc_info=True)
 

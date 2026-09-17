@@ -827,91 +827,76 @@ def get_player_by_name_tag(
 
 
 def get_player_match_history(
-    puuid: str, limit: int = 10, db_path: str = DB_PATH
+    puuid: str, limit: int = 10, max_scan: int = 200, db_path: str = DB_PATH
 ) -> list[dict]:
-    """Retrieve actual match records for a player by inspecting participant data in stored matches."""
+    """
+    Retrieve actual match records for a player by streaming recent matches
+    and inspecting participant data. Bounded to `max_scan` matches to prevent
+    excessive memory consumption and decompression latency.
+    """
     if not puuid:
         return []
 
     matches = []
     with get_connection(db_path) as conn:
-        # First attempt: search via LIKE in case raw_json is uncompressed or contains the puuid substring
-        rows = conn.execute(
+        cursor = conn.execute(
             """
             SELECT match_id, raw_json, game_mode, game_creation_time, game_duration
             FROM matches
-            WHERE raw_json LIKE ?
             ORDER BY game_creation_time DESC
             LIMIT ?
             """,
-            (f"%{puuid}%", limit * 2),
-        ).fetchall()
-
-        # If not found via LIKE (because raw_json is compressed with gzip+b64 in NNriot),
-        # scan recent matches by game_creation_time
-        if not rows:
-            cursor = conn.execute(
-                """
-                SELECT match_id, raw_json, game_mode, game_creation_time, game_duration
-                FROM matches
-                ORDER BY game_creation_time DESC
-                LIMIT 5000
-                """
-            )
-            rows = cursor.fetchall()
-
-    for r in rows:
-        raw = _decode_compressed_json(r["raw_json"])
-        if not raw:
-            continue
-        info = raw.get("info", {})
-        participants = info.get("participants", [])
-        p_data = next((p for p in participants if p.get("puuid") == puuid), None)
-        if not p_data:
-            continue
-
-        dur_secs = r["game_duration"] or info.get("gameDuration", 0)
-        dur_mins = max(1, dur_secs // 60)
-        kills = p_data.get("kills", 0)
-        deaths = p_data.get("deaths", 0)
-        assists = p_data.get("assists", 0)
-        kda = round((kills + assists) / max(1, deaths), 2)
-        cs = p_data.get("totalMinionsKilled", 0) + p_data.get("neutralMinionsKilled", 0)
-        items = [p_data.get(f"item{i}", 0) for i in range(7)]
-
-        game_creation = r["game_creation_time"] or info.get("gameCreation", 0)
-        time_ago = ""
-        if game_creation:
-            diff_secs = max(0, time.time() - (game_creation / 1000.0))
-            hours = int(diff_secs // 3600)
-            if hours < 24:
-                time_ago = f"Il y a {max(1, hours)}h"
-            else:
-                days = int(hours // 24)
-                time_ago = f"Il y a {days} jours"
-
-        matches.append(
-            {
-                "match_id": r["match_id"],
-                "champion": p_data.get("championName", "Unknown"),
-                "role": p_data.get("teamPosition")
-                or p_data.get("individualPosition", "UNKNOWN"),
-                "win": bool(p_data.get("win", False)),
-                "kills": kills,
-                "deaths": deaths,
-                "assists": assists,
-                "kda": str(kda),
-                "cs": cs,
-                "cs_per_min": f"{(cs / dur_mins):.1f}",
-                "gold": p_data.get("goldEarned", 0),
-                "duration": f"{dur_mins}:{dur_secs % 60:02d}",
-                "game_mode": r["game_mode"] or info.get("gameMode", "CLASSIC"),
-                "time_ago": time_ago,
-                "items": items,
-            }
+            (max_scan,),
         )
-        if len(matches) >= limit:
-            break
+
+        while True:
+            chunk = cursor.fetchmany(50)
+            if not chunk:
+                break
+            for r in chunk:
+                raw = _decode_compressed_json(r["raw_json"])
+                if not raw:
+                    continue
+                info = raw.get("info", {})
+                participants = info.get("participants", [])
+                p_data = next((p for p in participants if p.get("puuid") == puuid), None)
+                if not p_data:
+                    continue
+
+                dur_secs = r["game_duration"] or info.get("gameDuration", 0)
+                dur_mins = max(1, dur_secs // 60)
+                kills = p_data.get("kills", 0)
+                deaths = p_data.get("deaths", 0)
+                assists = p_data.get("assists", 0)
+                kda = round((kills + assists) / max(1, deaths), 2)
+                cs = p_data.get("totalMinionsKilled", 0) + p_data.get("neutralMinionsKilled", 0)
+                items = [p_data.get(f"item{i}", 0) for i in range(7)]
+                game_creation = r["game_creation_time"] or info.get("gameCreation", 0)
+
+                matches.append(
+                    {
+                        "match_id": r["match_id"],
+                        "champion": p_data.get("championName", "Unknown"),
+                        "role": p_data.get("teamPosition")
+                        or p_data.get("individualPosition", "UNKNOWN"),
+                        "win": bool(p_data.get("win", False)),
+                        "kills": kills,
+                        "deaths": deaths,
+                        "assists": assists,
+                        "kda": str(kda),
+                        "cs": cs,
+                        "cs_per_min": f"{(cs / dur_mins):.1f}",
+                        "gold": p_data.get("goldEarned", 0),
+                        "duration": f"{dur_mins}:{dur_secs % 60:02d}",
+                        "game_mode": r["game_mode"] or info.get("gameMode", "CLASSIC"),
+                        "game_creation_time": game_creation,
+                        "items": items,
+                    }
+                )
+                if len(matches) >= limit:
+                    break
+            if len(matches) >= limit:
+                break
 
     return matches
 

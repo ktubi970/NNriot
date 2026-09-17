@@ -86,7 +86,7 @@ def test_player_history_sync_riot_auth_error(client, tmp_path):
     with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db, "RIOT_API_KEY": "RGAPI-invalid"}):
         with patch("core.riot_api.RiotAPI.get_puuid", side_effect=RiotAuthError(401, "API key expired")):
             resp = client.get("/api/player/history?name=Faker&tag=KR1&sync_riot=1")
-            assert resp.status_code == 200
+            assert resp.status_code == 503
             data = resp.get_json()
-            assert data["success"] is True
-            assert data["matches"] == []
+            assert data["success"] is False
+            assert "error" in data
