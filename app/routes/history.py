@@ -58,6 +58,7 @@ def api_history_collect():
                 with core.collection_lock:
                     core.collection_status["status"] = "error"
                     core.collection_status["error"] = str(e)
+                raise
 
         job_id = global_task_runner.submit_task("history_collect", run_collection)
 
@@ -112,6 +113,7 @@ def api_history_collect_batch():
                 with core.collection_lock:
                     core.collection_status["status"] = "error"
                     core.collection_status["error"] = str(e)
+                raise
 
         job_id = global_task_runner.submit_task("history_collect_batch", run_collection)
 
@@ -126,10 +128,14 @@ def api_history_status():
     """API endpoint to check the status of the current collection job."""
     with core.collection_lock:
         status_copy = dict(core.collection_status)
-    latest_job = (
-        global_task_runner.get_latest_by_type("history_collect")
-        or global_task_runner.get_latest_by_type("history_collect_batch")
-    )
+    candidates = [
+        j for j in [
+            global_task_runner.get_latest_by_type("history_collect"),
+            global_task_runner.get_latest_by_type("history_collect_batch"),
+            global_task_runner.get_latest_by_type("lolpros_import"),
+        ] if j is not None
+    ]
+    latest_job = max(candidates, key=lambda x: x["created_at"]) if candidates else None
     if latest_job and "job_id" not in status_copy:
         status_copy["job_id"] = latest_job["job_id"]
     return jsonify(status_copy)

@@ -11,10 +11,24 @@ logger = logging.getLogger(__name__)
 class TaskRunner:
     """Bounded, thread-safe background task executor with UUID tracking."""
 
-    def __init__(self, max_workers: int = 3):
+    def __init__(self, max_workers: int = 3, max_history: int = 1000):
         self.executor = ThreadPoolExecutor(max_workers=max_workers, thread_name_prefix="NNTask")
         self.jobs: Dict[str, dict] = {}
+        self.max_history = max_history
         self.lock = threading.Lock()
+
+    def _prune_old_jobs_locked(self):
+        """Prune oldest completed/failed jobs if total jobs exceed max_history."""
+        if len(self.jobs) <= self.max_history:
+            return
+        terminal_jobs = [
+            j for j in self.jobs.values()
+            if j["status"] in ("completed", "failed")
+        ]
+        terminal_jobs.sort(key=lambda x: x["created_at"])
+        to_prune = len(self.jobs) - self.max_history
+        for j in terminal_jobs[:to_prune]:
+            self.jobs.pop(j["job_id"], None)
 
     def submit_task(self, task_type: str, fn: Callable, *args, **kwargs) -> str:
         job_id = f"job_{uuid.uuid4().hex[:12]}"
@@ -31,6 +45,7 @@ class TaskRunner:
         }
         with self.lock:
             self.jobs[job_id] = job_record
+            self._prune_old_jobs_locked()
 
         def _wrapper():
             with self.lock:

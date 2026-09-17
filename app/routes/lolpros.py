@@ -7,6 +7,7 @@ from flask import Blueprint, request, jsonify
 
 from core import database
 from scripts import data_collector
+from core.task_runner import global_task_runner
 
 from .. import core
 
@@ -168,13 +169,13 @@ def api_lolpros_import():
                 with core.collection_lock:
                     core.collection_status["status"] = "error"
                     core.collection_status["error"] = str(exc)
+                raise
 
         with core.collection_lock:
             already_running = core.collection_status["status"] == "collecting"
 
         if not already_running:
-            t = threading.Thread(target=_collect_all, daemon=True)
-            t.start()
+            global_task_runner.submit_task("lolpros_import", _collect_all)
             collect_msg = "History collection started in background."
         else:
             collect_msg = "A collection job is already running; skipped."

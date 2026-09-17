@@ -310,6 +310,7 @@ def api_train():
                     logger.info("Background training completed.")
                 except Exception as e:
                     logger.error(f"Background training failed: {e}", exc_info=True)
+                    raise
             else:
                 # Simulate training process if model isn't active
                 training_time = min(3.0, len(matches) * 0.05)
@@ -418,6 +419,7 @@ def api_predict_custom():
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
                             logger.error("Warm-up refresh failed", exc_info=True)
+                            raise
 
                     global_task_runner.submit_task("warmup_refresh", _refresh_stale)
         except Exception:
@@ -600,6 +602,7 @@ def api_spectator_active():
                     data_collector.collect_training_data(seeds, matches_per_player=10)
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
+                    raise
 
             global_task_runner.submit_task("auto_collect", auto_collect_task)
 

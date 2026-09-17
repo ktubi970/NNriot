@@ -1,4 +1,4 @@
-import sys
+﻿import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -55,6 +55,23 @@ def test_task_runner_get_latest_by_type():
     latest = runner.get_latest_by_type("task_a")
     assert latest is not None
     assert latest["job_id"] == j2
+    runner.shutdown()
+
+
+def test_task_runner_memory_bounding_prunes_oldest_jobs():
+    runner = TaskRunner(max_workers=2, max_history=3)
+    j1 = runner.submit_task("t", lambda: 1)
+    j2 = runner.submit_task("t", lambda: 2)
+    j3 = runner.submit_task("t", lambda: 3)
+    time.sleep(0.05)
+    assert len(runner.jobs) == 3
+
+    # 4th job triggers pruning of oldest completed
+    j4 = runner.submit_task("t", lambda: 4)
+    time.sleep(0.05)
+    assert len(runner.jobs) <= 3
+    assert runner.get_status(j1) is None
+    assert runner.get_status(j4) is not None
     runner.shutdown()
 
 
@@ -132,3 +149,86 @@ def test_history_and_batch_endpoints_with_task_runner(monkeypatch):
     assert resp.status_code == 200
     b_st = resp.get_json()
     assert "status" in b_st
+
+
+def test_route_failure_propagates_to_task_runner(monkeypatch):
+    flask_app.config["TESTING"] = True
+    client = flask_app.test_client()
+
+    from scripts import data_collector
+    def failing_collector(*args, **kwargs):
+        raise ValueError("Simulated route failure in collector")
+
+    monkeypatch.setattr(data_collector, "collect_training_data", failing_collector)
+
+    with app_core.collection_lock:
+        app_core.collection_status["status"] = "idle"
+
+    resp = client.post("/api/history/collect", json={"game_name": "CrashPlayer", "tag_line": "EUW", "count": 1})
+    assert resp.status_code == 200
+    job_id = resp.get_json()["job_id"]
+
+    # Wait for the task to execute and fail
+    time.sleep(0.1)
+    status = global_task_runner.get_status(job_id)
+    assert status is not None
+    assert status["status"] == "failed"
+    assert "Simulated route failure in collector" in (status["error"] or "")
+
+    # Check /api/jobs/<job_id> reflects the failure
+    job_resp = client.get(f"/api/jobs/{job_id}")
+    assert job_resp.status_code == 200
+    assert job_resp.get_json()["job"]["status"] == "failed"
+
+
+def test_history_status_picks_latest_by_created_at():
+    flask_app.config["TESTING"] = True
+    client = flask_app.test_client()
+
+    j_old = global_task_runner.submit_task("history_collect", lambda: None)
+    time.sleep(0.02)
+    j_new = global_task_runner.submit_task("history_collect_batch", lambda: None)
+    time.sleep(0.02)
+
+    resp = client.get("/api/history/status")
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data.get("job_id") == j_new
+
+
+def test_lolpros_import_uses_task_runner(monkeypatch):
+    flask_app.config["TESTING"] = True
+    client = flask_app.test_client()
+
+    from scripts import data_collector
+    from core import database
+    monkeypatch.setattr(database, "save_player", lambda *args, **kwargs: None)
+    monkeypatch.setattr(database, "link_accounts", lambda *args, **kwargs: None)
+    monkeypatch.setattr(data_collector, "collect_by_puuid", lambda *args, **kwargs: {"matches_saved": 0})
+
+    with app_core.collection_lock:
+        app_core.collection_status["status"] = "idle"
+
+    payload = {
+        "player": {
+            "name": "Faker",
+            "league_player": {
+                "accounts": [
+                    {
+                        "encrypted_puuid": "fake_puuid_123",
+                        "server": "KR",
+                        "gamename": "Hide on bush",
+                        "tagline": "KR1",
+                        "rank": {"score": 100},
+                    }
+                ]
+            }
+        }
+    }
+
+    resp = client.post("/api/lolpros/import", json=payload)
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+
+    latest = global_task_runner.get_latest_by_type("lolpros_import")
+    assert latest is not None
