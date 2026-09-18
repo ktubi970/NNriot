@@ -1123,9 +1123,11 @@ def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH, order_
                 raw = _decode_compressed_json(r["raw_json"])
             except Exception:
                 raw = None
-            participants = raw.get("info", {}).get("participants", []) if isinstance(raw, dict) else []
+            info = (raw.get("info") or {}) if isinstance(raw, dict) else {}
+            participants = (info.get("participants") or []) if isinstance(info, dict) else []
+            valid_participants = [p for p in participants if isinstance(p, dict)]
 
-            if not participants:
+            if not valid_participants:
                 # Insert a sentinel tombstone row so this match is marked as processed and never re-queried
                 p_rows.append(
                     (
@@ -1142,8 +1144,9 @@ def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH, order_
                 )
                 continue
 
-            info = raw.get("info", {})
-            for p in participants:
+            for p in valid_participants:
+                if not isinstance(p, dict):
+                    continue
                 p_puuid = p.get("puuid") or f"__UNKNOWN_{r['match_id']}_{p.get('participantId', 0)}"
                 items = [p.get(f"item{i}", 0) for i in range(7)]
                 p_rows.append(
@@ -1176,8 +1179,9 @@ def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH, order_
                     """,
                     p_rows,
                 )
-            except sqlite3.OperationalError:
-                pass
+            except sqlite3.OperationalError as exc:
+                logger.error("Failed to insert match_participants batch: %s", exc)
+                raise
         return len(rows)
 
 
