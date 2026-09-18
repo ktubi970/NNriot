@@ -1096,37 +1096,55 @@ def get_player_match_history(
     return matches
 
 
-def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH) -> int:
+def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH, order_by_recency: bool = False) -> int:
     """
     Backfill match_participants from compressed raw_json in matches table.
-    Returns the number of matches backfilled.
+    Uses WHERE NOT EXISTS for optimal query plan.
+    Handles corrupt/empty records gracefully to avoid infinite loops.
+    """
+    order_clause = "ORDER BY m.game_creation_time DESC" if order_by_recency else ""
+    query = f"""
+        SELECT m.match_id, m.raw_json, m.game_mode, m.game_creation_time, m.game_duration
+        FROM matches m
+        WHERE NOT EXISTS (
+            SELECT 1 FROM match_participants mp WHERE mp.match_id = m.match_id
+        )
+        {order_clause}
+        LIMIT ?
     """
     with get_connection(db_path) as conn:
-        rows = conn.execute(
-            """
-            SELECT m.match_id, m.raw_json, m.game_mode, m.game_creation_time, m.game_duration
-            FROM matches m
-            LEFT JOIN match_participants mp ON m.match_id = mp.match_id
-            WHERE mp.match_id IS NULL
-            ORDER BY m.game_creation_time DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
-
+        rows = conn.execute(query, (limit,)).fetchall()
         if not rows:
             return 0
 
         p_rows = []
         for r in rows:
-            raw = _decode_compressed_json(r["raw_json"])
-            if not raw:
+            try:
+                raw = _decode_compressed_json(r["raw_json"])
+            except Exception:
+                raw = None
+            participants = raw.get("info", {}).get("participants", []) if isinstance(raw, dict) else []
+
+            if not participants:
+                # Insert a sentinel tombstone row so this match is marked as processed and never re-queried
+                p_rows.append(
+                    (
+                        r["match_id"],
+                        "__TOMBSTONE__",
+                        "Unknown",
+                        "UNKNOWN",
+                        0, 0, 0, 0, 0, 0,
+                        r["game_creation_time"] or 0,
+                        r["game_duration"] or 0,
+                        r["game_mode"] or "UNKNOWN",
+                        "[]",
+                    )
+                )
                 continue
+
             info = raw.get("info", {})
-            for p in info.get("participants", []):
-                p_puuid = p.get("puuid")
-                if not p_puuid:
-                    continue
+            for p in participants:
+                p_puuid = p.get("puuid") or f"__UNKNOWN_{r['match_id']}_{p.get('participantId', 0)}"
                 items = [p.get(f"item{i}", 0) for i in range(7)]
                 p_rows.append(
                     (
@@ -1279,9 +1297,12 @@ def _decode_compressed_json(blob: str | None):
     """Decode a possibly-gzip+b64 JSON blob; pass through plain JSON / None."""
     if not blob:
         return None
-    if blob.startswith("{") or blob.startswith("["):
-        return json.loads(blob)
-    return json.loads(gzip.decompress(base64.b64decode(blob)).decode("utf-8"))
+    try:
+        if blob.startswith("{") or blob.startswith("["):
+            return json.loads(blob)
+        return json.loads(gzip.decompress(base64.b64decode(blob)).decode("utf-8"))
+    except Exception:
+        return None
 
 
 def get_untrained_records(limit: int = 500, db_path: str = DB_PATH) -> list[dict]:
