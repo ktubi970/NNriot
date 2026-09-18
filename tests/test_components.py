@@ -38,75 +38,76 @@ def test_json_utils():
 
 def test_database():
     """
-    Test database functionality using Repository Pattern.
+    Test database functionality using Repository Pattern in an isolated temp database.
     """
+    import os
+    import tempfile
     try:
         from core import database
         from core.repository import MatchRepository, TrainingRepository, SystemRepository
         
-        database.init_db()
+        with tempfile.TemporaryDirectory() as tmpdir:
+            test_db = os.path.join(tmpdir, "test_components.db")
+            database.init_db(test_db)
 
-        match_repo = MatchRepository()
-        train_repo = TrainingRepository()
-        sys_repo = SystemRepository()
+            match_repo = MatchRepository(test_db)
+            train_repo = TrainingRepository(test_db)
+            sys_repo = SystemRepository(test_db)
 
-        # Satisfaction of Foreign Key constraint: insert a dummy match first
-        with match_repo.get_connection() as conn:
-            conn.execute(
-                "INSERT OR IGNORE INTO matches (match_id, game_mode) VALUES (?, ?)",
-                ("TEST_MATCH", "CLASSIC"),
-            )
-            conn.commit()
+            # Satisfaction of Foreign Key constraint: insert a dummy match first
+            with match_repo.get_connection() as conn:
+                conn.execute(
+                    "INSERT OR IGNORE INTO matches (match_id, game_mode) VALUES (?, ?)",
+                    ("TEST_MATCH", "CLASSIC"),
+                )
+                conn.commit()
 
-        # perform a quick insert and fetch
-        dummy_feature = {"foo": "bar"}
-        # Note: the repository delegates to save_training_records_batch usually, 
-        # but for test compat we use legacy call for single or batch
-        train_repo.save_training_records_batch([
-            (
-                "TEST_MATCH",
-                dummy_feature,
-                0, # winner_label
-                {"test": True} # labels_json
-            )
-        ])
+            # perform a quick insert and fetch
+            dummy_feature = {"foo": "bar"}
+            train_repo.save_training_records_batch([
+                (
+                    "TEST_MATCH",
+                    dummy_feature,
+                    0,  # winner_label
+                    {"test": True},  # labels_json
+                )
+            ])
 
-        stats = sys_repo.get_db_stats()
-        required_keys = [
-            "players",
-            "matches",
-            "trained_records",
-            "untrained_records",
-            "trained_ratio",
-        ]
-        missing = [k for k in required_keys if k not in stats]
+            stats = sys_repo.get_db_stats()
+            required_keys = [
+                "players",
+                "matches",
+                "trained_records",
+                "untrained_records",
+                "trained_ratio",
+            ]
+            missing = [k for k in required_keys if k not in stats]
 
-        if not missing:
+            if missing:
+                print(f"[FAIL] Database stats missing keys: {missing}")
+                return False
+
+            with train_repo.get_connection() as conn:
+                row = conn.execute(
+                    "SELECT match_id, feature_json FROM training_dataset WHERE match_id = ?",
+                    ("TEST_MATCH",),
+                ).fetchone()
+
+            if not row:
+                print("[FAIL] Test record not found")
+                return False
+
             print(
                 f"[OK] Database stats consistent: {stats['matches']} matches, {stats['trained_records']} trained"
             )
-        else:
-            print(f"[FAIL] Database stats missing keys: {missing}")
-            return False
-
-        with train_repo.get_connection() as conn:
-            row = conn.execute(
-                "SELECT match_id, feature_json FROM training_dataset WHERE match_id = ?",
-                ("TEST_MATCH",),
-            ).fetchone()
-
-        if row:
             print("[OK] Database training record save/fetch working")
-        else:
-            print("[FAIL] Test record not found")
-            return False
-
-        return True
+            return True
     except Exception as e:
         import traceback
         traceback.print_exc()
         print(f"[FAIL] Database failed: {e}")
         return False
+
 
 
 def test_tensorflow():
