@@ -90,9 +90,9 @@ class TestPlayerService:
 
 class TestSystemService:
     @pytest.fixture
-    def mock_repo(self):
+    def mock_repo(self, tmp_path):
         repo = MagicMock()
-        repo.db_path = "test.db"
+        repo.db_path = str(tmp_path / "test.db")
         return repo
 
     @pytest.fixture

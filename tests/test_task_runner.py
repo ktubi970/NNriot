@@ -23,8 +23,11 @@ def test_task_runner_executes_and_tracks_job():
     assert status["status"] in ("queued", "running", "completed")
 
     # Wait for completion
-    time.sleep(0.1)
-    status = runner.get_status(job_id)
+    for _ in range(50):
+        status = runner.get_status(job_id)
+        if status["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.05)
     assert status["status"] == "completed"
     assert status["result"] == 30
     assert status["error"] is None
@@ -38,8 +41,11 @@ def test_task_runner_records_failure():
         raise ValueError("Boom")
 
     job_id = runner.submit_task("fail_job", failing_job)
-    time.sleep(0.1)
-    status = runner.get_status(job_id)
+    for _ in range(50):
+        status = runner.get_status(job_id)
+        if status["status"] == "failed":
+            break
+        time.sleep(0.05)
     assert status["status"] == "failed"
     assert "Boom" in status["error"]
     runner.shutdown()
@@ -129,8 +135,11 @@ def test_task_runner_handles_non_serializable_result():
             return "<UnserializableObjectInstance>"
 
     job_id = runner.submit_task("custom", lambda: UnserializableObject())
-    time.sleep(0.1)
-    status = runner.get_status(job_id)
+    for _ in range(50):
+        status = runner.get_status(job_id)
+        if status["status"] in ("completed", "failed"):
+            break
+        time.sleep(0.05)
     assert status["status"] == "completed"
     assert status["result"] == "<UnserializableObjectInstance>"
     runner.shutdown(wait=True)
