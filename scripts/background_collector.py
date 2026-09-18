@@ -85,8 +85,8 @@ def run_collector():
 
             database.save_player(puuid, name, tag)
 
-            # Fetch last 20 matches
-            match_ids = api.get_match_ids(puuid, count=20)
+            # Fetch last 20 ranked solo matches
+            match_ids = api.get_match_ids(puuid, count=20, queue=420, type="ranked")
 
             # Filter matches we already have
             new_mids = [mid for mid in match_ids if not database.match_exists(mid)]
@@ -104,10 +104,10 @@ def run_collector():
             training_records_batch = []
 
             for mid, details in details_map.items():
-                # Pre-filter excluded modes so we don't seed the crawl queue
+                # Pre-filter non-CLASSIC modes so we don't seed the crawl queue
                 # with their participants (no useful training pool growth).
                 info = details.get("info", {})
-                if (info.get("gameMode") or "") in EXCLUDED_GAME_MODES:
+                if (info.get("gameMode") or "").upper() != "CLASSIC":
                     continue
 
                 for p in info.get("participants", []):

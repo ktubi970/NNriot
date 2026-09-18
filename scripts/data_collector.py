@@ -87,8 +87,8 @@ def _build_training_record(
         # Note: Riot Match-V5 has 'win' boolean in each participant and also in 'teams'
         info = details.get("info", details)
 
-        game_mode = info.get("gameMode") or ""
-        if game_mode in EXCLUDED_GAME_MODES:
+        game_mode = (info.get("gameMode") or "").upper()
+        if game_mode != "CLASSIC":
             return None
 
         # Use centralized feature extraction
@@ -147,7 +147,7 @@ def collect_training_data(seed_players, matches_per_player=5, days_back=None):
 
         _player_repo.save_player(puuid, name, tag)
         match_ids = api.get_match_ids(
-            puuid, count=matches_per_player, start_time=start_time
+            puuid, count=matches_per_player, start_time=start_time, queue=420, type="ranked"
         )
 
         # Filter and fetch details in batch
