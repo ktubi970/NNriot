@@ -8,6 +8,7 @@ without having to reach into individual route module globals.
 import os
 import re
 import glob
+import uuid
 import random
 import time
 import base64
@@ -16,12 +17,18 @@ import logging
 
 from flask import Blueprint, request, jsonify, current_app
 
-import database
-import live_game
-import data_collector
-import riot_api
-import json_utils
-from feature_labels import VECTOR_DIM
+from core import database
+from scripts import live_game
+from scripts import data_collector
+from core import riot_api
+from core import json_utils
+from core.task_runner import global_task_runner
+from ..services.player_service import PlayerService
+from ..services.system_service import SystemService
+
+_player_service = PlayerService()
+_system_service = SystemService()
+from core.feature_labels import VECTOR_DIM
 
 from .. import core
 
@@ -34,17 +41,13 @@ logger = logging.getLogger(__name__)
 @api_bp.route("/api/status", methods=["GET"])
 def api_status():
     """API endpoint to check system status."""
-    import tensorflow as tf
-
-    tf_version = "N/A"
-    try:
-        tf_version = tf.__version__
-    except Exception:
-        pass
+    import sys
+    tf_mod = sys.modules.get("tensorflow")
+    tf_version = getattr(tf_mod, "__version__", "N/A") if tf_mod else "N/A"
 
     return jsonify(
         {
-            "model_loaded": core.tf_available and core.global_trainer is not None,
+            "model_loaded": bool(core.tf_available and core.global_trainer is not None),
             "tensorflow_version": tf_version,
             "input_dimension": VECTOR_DIM if core.tf_available else "N/A",
             "output_classes": 2,
@@ -59,99 +62,34 @@ def api_status():
 
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
-    """Returns database health metrics for the stats strip."""
     try:
-        stats = database.get_db_stats()
-        return jsonify(
-            {
-                "players": stats.get("players", 0),
-                "matches": stats.get("matches", 0),
-                "training_records": stats.get("training_records", 0),
-                "trained_records": stats.get("trained_records", 0),
-                "untrained_records": stats.get("untrained_records", 0),
-                "trained_ratio": stats.get("trained_ratio", 0),
-                "success": True,
-                "ok": True,
-            }
+        db_path = (
+            current_app.config.get("NNRIOT_DB_PATH")
+            or os.getenv("NNRIOT_DB_PATH")
+            or database.DB_PATH
         )
+        result = _system_service.get_full_telemetry(db_path=db_path)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
-# ── Explorer ────────────────────────────────────────────────────────────────
-
-@api_bp.route("/api/explorer/stats", methods=["GET"])
-def api_explorer_stats():
-    """API endpoint to get database statistics."""
-    try:
-        stats = database.get_db_stats()
-        # Add human readable size
-        db_path = database.DB_PATH
-        if os.path.exists(db_path):
-            size_mb = os.path.getsize(db_path) / (1024 * 1024)
-            stats["db_size_mb"] = round(size_mb, 2)
-        else:
-            stats["db_size_mb"] = 0.0
-
-        return jsonify(stats)
-    except Exception as e:
-        logger.error(f"Explorer stats error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/matches", methods=["GET"])
-def api_explorer_matches():
-    """API endpoint to get paginated match records."""
-    try:
-        page = int(request.args.get("page", 1))
-        limit = int(request.args.get("limit", 20))
-
-        # Ensure reasonable limits
-        limit = max(1, min(100, limit))
-        page = max(1, page)
-        offset = (page - 1) * limit
-
-        records = database.get_recent_training_records(limit=limit, offset=offset)
-        total_records = database.get_training_count()
-
-        return jsonify(
-            {
-                "success": True,
-                "page": page,
-                "limit": limit,
-                "total_records": total_records,
-                "total_pages": (total_records + limit - 1) // limit,
-                "records": records,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Explorer matches error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/match/<match_id>", methods=["GET"])
-def api_explorer_match_details(match_id):
-    """API endpoint to get full raw details for a specific match."""
-    try:
-        raw_match = database.get_raw_match(match_id)
-        if not raw_match:
-            return jsonify({"error": "Match not found"}), 404
-
-        return jsonify({"success": True, "match": raw_match})
-    except Exception as e:
-        logger.error(f"Explorer match details error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+@api_bp.route("/api/jobs/<job_id>", methods=["GET"])
+def api_get_job_status(job_id):
+    status = global_task_runner.get_status(job_id)
+    if not status:
+        return jsonify({"success": False, "error": "Job not found"}), 404
+    return jsonify({"success": True, "job": status}), 200
 
 
 # ── Players ─────────────────────────────────────────────────────────────────
 
 @api_bp.route("/api/players/aliases", methods=["GET"])
 def api_players_aliases():
-    """Retrieve all linked player aliases."""
     try:
-        aliases = database.get_all_aliases()
-        return jsonify(aliases)
+        result = _player_service.get_all_aliases()
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching aliases: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -159,13 +97,12 @@ def api_players_aliases():
 
 @api_bp.route("/api/players/unlink", methods=["DELETE"])
 def api_players_unlink():
-    """Unlink an alias from its canonical account."""
     try:
         alias_puuid = request.args.get("alias_puuid")
-        if not alias_puuid:
-            return jsonify({"error": "alias_puuid is required"}), 400
-        database.unlink_accounts(alias_puuid)
-        return jsonify({"success": True})
+        result = _player_service.unlink_accounts(alias_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error unlinking accounts: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -173,15 +110,11 @@ def api_players_unlink():
 
 @api_bp.route("/api/players/search", methods=["GET"])
 def api_players_search():
-    """Search for existing players in the local database by name."""
     try:
-        q = request.args.get("q", "").strip()
+        q = (request.args.get("q") or request.args.get("query") or "").strip()
         limit = request.args.get("limit", 10, type=int)
-        if len(q) < 2:
-            return jsonify([])
-
-        players = database.search_players(q, limit=limit)
-        return jsonify(players)
+        result = _player_service.search_players(q, limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Player search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -189,15 +122,10 @@ def api_players_search():
 
 @api_bp.route("/api/players/random", methods=["GET"])
 def api_players_random():
-    """Return a random sample of players from the database."""
-    limit = request.args.get("limit", 10, type=int)
-    # Sample from a pool of high-match-count players so results are actually
-    # varied but still skewed toward players the model has data on.
-    pool_size = max(limit * 20, 200)
     try:
-        pool = database.get_top_players(limit=pool_size)
-        sample = random.sample(pool, min(limit, len(pool)))
-        return jsonify(sample)
+        limit = request.args.get("limit", 10, type=int)
+        result = _player_service.get_random_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -205,12 +133,10 @@ def api_players_random():
 
 @api_bp.route("/api/players/top", methods=["GET"])
 def api_players_top():
-    """API endpoint to get top players by match count."""
-    limit = request.args.get("limit", 10, type=int)
-
     try:
-        players = database.get_top_players(limit=limit)
-        return jsonify(players)
+        limit = request.args.get("limit", 10, type=int)
+        result = _player_service.get_top_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Top players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -218,19 +144,16 @@ def api_players_top():
 
 @api_bp.route("/api/players/link", methods=["POST"])
 def api_link_players():
-    """Link a smurf/alias account to a canonical main account."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         main_puuid = data.get("canonical_puuid")
         smurf_puuid = data.get("alias_puuid")
-        if not main_puuid or not smurf_puuid:
-            return (
-                jsonify({"error": "canonical_puuid and alias_puuid are required"}),
-                400,
-            )
-
-        database.link_accounts(main_puuid, smurf_puuid)
-        return jsonify({"success": True, "message": "Accounts completely linked."})
+        result = _player_service.link_accounts(main_puuid, smurf_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Link accounts error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -254,8 +177,10 @@ def api_stream_process_frame():
             503,
         )
     try:
-        data = request.get_json()
-        if not data or "image" not in data:
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
+        if "image" not in data:
             return jsonify({"error": "No image data provided"}), 400
 
         # Decode base64 image
@@ -269,10 +194,29 @@ def api_stream_process_frame():
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir)
 
-        # Save image
-        filepath = os.path.join(screenshot_dir, "latest_capture.jpg")
+        # Save image with unique filename to prevent overwrite collisions
+        frame_id = uuid.uuid4().hex
+        filename = f"capture_{frame_id}.jpg"
+        filepath = os.path.join(screenshot_dir, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
+
+        # Retention janitor: prune oldest screenshots if exceeding threshold
+        try:
+            entries = [
+                os.path.join(screenshot_dir, f)
+                for f in os.listdir(screenshot_dir)
+                if f.startswith("capture_") and f.endswith(".jpg")
+            ]
+            if len(entries) > 50:
+                entries.sort(key=lambda p: os.path.getmtime(p))
+                for old_file in entries[:-50]:
+                    try:
+                        os.remove(old_file)
+                    except OSError:
+                        pass
+        except Exception:
+            pass
 
         # DYNAMIC OCR RESULTS (PICK 10 RANDOM FROM DB)
         try:
@@ -318,7 +262,7 @@ def api_stream_process_frame():
         return jsonify(
             {
                 "success": True,
-                "screenshot_url": "/static/screenshots/latest_capture.jpg",
+                "screenshot_url": f"/static/screenshots/{filename}",
                 "roster": mock_roster,
             }
         )
@@ -334,22 +278,11 @@ def api_train_manual():
     """API endpoint to trigger a single training step manually."""
     try:
         if not core.tf_available or core.global_trainer is None:
-            # Fallback for demonstration/UI testing if model isn't truly loaded
-            # in this environment
-            untrained = database.get_untrained_records(limit=10)
-            if untrained:
-                record_ids = [r["id"] for r in untrained]
-                database.mark_as_trained(record_ids)
-                return jsonify(
-                    {
-                        "success": True,
-                        "records_processed": len(untrained),
-                        "message": f"Simulation: Processed {len(untrained)} new records.",
-                    }
-                )
-            return jsonify({"error": "No untrained data available for simulation"}), 404
+            return jsonify({
+                "success": False,
+                "error": "TensorFlow model is not loaded or available. Real training step cannot run.",
+            }), 503
 
-        # Run a real training step
         records_processed = core.global_trainer.run_training_step()
 
         return jsonify(
@@ -361,7 +294,7 @@ def api_train_manual():
         )
     except Exception as e:
         logger.error(f"Manual train error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @api_bp.route("/api/train", methods=["POST"])
@@ -379,6 +312,19 @@ def api_train():
         if not matches:
             return jsonify({"error": "No matches provided for training"}), 400
 
+        # Enforce veracity: fail fast if TF is unavailable unless ?simulate=true is requested
+        if not core.tf_available or core.global_trainer is None:
+            if request.args.get("simulate", "false").lower() != "true":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Model trainer is unavailable. TensorFlow or model weights could not be loaded. Pass ?simulate=true for mock testing.",
+                        }
+                    ),
+                    503,
+                )
+
         # Setup background thread training process
         start_time = time.time()
 
@@ -391,15 +337,14 @@ def api_train():
                     logger.info("Background training completed.")
                 except Exception as e:
                     logger.error(f"Background training failed: {e}", exc_info=True)
+                    raise
             else:
                 # Simulate training process if model isn't active
                 training_time = min(3.0, len(matches) * 0.05)
                 time.sleep(training_time)
                 logger.info("Mock background training completed.")
 
-        thread = threading.Thread(target=background_train)
-        thread.daemon = True
-        thread.start()
+        job_id = global_task_runner.submit_task("training", background_train)
 
         return jsonify(
             {
@@ -407,6 +352,7 @@ def api_train():
                 "message": "Training job started in the background",
                 "training_samples_queued": len(matches),
                 "queued_time": round(time.time() - start_time, 2),
+                "job_id": job_id,
             }
         )
 
@@ -450,7 +396,9 @@ def api_predict():
 def api_predict_custom():
     """API endpoint for custom 5v5 match prediction based on selected players and champions."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         blue_team_data = data.get("blue_team", [])  # List of {puuid}
         red_team_data = data.get("red_team", [])  # List of {puuid}
 
@@ -498,8 +446,9 @@ def api_predict_custom():
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
                             logger.error("Warm-up refresh failed", exc_info=True)
+                            raise
 
-                    threading.Thread(target=_refresh_stale, daemon=True).start()
+                    global_task_runner.submit_task("warmup_refresh", _refresh_stale)
         except Exception:
             logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
 
@@ -510,41 +459,34 @@ def api_predict_custom():
         if not core.tf_available or core.global_trainer is None:
             return jsonify({"error": "TensorFlow model is not loaded"}), 503
 
-        # Construct a synthetic match structure for feature extraction
+        trainer_model = getattr(core.global_trainer, "model", None)
+        if (trainer_model is not None and getattr(trainer_model, "is_calibrated", True) is False) or getattr(core.global_trainer, "is_calibrated", True) is False:
+            return jsonify({
+                "error": "Model checkpoint is uncalibrated (untrained weights). Please train the model via 'cli.py train' before requesting predictions.",
+                "uncalibrated": True,
+            }), 503
+
+        # Construct a synthetic match structure for pre-match feature extraction
         participants = []
         for i, p in enumerate(blue_team_data):
             stats = blue_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 100,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 100,
+                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
+                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+            })
 
         for i, p in enumerate(red_team_data):
             stats = red_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 200,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 200,
+                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
+                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+            })
 
         match_data = {
             "info": {
@@ -553,8 +495,8 @@ def api_predict_custom():
             }
         }
 
-        # Use centralized feature extraction
-        feature_dict = json_utils.extract_match_features(match_data)
+        # Use centralized pre-match feature extraction
+        feature_dict = json_utils.extract_pre_match_features(match_data)
 
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
         dense_vec = sparse_vec.toarray()
@@ -577,6 +519,8 @@ def api_predict_custom():
             "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
             "blue_win_probability": blue_prob_nn,
             "red_win_probability":  red_prob_nn,
+            "blue_win_prob": blue_prob_nn,
+            "red_win_prob": red_prob_nn,
             "explanation": "Multi-head NN analysis complete.",
             "llm_active": False,
             # Include the full multi-output dict for clients that want it
@@ -655,7 +599,7 @@ def api_spectator_active():
 
         # Enhance participants with local database info (puuid and stats)
         # We need to resolve each participant
-        from data_collector import resolve_region
+        from scripts.data_collector import resolve_region
 
         region = resolve_region(tag)
         participants = game_data.get("participants", [])
@@ -685,8 +629,9 @@ def api_spectator_active():
                     data_collector.collect_training_data(seeds, matches_per_player=10)
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
+                    raise
 
-            threading.Thread(target=auto_collect_task, daemon=True).start()
+            global_task_runner.submit_task("auto_collect", auto_collect_task)
 
         return jsonify({"success": True, "game": game_data})
 
@@ -709,43 +654,17 @@ def api_sample_match():
 def api_monitor_metrics():
     """API endpoint to get model performance and training metrics."""
     try:
-        metrics = {
-            "database_stats": {},
-            "training_records": 0,
-            "players": 0,
-            "matches": 0,
-            "model_checkpoint": None,
-            "training_config": {},
-        }
+        db_path = (
+            current_app.config.get("NNRIOT_DB_PATH")
+            or os.getenv("NNRIOT_DB_PATH")
+            or database.DB_PATH
+        )
+        telemetry = _system_service.get_full_telemetry(db_path=db_path)
+        regions = _system_service.get_region_distribution(db_path=db_path)
 
-        # Get database statistics using context manager
-        with database.get_connection() as conn:
-            # Count training records
-            count_records = conn.execute(
-                "SELECT COUNT(*) FROM training_dataset"
-            ).fetchone()[0]
-            metrics["training_records"] = count_records
-
-            # Count unique players
-            count_players = conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]
-            metrics["players"] = count_players
-
-            # Count matches
-            count_matches = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-            metrics["matches"] = count_matches
-
-            # Get region distribution
-            regions = conn.execute(
-                """
-                SELECT
-                    SUBSTR(match_id, 1, INSTR(match_id, '_') - 1) as region,
-                    COUNT(*) as count
-                FROM matches
-                GROUP BY region
-                ORDER BY count DESC
-            """
-            ).fetchall()
-            metrics["regions"] = {r[0]: r[1] for r in regions}
+        metrics = dict(telemetry)
+        metrics["database_stats"] = dict(telemetry)
+        metrics["regions"] = regions
 
         # Check for model checkpoints
         checkpoint_files = glob.glob(

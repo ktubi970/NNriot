@@ -11,7 +11,9 @@ REM --- Pick a Python interpreter that has the project deps ----------------
 REM Prefer Anaconda (where flask + tensorflow are installed). Fall back to
 REM system python if Anaconda isn't found.
 set PYTHON=
-if exist "%USERPROFILE%\anaconda3\python.exe" set PYTHON=%USERPROFILE%\anaconda3\python.exe
+if exist "%~dp0.venv312\Scripts\python.exe" set PYTHON=%~dp0.venv312\Scripts\python.exe
+if not defined PYTHON if exist "%~dp0.venv\Scripts\python.exe" set PYTHON=%~dp0.venv\Scripts\python.exe
+if not defined PYTHON if exist "%USERPROFILE%\anaconda3\python.exe" set PYTHON=%USERPROFILE%\anaconda3\python.exe
 if not defined PYTHON if exist "%USERPROFILE%\miniconda3\python.exe" set PYTHON=%USERPROFILE%\miniconda3\python.exe
 if not defined PYTHON set PYTHON=python
 
@@ -27,24 +29,29 @@ REM   set CORS_ORIGINS=http://localhost:5000,http://127.0.0.1:5000
 REM   set HOST=127.0.0.1
 REM   set PORT=5000
 
-REM --- Menu ---------------------------------------------------------------
 if "%~1"=="" goto :menu
 if /i "%~1"=="web" goto :run_web
 if /i "%~1"=="train" goto :run_train
 if /i "%~1"=="backfill" goto :run_backfill
+if /i "%~1"=="build" goto :run_build
+if /i "%~1"=="dev" goto :run_dev
+if /i "%~1"=="test" goto :run_test
 echo Unknown action: %~1
 goto :usage
 
 :menu
 echo.
 echo ============================================================
-echo   NNriot Launcher
+echo   NNriot Cyber Launcher v2.0
 echo ============================================================
 echo   Python: %PYTHON%
 echo.
-echo   [1] Web app       (run.py - http://localhost:5000)
-echo   [2] Trainer       (continuous_trainer.py - loops every 10 min)
-echo   [3] Backfill labels (backfill_labels.py - one-shot)
+echo   [1] Web App (Production Cockpit - http://localhost:5000)
+echo   [2] Continuous Trainer (scripts/continuous_trainer.py)
+echo   [3] Backfill Labels (scripts/backfill_labels.py)
+echo   [4] Build React Frontend (npm run build)
+echo   [5] Frontend Hot-Reload Dev Server (http://localhost:5173)
+echo   [6] Run Full E2E Playwright Tests (npx playwright test)
 echo   [Q] Quit
 echo ============================================================
 set /p CHOICE="Choose an action [1]: "
@@ -52,6 +59,9 @@ if "%CHOICE%"=="" set CHOICE=1
 if /i "%CHOICE%"=="1" goto :run_web
 if /i "%CHOICE%"=="2" goto :run_train
 if /i "%CHOICE%"=="3" goto :run_backfill
+if /i "%CHOICE%"=="4" goto :run_build
+if /i "%CHOICE%"=="5" goto :run_dev
+if /i "%CHOICE%"=="6" goto :run_test
 if /i "%CHOICE%"=="q" goto :end
 echo Invalid choice.
 goto :menu
@@ -59,24 +69,42 @@ goto :menu
 :run_web
 echo.
 echo Starting Flask web app...
-"%PYTHON%" run.py
+"%PYTHON%" cli.py web
 goto :after
 
 :run_train
 echo.
 echo Starting continuous trainer (Ctrl-C to stop)...
-"%PYTHON%" continuous_trainer.py
+"%PYTHON%" cli.py train
 goto :after
 
 :run_backfill
 echo.
 echo Running backfill_labels.py...
-"%PYTHON%" backfill_labels.py
+"%PYTHON%" cli.py backfill
+goto :after
+
+:run_build
+echo.
+echo Building Cyber React Frontend...
+call npm.cmd run build
+goto :after
+
+:run_dev
+echo.
+echo Starting Vite Dev Server on http://localhost:5173...
+call npm.cmd run dev
+goto :after
+
+:run_test
+echo.
+echo Running Full E2E Playwright Test Suite...
+call npx.cmd playwright test e2e/cyber_cockpit.spec.ts --project=chromium
 goto :after
 
 :usage
 echo.
-echo Usage: start.bat [web^|train^|backfill]
+echo Usage: start.bat [web^|train^|backfill^|build^|dev^|test]
 echo   No arg = interactive menu
 echo.
 exit /b 1

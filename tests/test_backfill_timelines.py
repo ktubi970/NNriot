@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from unittest.mock import patch, MagicMock
 import pytest
 
-import database
-import backfill_timelines as bt
+from core import database
+from scripts import backfill_timelines as bt
 
 
 @pytest.fixture(autouse=True)

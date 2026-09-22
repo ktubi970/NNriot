@@ -85,9 +85,9 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     # Use a small CHECKPOINT_PATH in tmp so we don't touch the real model file
     checkpoint_path = str(tmp_path / "model_v2_test.keras")
 
-    import database
-    import feature_labels
-    from data_collector import _build_training_record
+    from core import database
+    from core import feature_labels
+    from scripts.data_collector import _build_training_record
 
     # 1. Init fresh DB at the current schema
     database.init_db(db_path)
@@ -123,7 +123,7 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     assert row is not None, "At least one training record should have labels_json"
 
     # 4. Run backfill (should be no-op since labels_json is already populated)
-    from backfill_labels import backfill_labels
+    from scripts.backfill_labels import backfill_labels
     stats = backfill_labels(db_path)
     assert stats["total_seen"] == 0, f"No records should need backfill: {stats}"
 
@@ -142,7 +142,7 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     assert stats["updated"] == 1, f"Backfill should update 1 record: {stats}"
 
     # 6. Build and run trainer for one step using mocked checkpoint
-    import continuous_trainer
+    from scripts import continuous_trainer
     # Force the env-var-derived module globals in case the module was imported
     # earlier by another test (env vars are read at import time).
     monkeypatch.setattr(continuous_trainer, "CHECKPOINT_PATH", checkpoint_path)
@@ -160,17 +160,17 @@ def test_p5_end_to_end(tmp_path, monkeypatch):
     monkeypatch.setattr(
         database,
         "get_untrained_records",
-        lambda limit=500: get_untrained_records(limit=limit, db_path=db_path),
+        lambda limit=500, **kw: get_untrained_records(limit=limit, db_path=db_path),
     )
     monkeypatch.setattr(
         database,
         "get_random_trained_records",
-        lambda limit=500: get_random_trained_records(limit=limit, db_path=db_path),
+        lambda limit=500, **kw: get_random_trained_records(limit=limit, db_path=db_path),
     )
     monkeypatch.setattr(
         database,
         "mark_as_trained",
-        lambda record_ids: mark_as_trained(record_ids, db_path=db_path),
+        lambda record_ids, **kw: mark_as_trained(record_ids, db_path=db_path),
     )
 
     trainer = continuous_trainer.ContinuousTrainer()

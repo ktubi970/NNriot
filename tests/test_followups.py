@@ -4,8 +4,8 @@ import sys
 # Ensure project root is on sys.path when running this file directly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import data_collector
-import database
+from scripts import data_collector
+from core import database
 
 
 def _match(team_a_win, team_b_win):

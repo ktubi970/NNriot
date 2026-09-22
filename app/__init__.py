@@ -9,7 +9,7 @@ import logging
 from flask import Flask
 from flask_cors import CORS
 
-import database
+from core import database
 
 
 def create_app():
@@ -36,8 +36,9 @@ def create_app():
     app.config["NNRIOT_DB_PATH"] = os.getenv(
         "NNRIOT_DB_PATH", database.DB_PATH
     )
-    app.config["ANALYTICS_DB_PATH"] = os.getenv(
-        "NNRIOT_ANALYTICS_DB_PATH", "analytics.db"
+    app.config["ANALYTICS_DB_PATH"] = (
+        os.getenv("NNRIOT_ANALYTICS_DB_PATH")
+        or os.getenv("ANALYTICS_DB_PATH", "analytics.db")
     )
 
     # CORS allowlist — match the previous final_web_app.py defaults.
@@ -50,10 +51,9 @@ def create_app():
     ]
     CORS(app, origins=allowed_origins)
 
-    # Import core at app creation to ensure the trainer is loaded eagerly
-    # (matches previous final_web_app.py behavior: trainer ready by the
-    # time the first request comes in).
-    from . import core  # noqa: F401
+    if not app.config.get("TESTING"):
+        from . import core
+        core.init_trainer_async()
 
     # Register blueprints
     from .routes.views import views_bp

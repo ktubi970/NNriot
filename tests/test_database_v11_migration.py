@@ -3,7 +3,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import database
+from core import database
 
 
 def test_v11_migration_creates_match_timelines_table(tmp_path):
@@ -56,5 +56,6 @@ def test_save_match_timelines_batch(tmp_path):
         assert t["info"]["frames"][0]["timestamp"] == i * 1000
 
 
-def test_schema_version_now_11():
-    assert database.SCHEMA_VERSION == 11
+def test_schema_version_is_at_least_12():
+    assert database.SCHEMA_VERSION >= 12
+    assert database.SCHEMA_VERSION == 12

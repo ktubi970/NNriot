@@ -11,23 +11,29 @@ A pure Python machine learning system for processing JSON data and predicting ou
 
 NNriot is a pure Python system designed to handle arbitrary JSON structures and learn from them to make predictions on new, potentially different JSON schemas. The system uses feature hashing for efficient vectorization and TensorFlow for neural network operations.
 
+## Honesty & Veracity Guarantees
+
+- **Strict Pre-Match Boundary:** Pre-match predictions rely *solely* on champion drafts, role assignments, and historical career priors. Post-game data leakage (e.g., gold earned, match KDA) has been strictly eliminated.
+- **Realistic Accuracy:** Our realistic pre-match prediction accuracy is ~52-56%. This is a true baseline without cheating, distinguishing it from retrospective match analysis.
+- **Calibration & Coin Flips:** The model includes a calibration guard (uncalibrated models yield a 503 instead of random predictions). Untrainable 50/50 markets (like `kills_odd`) are explicitly disclaimed as random coin flips.
+
 ## Architecture
 
-### Core Components
+### Core Components & Design Patterns
 
-- **Standalone Layer**: High-performance match prediction without external model dependencies (`final_web_app.py`)
-- **Neural Engine**: TensorFlow 1.x deep learning for pattern recognition (`main.py`, `continuous_trainer.py`)
-- **Match Explorer**: Interactive dashboard for match history and detailed player statistics
-- **Custom Predictor**: 5v5 lineup simulator with searchable players and champions
-- **Continuous Training**: Automated pipeline for periodic model updates on new data
-- **JSON Vectorization**: Feature hashing for converting arbitrary JSON to vectors (`json_utils.py`)
-- **Riot API Integration**: Real-time data collection (`riot_api.py`, `data_collector.py`)
+- **Unified CLI (Command Pattern)**: Single entrypoint (`cli.py`) for web server, training loop, and data backfills.
+- **Repository Pattern (`core/repository.py`)**: Clean abstraction decoupling database operations (SQLite/PostgreSQL) from business logic.
+- **Factory Pattern (`core/model_factory.py`)**: Centralized model architecture creation and checkpoint lifecycle management.
+- **Service Layer (`app/services/`)**: Encapsulates player search, alias resolution, and system health services.
+- **Neural Engine**: Multi-task learning deep neural network predicting 22 concurrent game markets (`core/generate_graph.py`, `scripts/continuous_trainer.py`).
+- **Modern Cyber Frontend**: TypeScript + Vite + Tailwind CSS Cockpit with Playwright E2E testing suite (`frontend/`, `e2e/`).
+- **Data & ETL Pipelines**: Real-time Riot API collector, timeline backfilling, and Liquipedia import (`scripts/`, `core/riot_api.py`).
 
 ### Data Processing Pipeline
 
-1. **JSON Vectorization** (`json_utils.py`): Converts arbitrary JSON structures into fixed-size vectors using feature hashing
-2. **Neural Network** (`main.py`): TensorFlow 1.x compatibility implementation with residual blocks
-3. **Standalone Interface** (`final_web_app.py`): Optimized web application for real-time predictions
+1. **JSON Vectorization** (`core/json_utils.py`): Converts arbitrary JSON structures into fixed-size vectors using feature hashing.
+2. **Multi-Output Neural Network** (`core/generate_graph.py`): Deep multi-task learning architecture with shared representations and task-specific heads.
+3. **Web Application & Cockpit** (`app/`, `frontend/`): High-performance Flask REST API and responsive React SPA interface.
 
 ## Features
 
@@ -181,20 +187,31 @@ matchup = get_matchup_data(team_a, team_b)
 
 ```
 NNriot/
-├── final_web_app.py        # Main web interface with Explorer and Predictor
-├── continuous_trainer.py   # Automated 10min training loop
-├── calculate_stats.py      # Historical player performance calculator
-├── main.py                 # Neural engine demonstration
-├── json_utils.py           # JSON vectorization utilities
-├── generate_graph.py       # Neural network architecture definition
-├── data_collector.py       # Riot API data collection
-├── database.py            # SQLite database management with schema migrations
-├── riot_api.py            # Riot Games API integration
-├── templates/             # HTML templates (Explorer, Predictor)
-├── requirements.txt       # Core dependencies
-├── web_requirements.txt   # Web interface dependencies
-├── PROJECT_SUMMARY.md     # Detailed project documentation
-└── .env                   # Environment variables
+├── cli.py                  # Unified CLI (Command pattern: web, train, backfill)
+├── core/                   # Domain logic & Design Patterns
+│   ├── config.py           # Configuration management
+│   ├── database.py         # DB connection & low-level migrations
+│   ├── feature_labels.py   # Label registries & multi-task targets
+│   ├── generate_graph.py   # Keras multi-output neural network
+│   ├── json_utils.py       # JSON vectorization & hashing
+│   ├── model_factory.py    # Model Factory pattern
+│   ├── repository.py       # Repository pattern (DAO layer)
+│   └── riot_api.py         # Riot Games API client
+├── app/                    # Web Application layer
+│   ├── core.py             # Global state & async model runner
+│   ├── services/           # Service layer (Player & System services)
+│   └── routes/             # Modular Flask blueprints (API, views, lolpros)
+├── scripts/                # ETL & Maintenance Scripts
+│   ├── continuous_trainer.py # Continuous learning loop
+│   ├── data_collector.py     # Riot API data pipeline
+│   ├── backfill_labels.py    # Label backfilling
+│   └── import_liquipedia.py  # Pro player scraping & import
+├── frontend/               # Modern TypeScript + Vite + Tailwind UI
+├── e2e/                    # Playwright End-to-End test suite
+├── templates/              # Server-rendered fallback templates
+├── tests/                  # Complete Pytest test suite (224 tests)
+├── start.bat               # Interactive Cyber Launcher
+└── requirements.txt        # Python dependencies
 ```
 
 ## Neural Network Architecture
@@ -397,7 +414,7 @@ A comprehensive Flask-based web application is available for League of Legends m
 
 2. **Run the Standalone Web Server**
    ```bash
-   python final_web_app.py
+   python run.py
    ```
 
 3. **Access the Interface**
