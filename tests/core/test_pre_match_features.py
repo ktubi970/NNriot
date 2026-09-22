@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_extract_pre_match_features_excludes_post_game_leakage():
     from core.json_utils import extract_pre_match_features, extract_match_features

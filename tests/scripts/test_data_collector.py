@@ -1,3 +1,7 @@
+import pytest
+
+
+@pytest.mark.integration
 def test_build_training_record_rejects_all_non_classic():
     # Valid CLASSIC payload stub
     from scripts.data_collector import _build_training_record
@@ -67,6 +71,7 @@ def _collector_match(team_a_win, team_b_win):
     }
 
 
+@pytest.mark.integration
 def test_build_training_record_team_a_wins():
     from scripts import data_collector
 
@@ -76,6 +81,7 @@ def test_build_training_record_team_a_wins():
     assert rec[2] == 0  # team A label
 
 
+@pytest.mark.integration
 def test_build_training_record_team_b_wins():
     from scripts import data_collector
 
@@ -84,6 +90,7 @@ def test_build_training_record_team_b_wins():
     assert rec[2] == 1
 
 
+@pytest.mark.integration
 def test_build_training_record_skips_no_winner():
     from scripts import data_collector
 
@@ -91,6 +98,7 @@ def test_build_training_record_skips_no_winner():
     assert rec is None
 
 
+@pytest.mark.unit
 def test_fetch_timelines_default_false():
     """NNRIOT_FETCH_TIMELINES env var resolves to a bool at module-load time."""
     from scripts import data_collector

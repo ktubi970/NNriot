@@ -19,6 +19,7 @@ def graph_module():
     return generate_graph
 
 
+@pytest.mark.unit
 def test_constants_cover_label_keys(graph_module):
     """LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly ALL_LABEL_KEYS."""
     assert set(graph_module.LOSS_PER_HEAD) == set(ALL_LABEL_KEYS)
@@ -26,6 +27,7 @@ def test_constants_cover_label_keys(graph_module):
     assert set(graph_module.METRICS_PER_HEAD) == set(ALL_LABEL_KEYS)
 
 
+@pytest.mark.unit
 def test_label_keys_includes_timeline_keys():
     """ALL_LABEL_KEYS = LABEL_KEYS (18) + TIMELINE_LABEL_KEYS (4) = 22."""
     assert len(ALL_LABEL_KEYS) == 22
@@ -33,6 +35,7 @@ def test_label_keys_includes_timeline_keys():
     assert ALL_LABEL_KEYS[18:] == TIMELINE_LABEL_KEYS
 
 
+@pytest.mark.integration
 def test_model_builds_with_small_input_dim(graph_module):
     """Build the model with a small input dim to make the test fast and assert structure."""
     model = graph_module.build_multi_output_model(input_dim=100)
@@ -41,6 +44,7 @@ def test_model_builds_with_small_input_dim(graph_module):
     assert set(model.output_names) == set(ALL_LABEL_KEYS)
 
 
+@pytest.mark.integration
 def test_model_output_shapes(graph_module):
     """Each head produces the right shape for a single sample."""
     import numpy as np
@@ -67,6 +71,7 @@ def test_model_output_shapes(graph_module):
         assert preds[name].shape == (1, 1), f"{name} shape mismatch"
 
 
+@pytest.mark.integration
 def test_model_trains_one_step(graph_module):
     """A single train_on_batch call works end-to-end with dict targets."""
     import numpy as np
@@ -106,6 +111,7 @@ def test_model_trains_one_step(graph_module):
     assert result is not None
 
 
+@pytest.mark.integration
 def test_dropout_layers_present(tensorflow_module, graph_module):
     """Trunk has 4 Dropout layers."""
     model = graph_module.build_multi_output_model(input_dim=100)
@@ -113,6 +119,7 @@ def test_dropout_layers_present(tensorflow_module, graph_module):
     assert dropout_count == 4, f"Expected 4 Dropout layers, got {dropout_count}"
 
 
+@pytest.mark.integration
 def test_per_head_hidden_layers_present(tensorflow_module, graph_module):
     """Each of the 22 heads has a *_hidden Dense(64) layer before the output."""
     model = graph_module.build_multi_output_model(input_dim=100)

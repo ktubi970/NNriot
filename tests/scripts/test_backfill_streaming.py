@@ -1,5 +1,10 @@
 """Test that backfill_labels processes rows in chunks without loading them all."""
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 from core import database
 from scripts import backfill_labels as bl
 

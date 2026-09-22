@@ -1,6 +1,9 @@
 """Test that EXCLUDED_GAME_MODES filter rejects malformed-mode matches."""
 
 
+import pytest
+
+
 def _classic_match(team_a_win=True):
     return {
         "info": {
@@ -18,6 +21,7 @@ def _classic_match(team_a_win=True):
     }
 
 
+@pytest.mark.integration
 def test_classic_match_accepted():
     """CLASSIC mode produces a valid training record."""
     from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES
@@ -27,6 +31,7 @@ def test_classic_match_accepted():
     assert rec[0] == "M1"
 
 
+@pytest.mark.integration
 def test_cherry_mode_rejected():
     """CHERRY mode (Arena) is rejected at _build_training_record."""
     from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES
@@ -37,6 +42,7 @@ def test_cherry_mode_rejected():
     assert rec is None
 
 
+@pytest.mark.integration
 def test_strawberry_mode_rejected():
     """STRAWBERRY mode (Swarm) is rejected."""
     from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES
@@ -47,6 +53,7 @@ def test_strawberry_mode_rejected():
     assert rec is None
 
 
+@pytest.mark.unit
 def test_constant_includes_expected_modes():
     """EXCLUDED_GAME_MODES contains CHERRY and STRAWBERRY at minimum."""
     from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES

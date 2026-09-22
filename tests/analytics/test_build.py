@@ -4,6 +4,8 @@ import sqlite3
 import analytics.build as build_module
 import pytest
 
+pytestmark = pytest.mark.integration
+
 from analytics.build import build_analytics
 from analytics.cli import main
 from analytics.db import EvidenceRepository, all_meta, connect_analytics

@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 def test_moderate_requires_all_statistical_and_practical_gates():
     from analytics.evidence import classify_recommendation, stable_hash
 

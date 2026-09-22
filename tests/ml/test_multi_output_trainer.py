@@ -39,6 +39,7 @@ def _full_labels(**overrides) -> dict:
     return base
 
 
+@pytest.mark.unit
 def test_build_targets_shapes_and_keys(trainer_module):
     """All 22 head names present with correct shapes."""
     records = [_make_record(_full_labels()) for _ in range(3)]
@@ -59,6 +60,7 @@ def test_build_targets_shapes_and_keys(trainer_module):
         assert t[name].shape == (3, 1)
 
 
+@pytest.mark.unit
 def test_build_targets_defaults_missing_timeline_to_class_2(trainer_module):
     """Records without timeline keys in labels_json get class 2 ('neither')."""
     import numpy as np
@@ -73,6 +75,7 @@ def test_build_targets_defaults_missing_timeline_to_class_2(trainer_module):
         np.testing.assert_array_equal(t[name][0], [0, 0, 1])
 
 
+@pytest.mark.unit
 def test_build_targets_one_hot_encoding(trainer_module):
     """Categorical heads are one-hot encoded correctly."""
     import numpy as np
@@ -85,6 +88,7 @@ def test_build_targets_one_hot_encoding(trainer_module):
     np.testing.assert_array_equal(t["first_baron"][0], [0, 0, 1])
 
 
+@pytest.mark.unit
 def test_build_targets_regression_normalized(trainer_module):
     """Regression targets are normalized: (raw - mean) / std."""
     rec = _make_record(_full_labels(total_kills=42, team_a_kills=20, kill_handicap=-7))
@@ -103,6 +107,7 @@ def test_build_targets_regression_normalized(trainer_module):
     assert abs(t["kill_handicap"][0, 0] - expected_h) < 1e-5
 
 
+@pytest.mark.unit
 def test_sparse_microbatch_generator_with_dict_targets(trainer_module):
     """Generator yields dict batches when given dict y."""
     import numpy as np
@@ -122,6 +127,7 @@ def test_sparse_microbatch_generator_with_dict_targets(trainer_module):
         assert y_batch["total_kills"].shape[0] == x_batch.shape[0]
 
 
+@pytest.mark.integration
 def test_validate_checkpoint_input_dim_mismatch(tmp_path):
     """ModelFactory rebuilds fresh model if checkpoint has wrong input dim."""
     from core.model_factory import ModelFactory
@@ -137,6 +143,7 @@ def test_validate_checkpoint_input_dim_mismatch(tmp_path):
     assert model.input_shape[-1] == 20000
 
 
+@pytest.mark.integration
 def test_validate_checkpoint_correct_arch_passes(tmp_path):
     """ModelFactory loads correctly when input dim and heads match."""
     from core.model_factory import ModelFactory
@@ -152,6 +159,7 @@ def test_validate_checkpoint_correct_arch_passes(tmp_path):
 
 @pytest.mark.slow
 @pytest.mark.ml
+@pytest.mark.integration
 def test_continuous_trainer_initializes_all_output_heads():
     from core.feature_labels import ALL_LABEL_KEYS
     from scripts.continuous_trainer import ContinuousTrainer

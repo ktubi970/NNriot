@@ -1,6 +1,8 @@
 from unittest.mock import MagicMock, patch
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 class VirtualClock:
     def __init__(self):

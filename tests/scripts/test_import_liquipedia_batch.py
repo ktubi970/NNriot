@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = pytest.mark.unit
 from unittest.mock import patch, mock_open, call
 
 @patch("scripts.run_batch_import.data_collector.collect_batch_with_smurfs")

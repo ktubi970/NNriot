@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 def test_resolve_pro_name_success(monkeypatch):
     from scripts.import_liquipedia import resolve_pro_name
 

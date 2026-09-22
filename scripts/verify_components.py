@@ -9,6 +9,11 @@ import sys
 
 import traceback
 
+# Direct script execution puts scripts/, rather than the repository, on sys.path.
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 
 def verify_json_utils():
     """

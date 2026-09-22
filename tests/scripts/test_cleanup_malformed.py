@@ -1,5 +1,10 @@
 """Test the malformed-row cleanup script."""
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 from core import database
 from scripts import cleanup_malformed as cm
 

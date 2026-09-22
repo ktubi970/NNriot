@@ -13,12 +13,14 @@ def graph_module():
     return generate_graph
 
 
+@pytest.mark.integration
 def test_model_builds_with_production_dim(graph_module):
     m = graph_module.build_multi_output_model(input_dim=VECTOR_DIM)
     assert m.input_shape[-1] == 20000
     assert "winner" in m.output_names
 
 
+@pytest.mark.unit
 def test_to_pre_match_features_strips_leakage():
     from scripts.train_pre_match_model import to_pre_match_features
 
@@ -37,4 +39,3 @@ def test_to_pre_match_features_strips_leakage():
     assert "gold" not in cleaned["team_a"][0]
     assert cleaned["game_mode"] == "CLASSIC"
     assert cleaned["region"] == "EUW"
-

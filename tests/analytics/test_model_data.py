@@ -1,6 +1,7 @@
 import pytest
 
 
+@pytest.mark.integration
 def test_matrix_is_one_blue_minus_red_row_per_match(powered_analytics_db):
     import numpy as np
     from analytics.model_data import MODEL_FEATURES, load_model_dataset
@@ -16,6 +17,7 @@ def test_matrix_is_one_blue_minus_red_row_per_match(powered_analytics_db):
     assert all(len(puuids) == 10 for puuids in dataset.match_puuids)
 
 
+@pytest.mark.unit
 def test_swapping_sides_negates_features_and_target():
     import numpy as np
     from analytics.model_data import MODEL_FEATURES, rows_to_matrix
@@ -30,6 +32,7 @@ def test_swapping_sides_negates_features_and_target():
     assert forward.y[0] == 1 - swapped.y[0]
 
 
+@pytest.mark.unit
 def test_forbidden_feature_fails_before_fit():
     from analytics.model_data import assert_allowed_features
 
@@ -37,6 +40,7 @@ def test_forbidden_feature_fails_before_fit():
         assert_allowed_features(("gold_delta", "win"))
 
 
+@pytest.mark.unit
 def test_unknown_feature_fails_before_fit():
     from analytics.model_data import assert_allowed_features
 

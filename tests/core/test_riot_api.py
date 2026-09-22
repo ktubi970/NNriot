@@ -2,6 +2,8 @@ import os
 from unittest.mock import MagicMock, patch
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_riot_api_raises_auth_error_on_401():
     from core.riot_api import RiotAPI, RiotAuthError

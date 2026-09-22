@@ -2,6 +2,8 @@ import sqlite3
 
 import pytest
 
+pytestmark = pytest.mark.integration
+
 from analytics.db import EvidenceRepository, connect_analytics, initialize_schema
 
 

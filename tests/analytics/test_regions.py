@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 def test_patch_adjusted_region_difference_passes_all_gates():
     import numpy as np
     from analytics.regions import RegionalObservation, compare_regions

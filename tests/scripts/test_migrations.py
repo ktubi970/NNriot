@@ -1,5 +1,10 @@
 """Test the winner_kills → team_b_kill_lead migration."""
 
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 import json
 import gzip
 import base64

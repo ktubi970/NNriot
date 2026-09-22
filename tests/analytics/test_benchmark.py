@@ -4,12 +4,14 @@ from analytics.build import build_analytics
 from analytics.cli import main
 
 
+@pytest.mark.unit
 def test_percentile_is_nearest_rank():
     from analytics.benchmark import percentile, run_benchmark
 
     assert percentile([0.01, 0.02, 0.03, 0.04, 0.05], 95) == 0.05
 
 
+@pytest.mark.unit
 def test_percentile_rejects_empty_values():
     from analytics.benchmark import percentile, run_benchmark
 
@@ -17,6 +19,7 @@ def test_percentile_rejects_empty_values():
         percentile([], 95)
 
 
+@pytest.mark.integration
 def test_benchmark_reports_cache_analysis_and_chat(powered_analytics_pair):
     from analytics.benchmark import percentile, run_benchmark
 
@@ -41,6 +44,7 @@ def test_benchmark_reports_cache_analysis_and_chat(powered_analytics_pair):
     assert report["available"] is True
 
 
+@pytest.mark.integration
 def test_benchmark_reports_underpowered_mart(source_db, tmp_path):
     from analytics.benchmark import percentile, run_benchmark
 
@@ -55,6 +59,7 @@ def test_benchmark_reports_underpowered_mart(source_db, tmp_path):
     assert report["passed"] is False
 
 
+@pytest.mark.integration
 def test_benchmark_cli_prints_json(powered_analytics_pair, capsys):
     source_db, analytics_db = powered_analytics_pair
 

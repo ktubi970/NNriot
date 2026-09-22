@@ -13,6 +13,7 @@ from analytics.source import (
 )
 
 
+@pytest.mark.unit
 def test_extracts_one_match_two_teams_ten_players(classic_match):
     classic_match["info"]["participants"][0]["visionScore"] = 15.5
     result = extract_match("EUW1_1", classic_match)
@@ -28,6 +29,7 @@ def test_extracts_one_match_two_teams_ten_players(classic_match):
     )
 
 
+@pytest.mark.unit
 def test_rejects_non_classic_without_partial_rows(classic_match):
     classic_match["info"]["gameMode"] = "ARAM"
 
@@ -38,6 +40,7 @@ def test_rejects_non_classic_without_partial_rows(classic_match):
     assert raised.value.field == "info.gameMode"
 
 
+@pytest.mark.unit
 def test_rejects_duplicate_puuid(classic_match):
     classic_match["info"]["participants"][1]["puuid"] = classic_match["info"][
         "participants"
@@ -49,6 +52,7 @@ def test_rejects_duplicate_puuid(classic_match):
     assert raised.value.code == "DUPLICATE_PARTICIPANT"
 
 
+@pytest.mark.integration
 def test_source_access_is_query_only_and_decodes_matches(source_db):
     rows = list(iter_source_matches(str(source_db)))
     assert len(rows) == 1
@@ -60,6 +64,7 @@ def test_source_access_is_query_only_and_decodes_matches(source_db):
             conn.execute("DELETE FROM matches")
 
 
+@pytest.mark.integration
 def test_source_tokens_are_deterministic_and_snapshot_is_cheap(source_db):
     first = source_fingerprint(str(source_db), "extractor-v1")
     second = source_fingerprint(str(source_db), "extractor-v1")
@@ -78,6 +83,7 @@ def test_source_tokens_are_deterministic_and_snapshot_is_cheap(source_db):
     }
 
 
+@pytest.mark.unit
 def test_decoder_accepts_legacy_plain_json():
     payload = {"info": {"gameMode": "CLASSIC"}}
     assert decode_raw_json(json.dumps(payload)) == payload

@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 from analytics.config import AnalyticsConfig
 from analytics.db import connect_analytics
 from analytics.registry import METRICS

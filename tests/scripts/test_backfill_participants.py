@@ -1,4 +1,6 @@
 import pytest
+
+pytestmark = pytest.mark.integration
 from core import database
 from scripts.backfill_participants import run_backfill
 

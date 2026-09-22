@@ -1,6 +1,6 @@
 import pytest
 
-pytestmark = [pytest.mark.ml, pytest.mark.slow]
+pytestmark = [pytest.mark.ml, pytest.mark.slow, pytest.mark.integration]
 
 
 @pytest.fixture(scope="module")

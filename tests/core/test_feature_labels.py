@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 from core.feature_labels import LABEL_KEYS, extract_labels
 
 

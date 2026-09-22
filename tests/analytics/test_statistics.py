@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 def test_continuous_effect_recovers_known_paired_difference():
     import numpy as np

@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 from analytics.db import connect_analytics, set_meta
 
 

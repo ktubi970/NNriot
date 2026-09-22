@@ -1,5 +1,7 @@
 import os
 import pytest
+
+pytestmark = pytest.mark.unit
 from unittest.mock import patch
 
 def test_analytics_config_prefers_nnriot_prefix_and_falls_back():

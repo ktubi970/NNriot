@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 def test_chronological_split_is_70_15_15_without_shuffle():
     import numpy as np
     from analytics.splits import chronological_split, player_disjoint_split

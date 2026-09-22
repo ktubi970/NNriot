@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 import sqlite3
 from analytics.build import build_analytics
 from analytics.db import initialize_schema, connect_analytics

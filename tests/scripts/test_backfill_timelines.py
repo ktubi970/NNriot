@@ -19,6 +19,7 @@ def _insert_match(db, match_id, game_mode="CLASSIC"):
         )
 
 
+@pytest.mark.unit
 def test_region_inference():
     from scripts import backfill_timelines as bt
 
@@ -30,6 +31,7 @@ def test_region_inference():
     assert bt._region_from_match_id(None) is None
 
 
+@pytest.mark.integration
 def test_backfill_no_matches_returns_zero(tmp_path):
     from scripts import backfill_timelines as bt
 
@@ -41,6 +43,7 @@ def test_backfill_no_matches_returns_zero(tmp_path):
     assert stats["saved"] == 0
 
 
+@pytest.mark.integration
 def test_backfill_fetches_and_saves_timeline(tmp_path):
     from scripts import backfill_timelines as bt
 
@@ -64,6 +67,7 @@ def test_backfill_fetches_and_saves_timeline(tmp_path):
     assert database.match_timeline_exists("EUW1_222", db_path=db) is True
 
 
+@pytest.mark.integration
 def test_backfill_idempotent(tmp_path):
     from scripts import backfill_timelines as bt
 
@@ -86,6 +90,7 @@ def test_backfill_idempotent(tmp_path):
     assert stats2["processed"] == 0
 
 
+@pytest.mark.integration
 def test_backfill_handles_unknown_region(tmp_path):
     """Match with an unrecognizable region prefix gets a NULL placeholder."""
     from scripts import backfill_timelines as bt
@@ -100,6 +105,7 @@ def test_backfill_handles_unknown_region(tmp_path):
     assert database.match_timeline_exists("BADREGION_999", db_path=db) is True
 
 
+@pytest.mark.integration
 def test_backfill_handles_riot_returning_none(tmp_path):
     """When the Riot API returns no timeline for a match, a NULL placeholder is stored."""
     from scripts import backfill_timelines as bt
@@ -118,6 +124,7 @@ def test_backfill_handles_riot_returning_none(tmp_path):
     assert database.match_timeline_exists("EUW1_GONE", db_path=db) is True
 
 
+@pytest.mark.integration
 def test_backfill_respects_limit(tmp_path):
     """--limit stops after the requested count."""
     from scripts import backfill_timelines as bt

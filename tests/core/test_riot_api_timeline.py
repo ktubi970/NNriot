@@ -3,6 +3,8 @@
 from unittest.mock import patch, MagicMock
 import pytest
 
+pytestmark = pytest.mark.unit
+
 
 @pytest.fixture(autouse=True)
 def fake_env(monkeypatch):

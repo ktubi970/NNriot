@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 from analytics.nn_adapter import (
     CandidateValidationGate,
     DiscoveryCandidate,

@@ -1,9 +1,13 @@
 """Test the v10 -> v11 migration: match_timelines table."""
 
+import pytest
+
+
 from core import database
 from core.repository import MatchRepository, SystemRepository, TrainingRepository
 
 
+@pytest.mark.integration
 def test_v11_migration_creates_match_timelines_table(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
@@ -15,6 +19,7 @@ def test_v11_migration_creates_match_timelines_table(tmp_path):
     assert col_names == {"match_id", "timeline_json"}
 
 
+@pytest.mark.integration
 def test_save_and_get_match_timeline(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
@@ -35,6 +40,7 @@ def test_save_and_get_match_timeline(tmp_path):
     assert database.match_timeline_exists("M99", db_path=db) is False
 
 
+@pytest.mark.integration
 def test_save_match_timelines_batch(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
@@ -54,11 +60,13 @@ def test_save_match_timelines_batch(tmp_path):
         assert t["info"]["frames"][0]["timestamp"] == i * 1000
 
 
+@pytest.mark.unit
 def test_schema_version_is_at_least_12():
     assert database.SCHEMA_VERSION >= 12
     assert database.SCHEMA_VERSION == 12
 
 
+@pytest.mark.integration
 def test_get_untrained_records_returns_dict(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
@@ -74,6 +82,7 @@ def test_get_untrained_records_returns_dict(tmp_path):
     assert records[0]["feature_json"]["n"] == 42
 
 
+@pytest.mark.integration
 def test_repository_saves_training_record_and_reports_required_stats(tmp_path):
     db = str(tmp_path / "test.db")
     database.init_db(db)
