@@ -10,7 +10,7 @@ import sys
 import traceback
 
 
-def test_json_utils():
+def verify_json_utils():
     """
     Test JSON vectorization utilities.
 
@@ -35,7 +35,7 @@ def test_json_utils():
         return False
 
 
-def test_database():
+def verify_database():
     """
     Test database functionality using Repository Pattern in an isolated temp database.
     """
@@ -109,7 +109,7 @@ def test_database():
 
 
 
-def test_tensorflow():
+def verify_tensorflow():
     """Test TensorFlow graph generation using ModelFactory."""
     try:
         from core.model_factory import ModelFactory
@@ -124,7 +124,7 @@ def test_tensorflow():
         return False
 
 
-def test_plotly():
+def verify_plotly():
     """Test plotly import."""
     try:
         import plotly.graph_objects as go
@@ -138,7 +138,7 @@ def test_plotly():
         return False
 
 
-def test_numpy():
+def verify_numpy():
     """Test numpy functionality."""
     try:
         import numpy as np
@@ -155,7 +155,7 @@ def test_numpy():
         return False
 
 
-def test_riot_api():
+def verify_riot_api():
     """Test Riot API import (may fail without API key)."""
     try:
         from core import riot_api
@@ -169,7 +169,7 @@ def test_riot_api():
         return False
 
 
-def test_nnriot_import():
+def verify_nnriot_import():
     """Test nnriot import (will fail without Rust extension)."""
     try:
         import nnriot
@@ -189,13 +189,13 @@ def main():
     print("=" * 40)
 
     tests = [
-        ("JSON Utilities", test_json_utils),
-        ("Database", test_database),
-        ("TensorFlow", test_tensorflow),
-        ("Plotly", test_plotly),
-        ("NumPy", test_numpy),
-        ("Riot API", test_riot_api),
-        ("nnriot (Rust Extension)", test_nnriot_import),
+        ("JSON Utilities", verify_json_utils),
+        ("Database", verify_database),
+        ("TensorFlow", verify_tensorflow),
+        ("Plotly", verify_plotly),
+        ("NumPy", verify_numpy),
+        ("Riot API", verify_riot_api),
+        ("nnriot (Rust Extension)", verify_nnriot_import),
     ]
 
     results = []
@@ -242,6 +242,4 @@ def main():
 
 
 if __name__ == "__main__":
-    success = main()
-    import sys
-    sys.exit(0 if success else 1)
+    raise SystemExit(0 if main() else 1)

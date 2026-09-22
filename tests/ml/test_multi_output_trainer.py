@@ -135,3 +135,14 @@ def test_validate_checkpoint_correct_arch_passes(tmp_path):
 
     model, path = ModelFactory.get_model(version="v2", input_dim=1000, checkpoint_dir=str(tmp_path))
     assert model.input_shape[-1] == 1000
+
+
+@pytest.mark.slow
+@pytest.mark.ml
+def test_continuous_trainer_initializes_all_output_heads():
+    from core.feature_labels import ALL_LABEL_KEYS
+    from scripts.continuous_trainer import ContinuousTrainer
+
+    trainer = ContinuousTrainer()
+
+    assert set(trainer.model.output_names) == set(ALL_LABEL_KEYS)

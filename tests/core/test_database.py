@@ -1,6 +1,7 @@
 """Test the v10 -> v11 migration: match_timelines table."""
 
 from core import database
+from core.repository import MatchRepository, SystemRepository, TrainingRepository
 
 
 def test_v11_migration_creates_match_timelines_table(tmp_path):
@@ -71,3 +72,42 @@ def test_get_untrained_records_returns_dict(tmp_path):
     assert isinstance(records[0]["feature_json"], dict)
     assert records[0]["feature_json"]["foo"] == "bar"
     assert records[0]["feature_json"]["n"] == 42
+
+
+def test_repository_saves_training_record_and_reports_required_stats(tmp_path):
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+
+    match_repo = MatchRepository(db)
+    training_repo = TrainingRepository(db)
+    system_repo = SystemRepository(db)
+
+    with match_repo.get_connection() as conn:
+        conn.execute(
+            "INSERT INTO matches (match_id, game_mode) VALUES (?, ?)",
+            ("TEST_MATCH", "CLASSIC"),
+        )
+
+    training_repo.save_training_records_batch(
+        [("TEST_MATCH", {"foo": "bar"}, 0, {"test": True})]
+    )
+
+    stats = system_repo.get_db_stats()
+    required_keys = {
+        "players",
+        "matches",
+        "trained_records",
+        "untrained_records",
+        "trained_ratio",
+    }
+    assert required_keys <= stats.keys()
+
+    with training_repo.get_connection() as conn:
+        row = conn.execute(
+            "SELECT match_id, feature_json FROM training_dataset WHERE match_id = ?",
+            ("TEST_MATCH",),
+        ).fetchone()
+
+    assert row is not None
+    assert row["match_id"] == "TEST_MATCH"
+    assert row["feature_json"]

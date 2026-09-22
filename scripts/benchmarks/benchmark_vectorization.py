@@ -7,7 +7,7 @@ Shows the enhancements made to JSON vectorization for better machine learning pe
 import numpy as np
 from scipy import sparse
 from core import json_utils
-from tests import test_data
+from tests import fixtures_data
 
 
 def get_nnz(vec):
@@ -31,7 +31,7 @@ def get_dense(vec):
     return vec
 
 
-def test_vectorization_improvements():
+def benchmark_vectorization():
     """Test and demonstrate the improved vectorization features."""
 
     print(
@@ -40,9 +40,9 @@ def test_vectorization_improvements():
     print("=" * 70)
 
     # Test data with League of Legends match structures
-    from tests import test_data
+    from tests import fixtures_data
 
-    test_data_batch = test_data.get_extended_test_data()
+    test_data_batch = fixtures_data.get_extended_test_data()
 
     print(
         f"[DATA] Test Data: {len(test_data_batch)} League of Legends matches with complex nested structures"
@@ -270,7 +270,7 @@ def create_comparison_report():
 
 if __name__ == "__main__":
     # Run all tests
-    results = test_vectorization_improvements()
+    results = benchmark_vectorization()
 
     if isinstance(results, dict) and results.get("success"):
         # Analyze vector quality
