@@ -1,27 +1,38 @@
-import time
 from unittest.mock import MagicMock, patch
 import pytest
 
 from core.riot_api import RiotAPI, RiotRateLimiter
 
 
-def test_rate_limiter_acquires_under_limit():
-    limiter = RiotRateLimiter(per_second=5, per_2min=10)
-    t0 = time.time()
-    for _ in range(4):
-        limiter.acquire()
-    assert time.time() - t0 < 0.5
+class VirtualClock:
+    def __init__(self):
+        self.now = 0.0
+        self.sleeps = []
+
+    def __call__(self):
+        return self.now
+
+    def sleep(self, seconds):
+        self.sleeps.append(seconds)
+        self.now += seconds
 
 
-def test_rate_limiter_delays_when_second_limit_reached():
-    limiter = RiotRateLimiter(per_second=2, per_2min=10)
-    t0 = time.time()
+def test_rate_limiter_advances_virtual_clock_when_second_limit_is_reached():
+    clock = VirtualClock()
+    limiter = RiotRateLimiter(
+        per_second=2,
+        per_2min=10,
+        clock=clock,
+        sleep=clock.sleep,
+    )
+
     limiter.acquire()
     limiter.acquire()
-    # 3rd acquire in same second should wait until 1s elapsed
     limiter.acquire()
-    elapsed = time.time() - t0
-    assert elapsed >= 0.9
+
+    assert len(clock.sleeps) == 1
+    assert clock.sleeps[0] == pytest.approx(1.05)
+    assert clock.now == pytest.approx(1.05)
 
 
 def test_get_match_ids_supports_queue_and_type():
