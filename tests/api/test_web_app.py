@@ -4,9 +4,6 @@ Replaces the previous live-server tests at localhost:5000. Uses
 monkeypatched MagicMock trainer to avoid loading TF at test time
 (other than via the initial app package import).
 """
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import json
 from unittest.mock import MagicMock
 

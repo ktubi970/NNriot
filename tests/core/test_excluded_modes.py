@@ -1,8 +1,5 @@
 """Test that EXCLUDED_GAME_MODES filter rejects malformed-mode matches."""
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES
 
 

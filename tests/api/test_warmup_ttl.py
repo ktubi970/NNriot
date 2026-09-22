@@ -1,8 +1,5 @@
 """Tests for the fresh-data warm-up TTL feature."""
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import datetime as _dt
 import pytest
 from core import database

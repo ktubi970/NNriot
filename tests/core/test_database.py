@@ -1,8 +1,5 @@
 """Test the v10 -> v11 migration: match_timelines table."""
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from core import database
 
 
@@ -59,3 +56,18 @@ def test_save_match_timelines_batch(tmp_path):
 def test_schema_version_is_at_least_12():
     assert database.SCHEMA_VERSION >= 12
     assert database.SCHEMA_VERSION == 12
+
+
+def test_get_untrained_records_returns_dict(tmp_path):
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+    # Insert a match (FK requirement) and a training record
+    with database.get_connection(db) as conn:
+        conn.execute("INSERT INTO matches (match_id, game_mode) VALUES (?, ?)", ("M1", "CLASSIC"))
+    database.save_training_record("M1", {"foo": "bar", "n": 42}, 0, db_path=db)
+
+    records = database.get_untrained_records(limit=10, db_path=db)
+    assert len(records) == 1
+    assert isinstance(records[0]["feature_json"], dict)
+    assert records[0]["feature_json"]["foo"] == "bar"
+    assert records[0]["feature_json"]["n"] == 42

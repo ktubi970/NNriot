@@ -1,8 +1,5 @@
 """Test that backfill_labels processes rows in chunks without loading them all."""
 
-import sys, os
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from core import database
 from scripts import backfill_labels as bl
 from scripts.data_collector import _build_training_record

@@ -1,9 +1,3 @@
-import os
-import sys
-
-# Ensure project root is on sys.path when running this file directly
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 from core.feature_labels import LABEL_KEYS, extract_labels
 
 

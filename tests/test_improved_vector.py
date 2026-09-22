@@ -7,7 +7,7 @@ Shows the enhancements made to JSON vectorization for better machine learning pe
 import numpy as np
 from scipy import sparse
 from core import json_utils
-import test_data
+from tests import test_data
 
 
 def get_nnz(vec):
@@ -40,7 +40,7 @@ def test_vectorization_improvements():
     print("=" * 70)
 
     # Test data with League of Legends match structures
-    import test_data
+    from tests import test_data
 
     test_data_batch = test_data.get_extended_test_data()
 
