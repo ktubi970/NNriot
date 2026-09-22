@@ -35,7 +35,8 @@ def test_rate_limiter_advances_virtual_clock_when_second_limit_is_reached():
     assert clock.now == pytest.approx(1.05)
 
 
-def test_get_match_ids_supports_queue_and_type():
+def test_get_match_ids_supports_queue_and_type(monkeypatch):
+    monkeypatch.setenv("RIOT_API_KEY", "test_key_123")
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()
     mock_resp.status_code = 200
