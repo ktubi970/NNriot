@@ -96,7 +96,6 @@ def test_fetch_timelines_default_false():
     from scripts import data_collector
 
     import importlib
-    from scripts import data_collector
     importlib.reload(data_collector)  # re-evaluate the module-level constant
     # Default env should produce False (or True if host set the flag).
     assert data_collector.FETCH_TIMELINES in (False, True)

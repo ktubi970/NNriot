@@ -162,4 +162,3 @@ All measurements use `.venv312\Scripts\python.exe` on Windows and Python 3.12 in
 4. `rg -n "sys\.path\.insert" tests` returns no matches.
 5. No `tests/test_*.py` files remain at the test root.
 6. `git diff --check` reports no whitespace errors.
-
