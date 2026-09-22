@@ -1,15 +1,10 @@
-import numpy as np
 import pytest
-
-from analytics.model_data import (
-    MODEL_FEATURES,
-    assert_allowed_features,
-    load_model_dataset,
-    rows_to_matrix,
-)
 
 
 def test_matrix_is_one_blue_minus_red_row_per_match(powered_analytics_db):
+    import numpy as np
+    from analytics.model_data import MODEL_FEATURES, load_model_dataset
+
     dataset = load_model_dataset(str(powered_analytics_db))
 
     assert dataset.x.shape == (dataset.match_ids.shape[0], len(MODEL_FEATURES))
@@ -22,6 +17,9 @@ def test_matrix_is_one_blue_minus_red_row_per_match(powered_analytics_db):
 
 
 def test_swapping_sides_negates_features_and_target():
+    import numpy as np
+    from analytics.model_data import MODEL_FEATURES, rows_to_matrix
+
     blue = {name: float(index + 1) for index, name in enumerate(MODEL_FEATURES)}
     red = {name: 0.0 for name in MODEL_FEATURES}
 
@@ -33,10 +31,14 @@ def test_swapping_sides_negates_features_and_target():
 
 
 def test_forbidden_feature_fails_before_fit():
+    from analytics.model_data import assert_allowed_features
+
     with pytest.raises(ValueError, match="TARGET_FORBIDDEN"):
         assert_allowed_features(("gold_delta", "win"))
 
 
 def test_unknown_feature_fails_before_fit():
+    from analytics.model_data import assert_allowed_features
+
     with pytest.raises(ValueError, match="UNREGISTERED_MODEL_FEATURE"):
         assert_allowed_features(("gold_delta", "secret_signal_delta"))

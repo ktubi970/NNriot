@@ -1,11 +1,20 @@
 import os
 import pytest
-from core.generate_graph import build_multi_output_model
+
+pytestmark = [pytest.mark.ml, pytest.mark.slow]
+
 from core.feature_labels import VECTOR_DIM
 
 
-def test_model_builds_with_production_dim():
-    m = build_multi_output_model(input_dim=VECTOR_DIM)
+@pytest.fixture(scope="module")
+def graph_module():
+    from core import generate_graph
+
+    return generate_graph
+
+
+def test_model_builds_with_production_dim(graph_module):
+    m = graph_module.build_multi_output_model(input_dim=VECTOR_DIM)
     assert m.input_shape[-1] == 20000
     assert "winner" in m.output_names
 

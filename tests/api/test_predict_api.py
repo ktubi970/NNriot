@@ -1,15 +1,24 @@
 import json
-import numpy as np
 import pytest
-from unittest.mock import MagicMock, patch
 
-from app import app as flask_app
-from app import core as app_core
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+from unittest.mock import MagicMock, patch
 
 
 @pytest.fixture
-def client(monkeypatch):
+def app_modules():
+    from app import app as flask_app
+    from app import core as app_core
+
+    return flask_app, app_core
+
+
+@pytest.fixture
+def client(monkeypatch, app_modules):
     """Build a Flask test client with a mocked global_trainer."""
+    flask_app, app_core = app_modules
+
     fake_trainer = MagicMock()
     fake_trainer.predict.return_value = _fake_preds()
 
@@ -24,6 +33,8 @@ def client(monkeypatch):
 
 def _fake_preds():
     """Synthetic Keras-dict output for a single match (batch size 1)."""
+    import numpy as np
+
     return {
         "winner":           np.array([[0.40, 0.60]], dtype=np.float32),
         "team_b_kill_lead":     np.array([[0.45, 0.55]], dtype=np.float32),
@@ -123,8 +134,10 @@ def test_predict_handles_missing_fields(client):
     assert resp.status_code == 400
 
 
-def test_predict_handles_model_unavailable(client, monkeypatch):
+def test_predict_handles_model_unavailable(client, monkeypatch, app_modules):
     """When tf_available=False, /api/predict returns 500 with error."""
+    flask_app, app_core = app_modules
+
     monkeypatch.setattr(app_core, "tf_available", False)
     monkeypatch.setattr(app_core, "global_trainer", None)
     resp = client.post("/api/predict",
@@ -292,7 +305,9 @@ def test_predict_custom_uses_pre_match_extraction(client):
         assert mock_extract.called
 
 
-def test_predict_custom_rejects_uncalibrated_model(client, monkeypatch):
+def test_predict_custom_rejects_uncalibrated_model(client, monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     class FakeUncalibratedTrainer:
         model = type("M", (), {"is_calibrated": False})()
         def predict(self, x):
@@ -312,7 +327,4 @@ def test_predict_custom_rejects_uncalibrated_model(client, monkeypatch):
     data = res.get_json()
     assert "error" in data
     assert "calibrated" in data["error"].lower()
-
-
-
 

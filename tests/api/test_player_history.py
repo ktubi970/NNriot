@@ -2,13 +2,17 @@ import os
 
 import json
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 from unittest.mock import patch, MagicMock
-from app import app as flask_app
 from core import database
 
 
 @pytest.fixture
 def client():
+    from app import app as flask_app
+
     flask_app.config["TESTING"] = True
     return flask_app.test_client()
 

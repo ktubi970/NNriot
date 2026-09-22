@@ -3,19 +3,32 @@ import os
 import base64
 import json
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 from unittest.mock import MagicMock, patch
-from app import app as flask_app
-from app import core as app_core
 from core import database
 
 
 @pytest.fixture
-def client():
+def app_modules():
+    from app import app as flask_app
+    from app import core as app_core
+
+    return flask_app, app_core
+
+
+@pytest.fixture
+def client(app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     return flask_app.test_client()
 
 
-def test_manual_train_fails_fast_without_marking_records(client, tmp_path):
+def test_manual_train_fails_fast_without_marking_records(client, tmp_path, app_modules):
+    flask_app, app_core = app_modules
+
     test_db = str(tmp_path / "test_train.db")
     database.init_db(test_db)
     with database.get_connection(test_db) as conn:
@@ -35,7 +48,9 @@ def test_manual_train_fails_fast_without_marking_records(client, tmp_path):
                 assert untrained[0]["match_id"] == "MATCH_1"
 
 
-def test_manual_train_success_with_trainer(client):
+def test_manual_train_success_with_trainer(client, app_modules):
+    flask_app, app_core = app_modules
+
     fake_trainer = MagicMock()
     fake_trainer.run_training_step.return_value = 5
     with patch.object(app_core, "tf_available", True):
@@ -48,7 +63,9 @@ def test_manual_train_success_with_trainer(client):
             fake_trainer.run_training_step.assert_called_once()
 
 
-def test_stream_ocr_unique_capture_filenames(client, tmp_path, monkeypatch):
+def test_stream_ocr_unique_capture_filenames(client, tmp_path, monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     fake_img = "data:image/jpeg;base64," + base64.b64encode(b"dummy_jpeg_data").decode("utf-8")
     static_dir = tmp_path / "static"
     monkeypatch.setenv("MOCK_OCR_ENABLED", "1")

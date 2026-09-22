@@ -1,9 +1,12 @@
-import numpy as np
 import pytest
-from app.core import _format_multi_output_response
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 def test_format_multi_output_disclaims_kills_odd_and_timeline():
+    import numpy as np
+    from app.core import _format_multi_output_response
+
     dummy_preds = {
         "winner": np.array([[0.52, 0.48]]),
         "team_b_kill_lead": np.array([[0.51, 0.49]]),

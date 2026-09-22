@@ -2,7 +2,6 @@
 
 from core import database
 from scripts import cleanup_malformed as cm
-from scripts.data_collector import _build_training_record
 
 
 def _make_classic_match(match_id, team_a_win=True):
@@ -24,6 +23,8 @@ def _make_classic_match(match_id, team_a_win=True):
 
 def test_dry_run_reports_count_without_deleting(tmp_path):
     """Dry run mode reports the count but doesn't delete."""
+    from scripts.data_collector import _build_training_record
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 
@@ -58,6 +59,8 @@ def test_dry_run_reports_count_without_deleting(tmp_path):
 
 def test_apply_deletes_only_null_labels_rows(tmp_path):
     """With --apply (dry_run=False), only NULL labels_json rows are deleted."""
+    from scripts.data_collector import _build_training_record
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 

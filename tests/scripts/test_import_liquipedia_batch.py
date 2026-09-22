@@ -1,12 +1,13 @@
 import pytest
 from unittest.mock import patch, mock_open, call
-from scripts import run_batch_import
 
 @patch("scripts.run_batch_import.data_collector.collect_batch_with_smurfs")
 @patch("scripts.run_batch_import.time.sleep")
 @patch("scripts.import_liquipedia.resolve_pro_name")
 @patch("scripts.run_batch_import.os.path.exists")
 def test_main_resolves_pro_names(mock_exists, mock_resolve, mock_sleep, mock_collect, monkeypatch):
+    from scripts import run_batch_import
+
     mock_exists.return_value = True
     
     # Mock file content

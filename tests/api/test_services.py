@@ -1,10 +1,10 @@
 import os
 
 import pytest
-from unittest.mock import MagicMock, patch
 
-from app.services.player_service import PlayerService
-from app.services.system_service import SystemService
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+from unittest.mock import MagicMock, patch
 
 
 class TestPlayerService:
@@ -14,6 +14,8 @@ class TestPlayerService:
 
     @pytest.fixture
     def service(self, mock_repo):
+        from app.services.player_service import PlayerService
+
         return PlayerService(repo=mock_repo)
 
     def test_get_all_aliases_returns_data_directly(self, service, mock_repo):
@@ -95,6 +97,8 @@ class TestSystemService:
 
     @pytest.fixture
     def service(self, mock_repo):
+        from app.services.system_service import SystemService
+
         return SystemService(repo=mock_repo)
 
     def test_get_db_health_returns_data_directly(self, service, mock_repo):
@@ -125,6 +129,8 @@ class TestSystemService:
 
     def test_get_explorer_stats_fallback_import(self):
         """Verify that when repo has no db_path, fallback import resolves to core.database without error."""
+        from app.services.system_service import SystemService
+
         repo = MagicMock(spec=[])  # No db_path attribute
         repo.get_db_stats = MagicMock(return_value={"total_matches": 10})
         service = SystemService(repo=repo)

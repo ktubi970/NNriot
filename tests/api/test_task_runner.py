@@ -1,9 +1,18 @@
 import time
 from unittest.mock import MagicMock
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 from core.task_runner import TaskRunner, global_task_runner
-from app import app as flask_app
-from app import core as app_core
+
+
+@pytest.fixture
+def app_modules():
+    from app import app as flask_app
+    from app import core as app_core
+
+    return flask_app, app_core
 
 
 def test_task_runner_executes_and_tracks_job():
@@ -77,7 +86,9 @@ def test_task_runner_memory_bounding_prunes_oldest_jobs():
     runner.shutdown()
 
 
-def test_api_jobs_endpoint():
+def test_api_jobs_endpoint(app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 
@@ -96,7 +107,9 @@ def test_api_jobs_endpoint():
     assert data["job"]["type"] == "dummy_task"
 
 
-def test_api_train_returns_job_id(monkeypatch):
+def test_api_train_returns_job_id(monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 
@@ -141,7 +154,9 @@ def test_task_runner_handles_non_serializable_result():
     runner.shutdown(wait=True)
 
 
-def test_history_and_batch_endpoints_with_task_runner(monkeypatch):
+def test_history_and_batch_endpoints_with_task_runner(monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 
@@ -180,7 +195,9 @@ def test_history_and_batch_endpoints_with_task_runner(monkeypatch):
     assert "status" in b_st
 
 
-def test_route_failure_propagates_to_task_runner(monkeypatch):
+def test_route_failure_propagates_to_task_runner(monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 
@@ -210,7 +227,9 @@ def test_route_failure_propagates_to_task_runner(monkeypatch):
     assert job_resp.get_json()["job"]["status"] == "failed"
 
 
-def test_history_status_picks_latest_by_created_at():
+def test_history_status_picks_latest_by_created_at(app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 
@@ -225,7 +244,9 @@ def test_history_status_picks_latest_by_created_at():
     assert data.get("job_id") == j_new
 
 
-def test_lolpros_import_uses_task_runner(monkeypatch):
+def test_lolpros_import_uses_task_runner(monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     flask_app.config["TESTING"] = True
     client = flask_app.test_client()
 

@@ -1,9 +1,7 @@
-from scripts import data_collector
-from scripts.data_collector import _build_training_record
-
-
 def test_build_training_record_rejects_all_non_classic():
     # Valid CLASSIC payload stub
+    from scripts.data_collector import _build_training_record
+
     valid_payload = {
         "info": {
             "gameMode": "CLASSIC",
@@ -70,6 +68,8 @@ def _collector_match(team_a_win, team_b_win):
 
 
 def test_build_training_record_team_a_wins():
+    from scripts import data_collector
+
     rec = data_collector._build_training_record("TEST_1", _collector_match(True, False))
     assert rec is not None
     assert rec[0] == "TEST_1"
@@ -77,18 +77,24 @@ def test_build_training_record_team_a_wins():
 
 
 def test_build_training_record_team_b_wins():
+    from scripts import data_collector
+
     rec = data_collector._build_training_record("TEST_2", _collector_match(False, True))
     assert rec is not None
     assert rec[2] == 1
 
 
 def test_build_training_record_skips_no_winner():
+    from scripts import data_collector
+
     rec = data_collector._build_training_record("TEST_3", _collector_match(False, False))
     assert rec is None
 
 
 def test_fetch_timelines_default_false():
     """NNRIOT_FETCH_TIMELINES env var resolves to a bool at module-load time."""
+    from scripts import data_collector
+
     import importlib
     from scripts import data_collector
     importlib.reload(data_collector)  # re-evaluate the module-level constant

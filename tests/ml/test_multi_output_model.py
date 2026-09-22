@@ -1,20 +1,29 @@
-import numpy as np
 import pytest
-import tensorflow as tf
-from core.generate_graph import (
-    build_multi_output_model,
-    LOSS_PER_HEAD,
-    LOSS_WEIGHTS,
-    METRICS_PER_HEAD,
-)
+
+pytestmark = [pytest.mark.ml, pytest.mark.slow]
+
 from core.feature_labels import LABEL_KEYS, TIMELINE_LABEL_KEYS, ALL_LABEL_KEYS
 
 
-def test_constants_cover_label_keys():
+@pytest.fixture(scope="module")
+def tensorflow_module():
+    import tensorflow
+
+    return tensorflow
+
+
+@pytest.fixture(scope="module")
+def graph_module():
+    from core import generate_graph
+
+    return generate_graph
+
+
+def test_constants_cover_label_keys(graph_module):
     """LOSS_PER_HEAD / LOSS_WEIGHTS / METRICS_PER_HEAD must cover exactly ALL_LABEL_KEYS."""
-    assert set(LOSS_PER_HEAD) == set(ALL_LABEL_KEYS)
-    assert set(LOSS_WEIGHTS) == set(ALL_LABEL_KEYS)
-    assert set(METRICS_PER_HEAD) == set(ALL_LABEL_KEYS)
+    assert set(graph_module.LOSS_PER_HEAD) == set(ALL_LABEL_KEYS)
+    assert set(graph_module.LOSS_WEIGHTS) == set(ALL_LABEL_KEYS)
+    assert set(graph_module.METRICS_PER_HEAD) == set(ALL_LABEL_KEYS)
 
 
 def test_label_keys_includes_timeline_keys():
@@ -24,17 +33,19 @@ def test_label_keys_includes_timeline_keys():
     assert ALL_LABEL_KEYS[18:] == TIMELINE_LABEL_KEYS
 
 
-def test_model_builds_with_small_input_dim():
+def test_model_builds_with_small_input_dim(graph_module):
     """Build the model with a small input dim to make the test fast and assert structure."""
-    model = build_multi_output_model(input_dim=100)
+    model = graph_module.build_multi_output_model(input_dim=100)
     # 22 named outputs (18 original + 4 timeline)
     assert len(model.output_names) == 22
     assert set(model.output_names) == set(ALL_LABEL_KEYS)
 
 
-def test_model_output_shapes():
+def test_model_output_shapes(graph_module):
     """Each head produces the right shape for a single sample."""
-    model = build_multi_output_model(input_dim=100)
+    import numpy as np
+
+    model = graph_module.build_multi_output_model(input_dim=100)
     x = np.zeros((1, 100), dtype=np.float32)
     preds = model.predict(x, verbose=0)
     # preds is a dict when the model has named outputs
@@ -56,9 +67,11 @@ def test_model_output_shapes():
         assert preds[name].shape == (1, 1), f"{name} shape mismatch"
 
 
-def test_model_trains_one_step():
+def test_model_trains_one_step(graph_module):
     """A single train_on_batch call works end-to-end with dict targets."""
-    model = build_multi_output_model(input_dim=50)
+    import numpy as np
+
+    model = graph_module.build_multi_output_model(input_dim=50)
     x = np.random.rand(4, 50).astype(np.float32)
     # Class-2 one-hot for the 4 timeline heads (default "neither team reached threshold")
     _none = np.array([[0, 0, 1]] * 4, dtype=np.float32)
@@ -93,18 +106,18 @@ def test_model_trains_one_step():
     assert result is not None
 
 
-def test_dropout_layers_present():
+def test_dropout_layers_present(tensorflow_module, graph_module):
     """Trunk has 4 Dropout layers."""
-    model = build_multi_output_model(input_dim=100)
-    dropout_count = sum(1 for layer in model.layers if isinstance(layer, tf.keras.layers.Dropout))
+    model = graph_module.build_multi_output_model(input_dim=100)
+    dropout_count = sum(1 for layer in model.layers if isinstance(layer, tensorflow_module.keras.layers.Dropout))
     assert dropout_count == 4, f"Expected 4 Dropout layers, got {dropout_count}"
 
 
-def test_per_head_hidden_layers_present():
+def test_per_head_hidden_layers_present(tensorflow_module, graph_module):
     """Each of the 22 heads has a *_hidden Dense(64) layer before the output."""
-    model = build_multi_output_model(input_dim=100)
+    model = graph_module.build_multi_output_model(input_dim=100)
     hidden_layers = [layer for layer in model.layers if layer.name.endswith("_hidden")]
     assert len(hidden_layers) == 22, f"Expected 22 *_hidden layers, got {len(hidden_layers)}"
     for layer in hidden_layers:
-        assert isinstance(layer, tf.keras.layers.Dense)
+        assert isinstance(layer, tensorflow_module.keras.layers.Dense)
         assert layer.units == 64

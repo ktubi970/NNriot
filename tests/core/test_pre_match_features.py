@@ -1,8 +1,9 @@
 import pytest
-from core.json_utils import extract_pre_match_features, extract_match_features
 
 
 def test_extract_pre_match_features_excludes_post_game_leakage():
+    from core.json_utils import extract_pre_match_features, extract_match_features
+
     raw_match = {
         "info": {
             "gameMode": "CLASSIC",
@@ -47,6 +48,8 @@ def test_extract_pre_match_features_excludes_post_game_leakage():
 
 
 def test_extract_pre_match_features_accepts_player_career_stats():
+    from core.json_utils import extract_pre_match_features, extract_match_features
+
     raw_match = {
         "info": {
             "gameMode": "CLASSIC",

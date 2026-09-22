@@ -1,7 +1,11 @@
-from app import create_app
+import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 def test_analytics_page_is_french_and_contains_required_regions():
+    from app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
 
@@ -19,6 +23,8 @@ def test_analytics_page_is_french_and_contains_required_regions():
 
 
 def test_layout_links_to_analytics():
+    from app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
 

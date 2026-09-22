@@ -2,12 +2,21 @@
 
 import pytest
 
-from app import app as flask_app
-from app import core as app_core
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
 
 
 @pytest.fixture
-def client(monkeypatch):
+def app_modules():
+    from app import app as flask_app
+    from app import core as app_core
+
+    return flask_app, app_core
+
+
+@pytest.fixture
+def client(monkeypatch, app_modules):
+    flask_app, app_core = app_modules
+
     from unittest.mock import MagicMock
     monkeypatch.setattr(app_core, "global_trainer", MagicMock())
     monkeypatch.setattr(app_core, "tf_available", True)

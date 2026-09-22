@@ -1,11 +1,14 @@
 import pytest
-from app import app as flask_app
-from app.services.system_service import SystemService
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 from core import database
 
 
 @pytest.fixture
 def client(tmp_path, monkeypatch):
+    from app import app as flask_app
+
     test_db = str(tmp_path / "telemetry.db")
     database.init_db(test_db)
     database.save_player("p1", "TestPlayer", "EUW", db_path=test_db)
@@ -50,6 +53,8 @@ def test_telemetry_endpoints_are_consistent(client):
 
 
 def test_system_service_get_full_telemetry(tmp_path):
+    from app.services.system_service import SystemService
+
     test_db = str(tmp_path / "direct_telemetry.db")
     database.init_db(test_db)
     database.save_player("p2", "PlayerTwo", "KR", db_path=test_db)

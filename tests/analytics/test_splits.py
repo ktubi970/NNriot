@@ -1,9 +1,7 @@
-import numpy as np
-
-from analytics.splits import chronological_split, player_disjoint_split
-
-
 def test_chronological_split_is_70_15_15_without_shuffle():
+    import numpy as np
+    from analytics.splits import chronological_split, player_disjoint_split
+
     train, validation, test = chronological_split(np.arange(100))
 
     assert train.tolist() == list(range(70))
@@ -12,6 +10,8 @@ def test_chronological_split_is_70_15_15_without_shuffle():
 
 
 def test_player_disjoint_split_has_no_shared_puuid():
+    from analytics.splits import chronological_split, player_disjoint_split
+
     puuids = (
         frozenset({"a", "bridge"}),
         frozenset({"c"}),
@@ -28,6 +28,8 @@ def test_player_disjoint_split_has_no_shared_puuid():
 
 
 def test_grouped_split_reports_underpowered_without_fallback():
+    from analytics.splits import chronological_split, player_disjoint_split
+
     puuids = tuple(frozenset({"shared"}) for _ in range(20))
 
     split = player_disjoint_split(puuids, min_test_matches=5)

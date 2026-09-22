@@ -2,7 +2,6 @@
 
 from core import database
 from scripts import backfill_labels as bl
-from scripts.data_collector import _build_training_record
 
 
 def _make_classic_match(match_id, team_a_win=True):
@@ -24,6 +23,8 @@ def _make_classic_match(match_id, team_a_win=True):
 
 def test_backfill_chunks_through_many_rows(tmp_path):
     """Insert 25 rows with NULL labels, backfill with chunk_size=5, verify all populated."""
+    from scripts.data_collector import _build_training_record
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 
@@ -62,6 +63,8 @@ def test_backfill_chunks_through_many_rows(tmp_path):
 
 def test_backfill_idempotent(tmp_path):
     """Running backfill twice doesn't re-process anything."""
+    from scripts.data_collector import _build_training_record
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 
@@ -121,6 +124,8 @@ def test_backfill_breaks_on_mixed_then_malformed_tail(tmp_path):
     chunk of pure malformed rows. Without the per-chunk safety break this
     case loops forever.
     """
+    from scripts.data_collector import _build_training_record
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 

@@ -2,6 +2,9 @@
 
 import datetime as _dt
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
 from core import database
 
 

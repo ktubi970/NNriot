@@ -1,7 +1,8 @@
 import pytest
-from scripts.import_liquipedia import resolve_pro_name
 
 def test_resolve_pro_name_success(monkeypatch):
+    from scripts.import_liquipedia import resolve_pro_name
+
     class MockResponse:
         def __init__(self, text):
             self.text = text
@@ -21,6 +22,8 @@ def test_resolve_pro_name_success(monkeypatch):
     assert result == ("Razork", "EUW")
 
 def test_resolve_pro_name_not_found(monkeypatch):
+    from scripts.import_liquipedia import resolve_pro_name
+
     class MockResponse:
         def __init__(self, text):
             self.text = text

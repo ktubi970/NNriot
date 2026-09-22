@@ -14,12 +14,15 @@ This test does NOT verify model accuracy -- only that the pipeline executes.
 
 from pathlib import Path
 
-import numpy as np
 import pytest
+
+pytestmark = [pytest.mark.integration, pytest.mark.ml, pytest.mark.slow]
 
 
 def _make_real_match(match_id: str, team_a_win: bool, seed: int = 0) -> dict:
     """Build a realistic Match-V5-ish dict that extract_labels can process."""
+    import numpy as np
+
     rng = np.random.default_rng(seed)
     a_kills = int(rng.integers(5, 25))
     b_kills = int(rng.integers(5, 25))

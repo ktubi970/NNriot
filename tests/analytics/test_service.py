@@ -1,11 +1,11 @@
-import analytics.service as service_module
-from analytics.service import AnalyticsService
 from analytics.db import connect_analytics, set_meta
 
 
 def test_supported_chat_returns_evidence_and_dataset_version(
     powered_analytics_db, monkeypatch
 ):
+    from analytics.service import AnalyticsService
+
     service = AnalyticsService(str(powered_analytics_db))
     monkeypatch.setattr(
         service,
@@ -28,6 +28,8 @@ def test_supported_chat_returns_evidence_and_dataset_version(
 def test_timeline_question_abstains_explicitly(
     powered_analytics_db, monkeypatch
 ):
+    from analytics.service import AnalyticsService
+
     service = AnalyticsService(str(powered_analytics_db))
     monkeypatch.setattr(service, "freshness", lambda: {"fresh": True})
 
@@ -40,6 +42,8 @@ def test_timeline_question_abstains_explicitly(
 def test_region_comparison_without_metric_asks_for_one(
     powered_analytics_db, monkeypatch
 ):
+    from analytics.service import AnalyticsService
+
     service = AnalyticsService(str(powered_analytics_db))
     monkeypatch.setattr(service, "freshness", lambda: {"fresh": True})
 
@@ -51,6 +55,8 @@ def test_region_comparison_without_metric_asks_for_one(
 
 
 def test_stale_mart_refuses_analysis(powered_analytics_db, monkeypatch):
+    from analytics.service import AnalyticsService
+
     service = AnalyticsService(str(powered_analytics_db))
     monkeypatch.setattr(
         service,
@@ -69,6 +75,8 @@ def test_stale_mart_refuses_analysis(powered_analytics_db, monkeypatch):
 
 
 def test_missing_mart_refuses_instead_of_raising(tmp_path):
+    from analytics.service import AnalyticsService
+
     response = AnalyticsService(str(tmp_path / "missing.db")).chat(
         "Comment gagne-t-on ?", None, {}
     )
@@ -78,6 +86,8 @@ def test_missing_mart_refuses_instead_of_raising(tmp_path):
 
 
 def test_missing_mart_health_is_structured(tmp_path):
+    from analytics.service import AnalyticsService
+
     health = AnalyticsService(str(tmp_path / "missing.db")).health()
 
     assert health == {"ok": False, "code": "ANALYTICS_DB_STALE"}
@@ -86,6 +96,8 @@ def test_missing_mart_health_is_structured(tmp_path):
 def test_freshness_rejects_incompatible_analytics_versions(
     powered_analytics_pair,
 ):
+    from analytics.service import AnalyticsService
+
     source_db, analytics_db = powered_analytics_pair
     service = AnalyticsService(str(analytics_db), str(source_db))
     assert service.freshness()["fresh"] is True
@@ -106,6 +118,9 @@ def test_freshness_rejects_incompatible_analytics_versions(
 def test_freshness_snapshot_is_cached_for_short_request_bursts(
     powered_analytics_pair, monkeypatch
 ):
+    import analytics.service as service_module
+    from analytics.service import AnalyticsService
+
     source_db, analytics_db = powered_analytics_pair
     original = service_module.source_snapshot
     calls = 0
@@ -126,6 +141,9 @@ def test_freshness_snapshot_is_cached_for_short_request_bursts(
 def test_freshness_cache_is_invalidated_immediately_when_source_changes(
     powered_analytics_pair, monkeypatch
 ):
+    import analytics.service as service_module
+    from analytics.service import AnalyticsService
+
     source_db, analytics_db = powered_analytics_pair
     original = service_module.source_snapshot
     calls = 0

@@ -1,9 +1,7 @@
-import numpy as np
-
-from analytics.regions import RegionalObservation, compare_regions
-
-
 def test_patch_adjusted_region_difference_passes_all_gates():
+    import numpy as np
+    from analytics.regions import RegionalObservation, compare_regions
+
     rows = []
     rng = np.random.default_rng(3)
     for region, shift in (("EUW", 0.35), ("KR", 0.0)):
@@ -27,6 +25,8 @@ def test_patch_adjusted_region_difference_passes_all_gates():
 
 
 def test_region_ranking_is_hidden_when_one_region_is_small():
+    from analytics.regions import RegionalObservation, compare_regions
+
     rows = [
         RegionalObservation("EUW", "16.14", 0.4, index, None)
         for index in range(600)
@@ -43,6 +43,9 @@ def test_region_ranking_is_hidden_when_one_region_is_small():
 
 
 def test_region_ranking_is_hidden_when_recent_direction_reverses():
+    import numpy as np
+    from analytics.regions import RegionalObservation, compare_regions
+
     rows = []
     rng = np.random.default_rng(8)
     for region in ("EUW", "KR"):
@@ -68,6 +71,8 @@ def test_region_ranking_is_hidden_when_recent_direction_reverses():
 
 
 def test_binary_region_comparison_requires_powered_outcomes():
+    from analytics.regions import RegionalObservation, compare_regions
+
     rows = []
     for region, exposed_wins, comparison_wins in (
         ("EUW", 240, 150),

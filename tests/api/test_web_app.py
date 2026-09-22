@@ -7,15 +7,23 @@ monkeypatched MagicMock trainer to avoid loading TF at test time
 import json
 from unittest.mock import MagicMock
 
-import numpy as np
 import pytest
 
-from app import app as flask_app
-from app import core as app_core
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+
+@pytest.fixture
+def app_modules():
+    from app import app as flask_app
+    from app import core as app_core
+
+    return flask_app, app_core
 
 
 def _fake_preds():
     """Synthetic Keras dict output for the 22-head multi-output model."""
+    import numpy as np
+
     return {
         "winner":            np.array([[0.40, 0.60]], dtype=np.float32),
         "team_b_kill_lead":  np.array([[0.45, 0.55]], dtype=np.float32),
@@ -43,8 +51,10 @@ def _fake_preds():
 
 
 @pytest.fixture
-def client(monkeypatch):
+def client(monkeypatch, app_modules):
     """Flask test client with the trainer mocked out (no TF predict cost)."""
+    flask_app, app_core = app_modules
+
     fake_trainer = MagicMock()
     fake_trainer.predict.return_value = _fake_preds()
     # JSON-serializable return for /api/train/manual.
