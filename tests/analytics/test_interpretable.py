@@ -1,6 +1,9 @@
 import json
+import pytest
 
 
+@pytest.mark.slow
+@pytest.mark.ml
 def test_report_includes_baselines_calibration_and_untouched_test(
     model_db, tmp_path
 ):
@@ -33,6 +36,8 @@ def test_report_includes_baselines_calibration_and_untouched_test(
     assert (tmp_path / "artifacts" / "interpretable_model.joblib").exists()
 
 
+@pytest.mark.slow
+@pytest.mark.ml
 def test_grouped_result_reports_underpowered_instead_of_fallback(
     model_db, tmp_path
 ):

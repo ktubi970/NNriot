@@ -1,8 +1,6 @@
 from unittest.mock import MagicMock, patch
 import pytest
 
-from core.riot_api import RiotAPI, RiotRateLimiter
-
 
 class VirtualClock:
     def __init__(self):
@@ -18,6 +16,8 @@ class VirtualClock:
 
 
 def test_rate_limiter_advances_virtual_clock_when_second_limit_is_reached():
+    from core.riot_api import RiotRateLimiter
+
     clock = VirtualClock()
     limiter = RiotRateLimiter(
         per_second=2,
@@ -36,6 +36,8 @@ def test_rate_limiter_advances_virtual_clock_when_second_limit_is_reached():
 
 
 def test_get_match_ids_supports_queue_and_type(monkeypatch):
+    from core.riot_api import RiotAPI
+
     monkeypatch.setenv("RIOT_API_KEY", "test_key_123")
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()

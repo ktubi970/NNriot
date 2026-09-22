@@ -4,7 +4,6 @@ from unittest.mock import patch, MagicMock
 import pytest
 
 from core import database
-from scripts import backfill_timelines as bt
 
 
 @pytest.fixture(autouse=True)
@@ -21,6 +20,8 @@ def _insert_match(db, match_id, game_mode="CLASSIC"):
 
 
 def test_region_inference():
+    from scripts import backfill_timelines as bt
+
     assert bt._region_from_match_id("EUW1_123") == "EUW"
     assert bt._region_from_match_id("KR_456") == "KR"
     assert bt._region_from_match_id("NA1_789") == "NA"
@@ -30,6 +31,8 @@ def test_region_inference():
 
 
 def test_backfill_no_matches_returns_zero(tmp_path):
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
 
@@ -39,6 +42,8 @@ def test_backfill_no_matches_returns_zero(tmp_path):
 
 
 def test_backfill_fetches_and_saves_timeline(tmp_path):
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
     _insert_match(db, "EUW1_111")
@@ -60,6 +65,8 @@ def test_backfill_fetches_and_saves_timeline(tmp_path):
 
 
 def test_backfill_idempotent(tmp_path):
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
     _insert_match(db, "EUW1_111")
@@ -81,6 +88,8 @@ def test_backfill_idempotent(tmp_path):
 
 def test_backfill_handles_unknown_region(tmp_path):
     """Match with an unrecognizable region prefix gets a NULL placeholder."""
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
     _insert_match(db, "BADREGION_999")
@@ -93,6 +102,8 @@ def test_backfill_handles_unknown_region(tmp_path):
 
 def test_backfill_handles_riot_returning_none(tmp_path):
     """When the Riot API returns no timeline for a match, a NULL placeholder is stored."""
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
     _insert_match(db, "EUW1_GONE")
@@ -109,6 +120,8 @@ def test_backfill_handles_riot_returning_none(tmp_path):
 
 def test_backfill_respects_limit(tmp_path):
     """--limit stops after the requested count."""
+    from scripts import backfill_timelines as bt
+
     db = str(tmp_path / "test.db")
     database.init_db(db)
     for i in range(10):

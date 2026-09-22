@@ -1,12 +1,11 @@
 import os
 from unittest.mock import MagicMock, patch
 import pytest
-import requests
-
-from core.riot_api import RiotAPI, RiotAuthError
 
 
 def test_riot_api_raises_auth_error_on_401():
+    from core.riot_api import RiotAPI, RiotAuthError
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-test-expired", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         api = RiotAPI(region="EUW")
         mock_resp = MagicMock()
@@ -22,6 +21,8 @@ def test_riot_api_raises_auth_error_on_401():
 
 
 def test_riot_api_raises_auth_error_on_403():
+    from core.riot_api import RiotAPI, RiotAuthError
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-test-forbidden", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         api = RiotAPI(region="EUW")
         mock_resp = MagicMock()
@@ -37,6 +38,9 @@ def test_riot_api_raises_auth_error_on_403():
 
 
 def test_riot_api_uses_persistent_session():
+    import requests
+    from core.riot_api import RiotAPI
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-test-key", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         api = RiotAPI(region="KR")
         assert hasattr(api, "session")
@@ -45,6 +49,8 @@ def test_riot_api_uses_persistent_session():
 
 
 def test_riot_api_close_delegates_to_session():
+    from core.riot_api import RiotAPI
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-test-key", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         api = RiotAPI(region="EUW")
         with patch.object(api.session, "close") as mock_close:
@@ -53,6 +59,9 @@ def test_riot_api_close_delegates_to_session():
 
 
 def test_riot_api_context_manager():
+    import requests
+    from core.riot_api import RiotAPI
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-test-key", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         with patch.object(requests.Session, "close") as mock_close:
             with RiotAPI(region="NA") as api:
@@ -61,6 +70,8 @@ def test_riot_api_context_manager():
 
 
 def test_riot_api_reloads_key_and_retries_on_auth_failure():
+    from core.riot_api import RiotAPI
+
     with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-old-key", "RIOT_DISABLE_RATE_LIMIT": "1"}):
         api = RiotAPI(region="EUW")
 
