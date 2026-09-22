@@ -384,10 +384,10 @@ if __name__ == "__main__":
     import os
     import sys
     sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    from tests import test_data
+    from tests import fixtures_data
 
     # Quick test with enhanced features - League of Legends match data
-    test_json = test_data.get_extended_test_data()
+    test_json = fixtures_data.get_extended_test_data()
 
     print("=== Enhanced JSON Vectorization Test - League of Legends Matches ===")
 

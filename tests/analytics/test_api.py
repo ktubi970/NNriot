@@ -1,9 +1,13 @@
-from unittest.mock import MagicMock
+import pytest
 
-from app import create_app
+pytestmark = [pytest.mark.integration, pytest.mark.slow]
+
+from unittest.mock import MagicMock
 
 
 def test_chat_endpoint_preserves_response_contract(monkeypatch):
+    from app import create_app
+
     service = MagicMock()
     service.chat.return_value.to_dict.return_value = {
         "success": True,
@@ -34,6 +38,8 @@ def test_chat_endpoint_preserves_response_contract(monkeypatch):
 
 
 def test_chat_rejects_arbitrary_context_shape(monkeypatch):
+    from app import create_app
+
     service = MagicMock()
     service.chat.side_effect = ValueError("UNSUPPORTED_FILTER: context")
     monkeypatch.setattr(
@@ -56,6 +62,8 @@ def test_chat_rejects_arbitrary_context_shape(monkeypatch):
 
 
 def test_invalid_chat_payload_is_400():
+    from app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
 
@@ -66,6 +74,8 @@ def test_invalid_chat_payload_is_400():
 
 
 def test_chat_rejects_oversized_message_before_service():
+    from app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
 
@@ -79,6 +89,8 @@ def test_chat_rejects_oversized_message_before_service():
 
 
 def test_health_and_evidence_contracts(monkeypatch):
+    from app import create_app
+
     service = MagicMock()
     service.health.return_value = {"ok": False, "code": "ANALYTICS_DB_STALE"}
     service.get_evidence.return_value = None
@@ -98,6 +110,8 @@ def test_health_and_evidence_contracts(monkeypatch):
 
 
 def test_existing_status_contract_still_exists():
+    from app import create_app
+
     app = create_app()
     app.config["TESTING"] = True
 

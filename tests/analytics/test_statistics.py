@@ -1,14 +1,12 @@
-import numpy as np
 import pytest
 
-from analytics.statistics import (
-    binary_effect,
-    benjamini_hochberg,
-    continuous_effect,
-)
+pytestmark = pytest.mark.unit
 
 
 def test_continuous_effect_recovers_known_paired_difference():
+    import numpy as np
+    from analytics.statistics import continuous_effect
+
     differences = np.array([2.0, 3.0, 4.0, 5.0] * 150)
 
     result = continuous_effect(differences, seed=7, resamples=2000)
@@ -21,6 +19,9 @@ def test_continuous_effect_recovers_known_paired_difference():
 
 
 def test_continuous_effect_is_seed_reproducible():
+    import numpy as np
+    from analytics.statistics import continuous_effect
+
     values = np.linspace(-1.0, 2.0, 500)
     assert continuous_effect(values, seed=9, resamples=500) == continuous_effect(
         values, seed=9, resamples=500
@@ -28,6 +29,9 @@ def test_continuous_effect_is_seed_reproducible():
 
 
 def test_continuous_null_effect_stays_descriptive():
+    import numpy as np
+    from analytics.statistics import continuous_effect
+
     result = continuous_effect(np.zeros(600), seed=9, resamples=500)
 
     assert result.value == 0.0
@@ -37,6 +41,9 @@ def test_continuous_null_effect_stays_descriptive():
 
 
 def test_binary_effect_uses_one_match_once():
+    import numpy as np
+    from analytics.statistics import binary_effect
+
     exposure = np.array([1] * 300 + [0] * 300)
     outcome = np.array([1] * 210 + [0] * 90 + [1] * 150 + [0] * 150)
 
@@ -48,6 +55,9 @@ def test_binary_effect_uses_one_match_once():
 
 
 def test_binary_effect_rejects_sparse_group():
+    import numpy as np
+    from analytics.statistics import binary_effect
+
     with pytest.raises(ValueError, match="SPARSE_COMPARISON_GROUP"):
         binary_effect(
             np.array([1] * 99 + [0] * 501),
@@ -57,11 +67,17 @@ def test_binary_effect_rejects_sparse_group():
 
 
 def test_binary_effect_rejects_non_binary_values_before_casting():
+    import numpy as np
+    from analytics.statistics import binary_effect
+
     with pytest.raises(ValueError, match="SOURCE_DATA_INVALID"):
         binary_effect(np.array([0.5] * 300 + [0] * 300), np.zeros(600))
 
 
 def test_binary_effect_serializes_perfect_separation_without_infinity():
+    import numpy as np
+    from analytics.statistics import binary_effect
+
     result = binary_effect(
         np.array([1] * 300 + [0] * 300),
         np.array([1] * 300 + [0] * 300),
@@ -72,11 +88,15 @@ def test_binary_effect_serializes_perfect_separation_without_infinity():
 
 
 def test_bh_is_monotone_in_original_order():
+    from analytics.statistics import benjamini_hochberg
+
     assert benjamini_hochberg([0.01, 0.04, 0.03]) == pytest.approx(
         [0.03, 0.04, 0.04]
     )
 
 
 def test_bh_rejects_invalid_probability():
+    from analytics.statistics import benjamini_hochberg
+
     with pytest.raises(ValueError, match="SOURCE_DATA_INVALID"):
         benjamini_hochberg([0.01, float("nan")])

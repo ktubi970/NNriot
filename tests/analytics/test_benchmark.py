@@ -1,22 +1,28 @@
-from analytics.benchmark import percentile, run_benchmark
+import pytest
+
 from analytics.build import build_analytics
 from analytics.cli import main
 
 
+@pytest.mark.unit
 def test_percentile_is_nearest_rank():
+    from analytics.benchmark import percentile, run_benchmark
+
     assert percentile([0.01, 0.02, 0.03, 0.04, 0.05], 95) == 0.05
 
 
+@pytest.mark.unit
 def test_percentile_rejects_empty_values():
-    try:
+    from analytics.benchmark import percentile, run_benchmark
+
+    with pytest.raises(ValueError, match="^EMPTY_BENCHMARK_SERIES$"):
         percentile([], 95)
-    except ValueError as exc:
-        assert str(exc) == "EMPTY_BENCHMARK_SERIES"
-    else:
-        raise AssertionError("percentile() should reject an empty series")
 
 
+@pytest.mark.integration
 def test_benchmark_reports_cache_analysis_and_chat(powered_analytics_pair):
+    from analytics.benchmark import percentile, run_benchmark
+
     source_db, analytics_db = powered_analytics_pair
 
     report = run_benchmark(str(analytics_db), str(source_db), iterations=5)
@@ -38,7 +44,10 @@ def test_benchmark_reports_cache_analysis_and_chat(powered_analytics_pair):
     assert report["available"] is True
 
 
+@pytest.mark.integration
 def test_benchmark_reports_underpowered_mart(source_db, tmp_path):
+    from analytics.benchmark import percentile, run_benchmark
+
     analytics_db = tmp_path / "analytics.db"
     build_analytics(str(source_db), str(analytics_db))
 
@@ -50,6 +59,7 @@ def test_benchmark_reports_underpowered_mart(source_db, tmp_path):
     assert report["passed"] is False
 
 
+@pytest.mark.integration
 def test_benchmark_cli_prints_json(powered_analytics_pair, capsys):
     source_db, analytics_db = powered_analytics_pair
 

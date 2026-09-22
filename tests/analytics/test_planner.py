@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 from analytics.cohorts import AnalyticsAbstention
 from analytics.planner import FrenchPlanner
 from analytics.types import Intent

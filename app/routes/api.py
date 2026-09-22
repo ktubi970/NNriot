@@ -645,9 +645,9 @@ def api_spectator_active():
 @api_bp.route("/api/sample-match", methods=["GET"])
 def api_sample_match():
     """API endpoint to get a sample match structure."""
-    import test_data
+    from tests import fixtures_data
 
-    return jsonify(test_data.get_sample_match())
+    return jsonify(fixtures_data.get_sample_match())
 
 
 @api_bp.route("/api/monitor/metrics", methods=["GET"])

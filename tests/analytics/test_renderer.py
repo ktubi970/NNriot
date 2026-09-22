@@ -1,3 +1,8 @@
+import pytest
+
+pytestmark = pytest.mark.unit
+
+
 from analytics.renderer import (
     render_answer,
     validate_narrative,

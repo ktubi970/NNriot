@@ -1,11 +1,16 @@
 import json
+import pytest
 
-from analytics.interpretable import train_and_evaluate
+pytestmark = pytest.mark.integration
 
 
+@pytest.mark.slow
+@pytest.mark.ml
 def test_report_includes_baselines_calibration_and_untouched_test(
     model_db, tmp_path
 ):
+    from analytics.interpretable import train_and_evaluate
+
     report = train_and_evaluate(str(model_db), str(tmp_path / "artifacts"))
 
     assert report.dataset_version
@@ -33,9 +38,13 @@ def test_report_includes_baselines_calibration_and_untouched_test(
     assert (tmp_path / "artifacts" / "interpretable_model.joblib").exists()
 
 
+@pytest.mark.slow
+@pytest.mark.ml
 def test_grouped_result_reports_underpowered_instead_of_fallback(
     model_db, tmp_path
 ):
+    from analytics.interpretable import train_and_evaluate
+
     report = train_and_evaluate(
         str(model_db),
         str(tmp_path / "artifacts"),
@@ -47,6 +56,8 @@ def test_grouped_result_reports_underpowered_instead_of_fallback(
 
 
 def test_underpowered_final_test_does_not_publish_artifacts(cohort_db, tmp_path):
+    from analytics.interpretable import train_and_evaluate
+
     artifact_dir = tmp_path / "underpowered-artifacts"
 
     report = train_and_evaluate(str(cohort_db), str(artifact_dir))

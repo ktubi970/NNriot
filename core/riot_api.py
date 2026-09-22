@@ -4,6 +4,7 @@ import os
 import requests
 import time
 import threading
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dotenv import load_dotenv, dotenv_values, find_dotenv
 
@@ -25,9 +26,18 @@ class RiotRateLimiter:
     - 100 requests per 120 seconds
     """
 
-    def __init__(self, per_second: int = 18, per_2min: int = 95):
+    def __init__(
+        self,
+        per_second: int = 18,
+        per_2min: int = 95,
+        *,
+        clock: Callable[[], float] = time.monotonic,
+        sleep: Callable[[float], None] = time.sleep,
+    ):
         self.per_second = per_second
         self.per_2min = per_2min
+        self._clock = clock
+        self._sleep = sleep
         self.lock = threading.Lock()
         self.timestamps_1s = collections.deque()
         self.timestamps_120s = collections.deque()
@@ -39,7 +49,7 @@ class RiotRateLimiter:
         while True:
             wait_time = 0.0
             with self.lock:
-                now = time.time()
+                now = self._clock()
                 while self.timestamps_1s and now - self.timestamps_1s[0] >= 1.0:
                     self.timestamps_1s.popleft()
                 while self.timestamps_120s and now - self.timestamps_120s[0] >= 120.0:
@@ -56,7 +66,7 @@ class RiotRateLimiter:
                     return
 
             if wait_time > 0:
-                time.sleep(wait_time)
+                self._sleep(wait_time)
 
 
 class RiotAPI:

@@ -1,5 +1,7 @@
 import pytest
 
+pytestmark = pytest.mark.unit
+
 from analytics.registry import FeatureClass, MetricKind, get_metric
 from analytics.types import AnalysisFilters, AnalysisRequest, Intent
 

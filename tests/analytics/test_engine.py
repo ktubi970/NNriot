@@ -1,4 +1,8 @@
-from analytics.engine import AnalysisEngine
+import pytest
+
+pytestmark = pytest.mark.integration
+
+
 from analytics.config import AnalyticsConfig
 from analytics.db import connect_analytics
 from analytics.registry import METRICS
@@ -7,6 +11,8 @@ from tests.analytics.factories import seed_fact_rows
 
 
 def test_engine_applies_bh_to_complete_candidate_family(powered_analytics_db):
+    from analytics.engine import AnalysisEngine
+
     packets = AnalysisEngine(str(powered_analytics_db)).run(
         AnalysisRequest(Intent.RANK_CONDITIONS),
         question="Comment gagne-t-on ?",
@@ -28,6 +34,8 @@ def test_engine_applies_bh_to_complete_candidate_family(powered_analytics_db):
 
 
 def test_same_dataset_request_and_seed_reproduce_evidence_id(powered_analytics_db):
+    from analytics.engine import AnalysisEngine
+
     engine = AnalysisEngine(str(powered_analytics_db))
     request = AnalysisRequest(Intent.EXPLAIN_METRIC, "gold")
 
@@ -39,6 +47,8 @@ def test_same_dataset_request_and_seed_reproduce_evidence_id(powered_analytics_d
 
 
 def test_different_question_wording_gets_its_own_packet(powered_analytics_db):
+    from analytics.engine import AnalysisEngine
+
     engine = AnalysisEngine(str(powered_analytics_db))
     request = AnalysisRequest(Intent.EXPLAIN_METRIC, "gold")
 
@@ -50,6 +60,8 @@ def test_different_question_wording_gets_its_own_packet(powered_analytics_db):
 
 
 def test_cache_does_not_reuse_a_packet_from_another_seed(powered_analytics_db):
+    from analytics.engine import AnalysisEngine
+
     request = AnalysisRequest(Intent.EXPLAIN_METRIC, "gold")
     default = AnalysisEngine(str(powered_analytics_db)).run(
         request, question="Question réservée au test de graine"
@@ -79,6 +91,8 @@ def test_cache_does_not_reuse_a_packet_from_another_seed(powered_analytics_db):
 def test_compare_patches_returns_contrast_not_two_unrelated_rankings(
     powered_analytics_db,
 ):
+    from analytics.engine import AnalysisEngine
+
     request = AnalysisRequest(
         Intent.COMPARE_PATCHES,
         "gold",
@@ -96,6 +110,8 @@ def test_compare_patches_returns_contrast_not_two_unrelated_rankings(
 
 
 def test_null_metric_remains_descriptive(powered_analytics_db):
+    from analytics.engine import AnalysisEngine
+
     packet = AnalysisEngine(str(powered_analytics_db)).run(
         AnalysisRequest(Intent.EXPLAIN_METRIC, "atakhan"),
         question="Atakhan est-il associé à la victoire ?",
@@ -108,6 +124,8 @@ def test_null_metric_remains_descriptive(powered_analytics_db):
 def test_compare_regions_widens_until_each_region_is_powered(
     powered_analytics_db,
 ):
+    from analytics.engine import AnalysisEngine
+
     request = AnalysisRequest(
         Intent.COMPARE_REGIONS,
         "gold",
@@ -130,6 +148,8 @@ def test_compare_regions_widens_until_each_region_is_powered(
 def test_compare_regions_applies_bh_to_every_requested_pair(
     powered_analytics_db,
 ):
+    from analytics.engine import AnalysisEngine
+
     request = AnalysisRequest(
         Intent.COMPARE_REGIONS,
         "vision_score",
@@ -164,6 +184,8 @@ def test_compare_regions_applies_bh_to_every_requested_pair(
 def test_compare_regions_discovers_supported_region_family_automatically(
     powered_analytics_db,
 ):
+    from analytics.engine import AnalysisEngine
+
     config = AnalyticsConfig(
         analytics_path=str(powered_analytics_db),
         bootstrap_resamples=200,
@@ -179,6 +201,8 @@ def test_compare_regions_discovers_supported_region_family_automatically(
 
 
 def test_null_regional_family_publishes_no_ranking(tmp_path):
+    from analytics.engine import AnalysisEngine
+
     path = seed_fact_rows(
         tmp_path / "null-regions.db",
         {"16.14": 1800},
