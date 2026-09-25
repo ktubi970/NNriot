@@ -15,6 +15,9 @@ def client(monkeypatch):
     """Build a Flask test client with a mocked global_trainer."""
     fake_trainer = MagicMock()
     fake_trainer.predict.return_value = _fake_preds()
+    fake_trainer.model.is_calibrated = True
+    fake_trainer.model.calibration_temperature = 1.0
+    fake_trainer.is_calibrated = True
 
     # init_trainer runs at app package import time; overwrite the
     # core-module globals via monkeypatch so the assignments are undone
@@ -317,5 +320,64 @@ def test_predict_custom_rejects_uncalibrated_model(client, monkeypatch):
     assert "calibrated" in data["error"].lower()
 
 
+def test_predict_endpoints_share_calibrated_winner_transform(monkeypatch):
+    import threading
+    from scripts.continuous_trainer import ContinuousTrainer
 
+    raw = _fake_preds()
+
+    class FakeModel:
+        is_calibrated = True
+        calibration_temperature = 2.0
+        calibration_metadata = {"temperature": 2.0}
+
+        def predict(self, x, verbose=0):
+            return {k: v.copy() for k, v in raw.items()}
+
+    trainer = ContinuousTrainer.__new__(ContinuousTrainer)
+    trainer._model_lock = threading.RLock()
+    trainer.model = FakeModel()
+
+    monkeypatch.setattr(app_core, "global_trainer", trainer)
+    monkeypatch.setattr(app_core, "tf_available", True)
+
+    flask_app.config["TESTING"] = True
+    c = flask_app.test_client()
+
+    resp_legacy = c.post("/api/predict", json=_sample_match_payload())
+    assert resp_legacy.status_code == 200
+    data_legacy = resp_legacy.get_json()
+
+    resp_custom = c.post("/api/predict/custom", json={
+        "blue_team": [{"champion_name": "Aatrox", "role": "TOP", "puuid": "p1"}] * 5,
+        "red_team": [{"champion_name": "Lux", "role": "MID", "puuid": "p2"}] * 5,
+    })
+    assert resp_custom.status_code == 200
+    data_custom = resp_custom.get_json()
+
+    p_a_leg = data_legacy["winner"]["team_a"]
+    p_b_leg = data_legacy["winner"]["team_b"]
+    p_a_cust = data_custom["nn_results"]["blue_win_probability"]
+    p_b_cust = data_custom["nn_results"]["red_win_probability"]
+
+    assert abs(p_a_leg - p_a_cust) <= 0.001
+    assert abs(p_b_leg - p_b_cust) <= 0.001
+    assert abs(p_a_leg - 0.449) <= 0.002
+    assert abs(p_b_leg - 0.551) <= 0.002
+
+    # Preserves non-winner fields on legacy endpoint
+    assert data_legacy["totals"]["barons"] == 2.8
+    assert data_legacy["kills"]["odd_probability"] == 0.5
+
+    # Test unavailable calibration produces 503 on custom route and uncalibrated error on legacy
+    trainer.model.is_calibrated = False
+    err_custom = c.post("/api/predict/custom", json={
+        "blue_team": [{"champion_name": "Aatrox", "role": "TOP", "puuid": "p1"}] * 5,
+        "red_team": [{"champion_name": "Lux", "role": "MID", "puuid": "p2"}] * 5,
+    })
+    assert err_custom.status_code == 503
+    assert err_custom.get_json().get("uncalibrated") is True
+
+    err_legacy = c.post("/api/predict", json=_sample_match_payload())
+    assert err_legacy.get_json().get("uncalibrated") is True
 

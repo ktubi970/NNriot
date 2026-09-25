@@ -44,7 +44,7 @@ LOSS_PER_HEAD: dict[str, str] = {
 
 # Output head name -> loss weight (starting point per MULTI_OUTPUT_MODEL_PLAN.md §5).
 # Regression heads run at 1.0 because their targets are normalized to ~unit
-# variance in continuous_trainer._build_targets (see REGRESSION_STATS).
+# variance in training_utils._build_targets (see REGRESSION_STATS).
 LOSS_WEIGHTS: dict[str, float] = {
     "winner":            1.0,
     "team_b_kill_lead":  1.0,

@@ -24,16 +24,24 @@ from core import riot_api
 from core import json_utils
 from core.task_runner import global_task_runner
 from ..services.player_service import PlayerService
+from core.repository import PlayerRepository
 from ..services.system_service import SystemService
 
-_player_service = PlayerService()
-_system_service = SystemService()
+def _system_service():
+    from core.repository import SystemRepository
+    return SystemService(SystemRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
 from core.feature_labels import VECTOR_DIM
+from core.calibration import UncalibratedModelError
+from core.pre_match_dataset import to_pre_match_features
 
 from .. import core
 
 api_bp = Blueprint("api", __name__)
 logger = logging.getLogger(__name__)
+
+
+def _player_service():
+    return PlayerService(PlayerRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
 
 
 # ── Status / health ─────────────────────────────────────────────────────────
@@ -63,12 +71,8 @@ def api_status():
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
     try:
-        db_path = (
-            current_app.config.get("NNRIOT_DB_PATH")
-            or os.getenv("NNRIOT_DB_PATH")
-            or database.DB_PATH
-        )
-        result = _system_service.get_full_telemetry(db_path=db_path)
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+        result = _system_service().get_full_telemetry(db_path=db_path)
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
@@ -88,7 +92,7 @@ def api_get_job_status(job_id):
 @api_bp.route("/api/players/aliases", methods=["GET"])
 def api_players_aliases():
     try:
-        result = _player_service.get_all_aliases()
+        result = _player_service().get_all_aliases()
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching aliases: {e}", exc_info=True)
@@ -99,7 +103,7 @@ def api_players_aliases():
 def api_players_unlink():
     try:
         alias_puuid = request.args.get("alias_puuid")
-        result = _player_service.unlink_accounts(alias_puuid)
+        result = _player_service().unlink_accounts(alias_puuid)
         return jsonify(result), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -113,7 +117,7 @@ def api_players_search():
     try:
         q = (request.args.get("q") or request.args.get("query") or "").strip()
         limit = request.args.get("limit", 10, type=int)
-        result = _player_service.search_players(q, limit)
+        result = _player_service().search_players(q, limit)
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Player search error: {e}", exc_info=True)
@@ -124,7 +128,7 @@ def api_players_search():
 def api_players_random():
     try:
         limit = request.args.get("limit", 10, type=int)
-        result = _player_service.get_random_players(limit)
+        result = _player_service().get_random_players(limit)
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
@@ -135,7 +139,7 @@ def api_players_random():
 def api_players_top():
     try:
         limit = request.args.get("limit", 10, type=int)
-        result = _player_service.get_top_players(limit)
+        result = _player_service().get_top_players(limit)
         return jsonify(result), 200
     except Exception as e:
         logger.error(f"Top players error: {e}", exc_info=True)
@@ -150,7 +154,7 @@ def api_link_players():
             return jsonify({"error": "Invalid or missing JSON payload"}), 400
         main_puuid = data.get("canonical_puuid")
         smurf_puuid = data.get("alias_puuid")
-        result = _player_service.link_accounts(main_puuid, smurf_puuid)
+        result = _player_service().link_accounts(main_puuid, smurf_puuid)
         return jsonify(result), 200
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
@@ -220,7 +224,7 @@ def api_stream_process_frame():
 
         # DYNAMIC OCR RESULTS (PICK 10 RANDOM FROM DB)
         try:
-            db_players = database.get_top_players(limit=20)
+            db_players = database.get_top_players(limit=20, db_path=current_app.config["NNRIOT_DB_PATH"])
             if len(db_players) >= 10:
                 random.shuffle(db_players)
                 blue_names = [p["game_name"] for p in db_players[:5]]
@@ -413,7 +417,7 @@ def api_predict_custom():
         # whatever data is in the DB now.
         all_puuids = blue_team_puuids + red_team_puuids
         try:
-            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7)
+            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7, db_path=current_app.config["NNRIOT_DB_PATH"])
             if stale_puuids:
                 logger.info(
                     "Warm-up: %d/%d players have stale data — enqueueing refresh",
@@ -422,7 +426,7 @@ def api_predict_custom():
                 )
                 # Get account info (game_name, tag_line) for each stale puuid
                 # to feed collect_by_puuid
-                with database.get_connection() as conn:
+                with database.get_connection(current_app.config["NNRIOT_DB_PATH"]) as conn:
                     placeholders = ",".join(["?"] * len(stale_puuids))
                     rows = conn.execute(
                         f"SELECT puuid, game_name, tag_line FROM players WHERE puuid IN ({placeholders})",
@@ -438,10 +442,12 @@ def api_predict_custom():
                     for r in rows
                 ]
                 if accounts:
+                    db_path = current_app.config["NNRIOT_DB_PATH"]
+
                     def _refresh_stale():
                         try:
                             result = data_collector.collect_by_puuid(
-                                accounts, matches_per_player=20
+                                accounts, matches_per_player=20, db_path=db_path
                             )
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
@@ -453,16 +459,22 @@ def api_predict_custom():
             logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
 
         # Fetch stats for all players
-        blue_stats = [database.get_player_stats(p) for p in blue_team_puuids]
-        red_stats = [database.get_player_stats(p) for p in red_team_puuids]
+        blue_stats = [database.get_player_stats(p, db_path=current_app.config["NNRIOT_DB_PATH"]) for p in blue_team_puuids]
+        red_stats = [database.get_player_stats(p, db_path=current_app.config["NNRIOT_DB_PATH"]) for p in red_team_puuids]
 
         if not core.tf_available or core.global_trainer is None:
             return jsonify({"error": "TensorFlow model is not loaded"}), 503
 
         trainer_model = getattr(core.global_trainer, "model", None)
-        if (trainer_model is not None and getattr(trainer_model, "is_calibrated", True) is False) or getattr(core.global_trainer, "is_calibrated", True) is False:
+        is_calibrated = False
+        if trainer_model is not None:
+            is_calibrated = getattr(trainer_model, "is_calibrated", False) is True
+        elif getattr(core.global_trainer, "is_calibrated", False) is True:
+            is_calibrated = True
+
+        if not is_calibrated:
             return jsonify({
-                "error": "Model checkpoint is uncalibrated (untrained weights). Please train the model via 'cli.py train' before requesting predictions.",
+                "error": "Active model checkpoint is uncalibrated. A 'cli.py train' run writes only a candidate checkpoint and does not activate it.",
                 "uncalibrated": True,
             }), 503
 
@@ -496,7 +508,7 @@ def api_predict_custom():
         }
 
         # Use centralized pre-match feature extraction
-        feature_dict = json_utils.extract_pre_match_features(match_data)
+        feature_dict = to_pre_match_features(match_data)
 
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
         dense_vec = sparse_vec.toarray()
@@ -538,6 +550,8 @@ def api_predict_custom():
 
         return jsonify(response_data)
 
+    except UncalibratedModelError as e:
+        return jsonify({"error": str(e), "uncalibrated": True}), 503
     except Exception as e:
         logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -552,7 +566,7 @@ def api_warmup_status():
     puuids = [p.strip() for p in raw.split(",") if p.strip()]
     if not puuids:
         return jsonify({"error": "puuids query param required"}), 400
-    stale = database.get_stale_puuids(puuids, stale_after_days=7)
+    stale = database.get_stale_puuids(puuids, stale_after_days=7, db_path=current_app.config["NNRIOT_DB_PATH"])
     return jsonify(
         {
             "puuids_checked": puuids,
@@ -612,7 +626,7 @@ def api_spectator_active():
         for p in participants:
             puuid = p.get("puuid")
             if puuid:
-                p["stats"] = database.get_player_stats(puuid)
+                p["stats"] = database.get_player_stats(puuid, db_path=current_app.config["NNRIOT_DB_PATH"])
                 if not p["stats"]:
                     new_players.append(
                         {"name": p.get("summonerName"), "tag": tag, "puuid": puuid}
@@ -621,12 +635,13 @@ def api_spectator_active():
         # If there are new players, trigger background collection (Auto-Import)
         if new_players:
             logger.info(f"Triggering auto-collection for {len(new_players)} new players")
+            db_path = current_app.config["NNRIOT_DB_PATH"]
 
             def auto_collect_task():
                 try:
                     # Use seeds approach
                     seeds = [(p["name"], p["tag"]) for p in new_players]
-                    data_collector.collect_training_data(seeds, matches_per_player=10)
+                    data_collector.collect_training_data(seeds, matches_per_player=10, db_path=db_path)
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
                     raise
@@ -654,13 +669,9 @@ def api_sample_match():
 def api_monitor_metrics():
     """API endpoint to get model performance and training metrics."""
     try:
-        db_path = (
-            current_app.config.get("NNRIOT_DB_PATH")
-            or os.getenv("NNRIOT_DB_PATH")
-            or database.DB_PATH
-        )
-        telemetry = _system_service.get_full_telemetry(db_path=db_path)
-        regions = _system_service.get_region_distribution(db_path=db_path)
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+        telemetry = _system_service().get_full_telemetry(db_path=db_path)
+        regions = _system_service().get_region_distribution(db_path=db_path)
 
         metrics = dict(telemetry)
         metrics["database_stats"] = dict(telemetry)

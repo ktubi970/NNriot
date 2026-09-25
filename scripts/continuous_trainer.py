@@ -13,48 +13,34 @@ import os
 os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 
 import random
+import threading
 import tensorflow as tf
 import numpy as np
 import time
 import logging
-from core import database
+from core import config, database
 from core.repository import TrainingRepository
 from core import json_utils
 from core.feature_labels import LABEL_KEYS, ALL_LABEL_KEYS, VECTOR_DIM
+from core.training_utils import REGRESSION_STATS, _build_targets, sparse_microbatch_generator
 from core.generate_graph import build_multi_output_model
+from core.calibration import (
+    UncalibratedModelError,
+    apply_temperature_to_probabilities,
+    invalidate_calibration,
+)
 
 # Configuration
 TRAINING_INTERVAL_SECONDS = 10 * 60  # 10 minutes
 
-# Normalization stats for regression heads, derived empirically from the
-# production training set (47k Match-V5 records). Values are (mean, std).
-# After normalization, each regression head sees ~unit-variance targets,
-# letting LOSS_WEIGHTS for regressions be 1.0 alongside categorical heads.
-REGRESSION_STATS: dict[str, tuple[float, float]] = {
-    "total_kills":   (30.0, 12.0),
-    "team_a_kills":  (15.0, 7.0),
-    "team_b_kills":  (15.0, 7.0),
-    "kill_handicap": (0.0, 12.0),
-    "total_barons":  (1.0, 1.0),
-    "total_dragons": (2.5, 1.5),
-    "total_towers":  (10.0, 5.0),
-}
-# BATCH_SIZE / EPOCHS_PER_BATCH can be overridden via env vars so users can
-# do a small smoke run before kicking off a full training cycle:
-#   NNRIOT_BATCH_SIZE=100 NNRIOT_EPOCHS=1 python continuous_trainer.py
-#
-# Defaults raised after focused_train.py diagnostic showed the multi-output
-# model requires ~8 warmup epochs before signal appears. The previous defaults
-# (500 / 2) trapped the model at baseline accuracy on every cycle. The new
-# defaults push each cycle past the warmup plateau but make cycles much slower
-# (~3 minutes instead of ~10 seconds). For periodic from-scratch retraining,
-# use retrain_full.py instead — that is the recommended workflow.
+# Continuous updates remain available through cli.py train-continuous.
+# Candidate evaluation uses the chronological pre-match training command.
 BATCH_SIZE = int(os.environ.get("NNRIOT_BATCH_SIZE", "3000"))
 EPOCHS_PER_BATCH = int(os.environ.get("NNRIOT_EPOCHS", "15"))
 
 # Use script-relative paths so the trainer works regardless of CWD
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CHECKPOINT_PATH = os.path.join(BASE_DIR, "model_v2.keras")
+CHECKPOINT_PATH = os.environ.get("NNRIOT_CHECKPOINT_PATH") or os.path.join(BASE_DIR, "model_v2.keras")
 
 # Setup Logging
 logger = logging.getLogger(__name__)
@@ -64,93 +50,9 @@ logging.basicConfig(
 )
 
 
-def _build_targets(records: list[dict]) -> dict[str, np.ndarray]:
-    """Build a dict of {head_name: ndarray} ready for model.train_on_batch.
-
-    Assumes all records have complete labels_json (filtered by caller).
-    The ``.get(name, 0)`` defensive accesses below remain to protect against
-    future drift, but the caller (``run_training_step``) is responsible for
-    filtering incomplete records before invoking this function — otherwise
-    the produced targets would not align with the input matrix built from
-    the same record list.
-    """
-    n = len(records)
-    # Pre-allocate arrays per head type
-    targets: dict[str, np.ndarray] = {}
-
-    # 2-class softmax heads: shape (n, 2), one-hot
-    for name in ("winner", "team_b_kill_lead"):
-        arr = np.zeros((n, 2), dtype=np.float32)
-        for i, r in enumerate(records):
-            val = int(r["labels_json"].get(name, 0))
-            arr[i, val] = 1.0
-        targets[name] = arr
-
-    # 3-class softmax heads: shape (n, 3), one-hot
-    # NOTE: timeline kill-threshold heads (first_to_N_kills) default to class 2
-    # ("neither team reached the threshold") when the key is missing from a
-    # record's labels_json. This makes timeline labels OPTIONAL — existing rows
-    # without timeline ingestion still train these heads (toward "neither").
-    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower"):
-        arr = np.zeros((n, 3), dtype=np.float32)
-        for i, r in enumerate(records):
-            val = int(r["labels_json"].get(name, 0))
-            arr[i, val] = 1.0
-        targets[name] = arr
-    for name in ("first_to_5_kills", "first_to_10_kills",
-                 "first_to_15_kills", "first_to_20_kills"):
-        arr = np.zeros((n, 3), dtype=np.float32)
-        for i, r in enumerate(records):
-            val = int(r["labels_json"].get(name, 2))  # default: "neither" class
-            arr[i, val] = 1.0
-        targets[name] = arr
-
-    # Binary sigmoid heads: shape (n, 1), 0.0 or 1.0
-    for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
-        arr = np.zeros((n, 1), dtype=np.float32)
-        for i, r in enumerate(records):
-            arr[i, 0] = float(r["labels_json"].get(name, 0))
-        targets[name] = arr
-
-    # Regression heads: shape (n, 1), normalized via (raw - mean) / std
-    # so each head sees ~unit-variance targets (REGRESSION_STATS).
-    for name in ("kill_handicap", "total_kills", "team_a_kills", "team_b_kills",
-                 "total_barons", "total_dragons", "total_towers"):
-        arr = np.zeros((n, 1), dtype=np.float32)
-        mean, std = REGRESSION_STATS[name]
-        for i, r in enumerate(records):
-            raw = float(r["labels_json"].get(name, 0))
-            arr[i, 0] = (raw - mean) / std
-        targets[name] = arr
-
-    return targets
-
-
-def sparse_microbatch_generator(x_sparse, y_dense, batch_size=32):
-    """Yields small dense micro-batches from a large sparse matrix to save memory.
-
-    ``y_dense`` may be either a plain ndarray (legacy) or a dict mapping head
-    names to ndarrays (multi-output). The generator preserves whichever shape
-    was passed in.
-    """
-    n_samples = x_sparse.shape[0]
-    indices = np.arange(n_samples)
-    np.random.shuffle(indices)
-
-    for start_idx in range(0, n_samples, batch_size):
-        end_idx = min(start_idx + batch_size, n_samples)
-        batch_indices = indices[start_idx:end_idx]
-
-        x_batch = x_sparse[batch_indices].toarray()
-        if isinstance(y_dense, dict):
-            y_batch = {k: v[batch_indices] for k, v in y_dense.items()}
-        else:
-            y_batch = y_dense[batch_indices]
-        yield x_batch, y_batch
-
-
 class ContinuousTrainer:
-    def __init__(self, checkpoint_path: str = None):
+    def __init__(self, checkpoint_path: str = None, db_path: str = None):
+        self._model_lock = threading.RLock()
         from core.model_factory import ModelFactory
         target_checkpoint = checkpoint_path or CHECKPOINT_PATH
         self.model, self.checkpoint_path = ModelFactory.get_model(
@@ -159,7 +61,7 @@ class ContinuousTrainer:
             force_rebuild=False, 
             checkpoint_path=target_checkpoint
         )
-        self.repo = TrainingRepository()
+        self.repo = TrainingRepository(db_path=db_path)
 
     def close(self):
         """No explicit session close needed in TF2."""
@@ -167,6 +69,10 @@ class ContinuousTrainer:
 
     def run_training_step(self):
         """Fetch new data, train, and tag. Returns number of records processed."""
+        with self._model_lock:
+            return self._run_training_step_locked()
+
+    def _run_training_step_locked(self):
         logger.info("Checking for new training data...")
         new_records = self.repo.get_untrained_records(limit=BATCH_SIZE)
 
@@ -226,6 +132,8 @@ class ContinuousTrainer:
         # when the row's labels_json is missing them).
         y_data = _build_targets(records)
 
+        invalidate_calibration(self.model, self.checkpoint_path)
+
         logger.info(
             "Starting %d epochs with micro-batch optimization...", EPOCHS_PER_BATCH
         )
@@ -284,23 +192,36 @@ class ContinuousTrainer:
         -------
         dict[str, np.ndarray]
             One entry per output head; e.g. ``out["winner"]`` has shape
-            (n_samples, 2) and contains softmax probabilities. Regression
+            (n_samples, 2) and contains calibrated softmax probabilities. Regression
             heads return shape (n_samples, 1).
 
         Notes
         -----
         Return type changed from ndarray to dict in P3 (multi-output model).
         Callers that previously did ``preds[0]`` for the single softmax row
-        must be updated to use ``preds["winner"][0]``. This is a known
-        incompatibility for ``final_web_app.py`` to be fixed in P4.
+        must be updated to use ``preds["winner"][0]``. The web application formats these named outputs for its prediction API.
         """
-        return self.model.predict(x_dense, verbose=0)
+        with self._model_lock:
+            if getattr(self.model, 'is_calibrated', False) is not True:
+                raise UncalibratedModelError('No verified winner calibration is available')
+            temperature = self.model.calibration_temperature
+            raw = self.model.predict(x_dense, verbose=0)
+            winner = np.asarray(raw['winner'], dtype=float)
+            if (winner.ndim != 2 or winner.shape[1] != 2 or
+                    not np.isfinite(winner).all() or (winner < 0).any() or
+                    (winner > 1).any() or not np.allclose(winner.sum(axis=1), 1.0, atol=1e-6)):
+                raise ValueError('winner output must contain normalized [A, B] probabilities')
+            p_b = apply_temperature_to_probabilities(winner[:, 1], temperature)
+            output = dict(raw)
+            output['winner'] = np.column_stack((1.0 - p_b, p_b))
+            return output
 
 
-def main():
-    database.migrate_db()
+def main(db_path=None):
+    db_path = config.get_db_path(db_path, require_exists=True)
+    database.migrate_db(db_path)
 
-    trainer = ContinuousTrainer()
+    trainer = ContinuousTrainer(db_path=db_path)
 
     print("\n" + "=" * 40)
     print("NNriot Batch Trainer Started")

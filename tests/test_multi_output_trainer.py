@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pytest
 
-from scripts.continuous_trainer import _build_targets, sparse_microbatch_generator, REGRESSION_STATS
+from core.training_utils import _build_targets, sparse_microbatch_generator, REGRESSION_STATS
 from core.feature_labels import LABEL_KEYS, ALL_LABEL_KEYS
 
 

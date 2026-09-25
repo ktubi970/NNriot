@@ -5,6 +5,8 @@ import logging
 from core import database
 from core import json_utils
 from core.feature_labels import VECTOR_DIM
+from core.calibration import UncalibratedModelError
+from core.pre_match_dataset import to_pre_match_features
 
 logger = logging.getLogger(__name__)
 
@@ -25,12 +27,12 @@ global_trainer = None
 tf_available = False
 trainer_loading = False
 
-def _bg_load_trainer():
+def _bg_load_trainer(db_path=None):
     global global_trainer, tf_available, trainer_loading
     try:
         logger.info("Background thread: starting to load TensorFlow model (this may take a minute)...")
         from scripts.continuous_trainer import ContinuousTrainer
-        trainer = ContinuousTrainer()
+        trainer = ContinuousTrainer(db_path=db_path)
         global_trainer = trainer
         tf_available = True
         logger.info("TensorFlow model loaded successfully in background!")
@@ -39,14 +41,14 @@ def _bg_load_trainer():
     finally:
         trainer_loading = False
 
-def init_trainer_async():
+def init_trainer_async(db_path=None):
     global trainer_loading
     trainer_loading = True
-    t = threading.Thread(target=_bg_load_trainer, daemon=True)
+    t = threading.Thread(target=_bg_load_trainer, args=(db_path,), daemon=True)
     t.start()
 
 def _format_multi_output_response(preds: dict) -> dict:
-    from scripts.continuous_trainer import REGRESSION_STATS
+    from core.training_utils import REGRESSION_STATS
 
     def _scalar(name): return float(preds[name][0][0])
     def _denorm(name):
@@ -103,19 +105,27 @@ def final_predict_match_outcome(match_data: dict) -> dict:
         return {"error": "TensorFlow model is not loaded or available"}
 
     trainer_model = getattr(global_trainer, "model", None)
-    if getattr(trainer_model, "is_calibrated", True) is False or getattr(global_trainer, "is_calibrated", True) is False:
+    is_calibrated = False
+    if trainer_model is not None:
+        is_calibrated = getattr(trainer_model, "is_calibrated", False) is True
+    elif getattr(global_trainer, "is_calibrated", False) is True:
+        is_calibrated = True
+
+    if not is_calibrated:
         return {
-            "error": "Model checkpoint is uncalibrated (untrained weights). Please train the model via 'cli.py train' before requesting predictions.",
+            "error": "No calibrated active model is available. Candidate training does not automatically activate a model; validate and promote a checkpoint before requesting predictions.",
             "uncalibrated": True,
         }
 
     try:
-        feature_dict = json_utils.extract_match_features(match_data)
+        feature_dict = to_pre_match_features(match_data)
         sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
         dense_vec = sparse_vec.toarray()
         with predict_lock:
             preds = global_trainer.predict(dense_vec)
         return _format_multi_output_response(preds)
+    except UncalibratedModelError as exc:
+        return {"error": str(exc), "uncalibrated": True}
     except Exception as e:
         logger.error(f"Prediction error: {e}", exc_info=True)
         return {"error": str(e)}

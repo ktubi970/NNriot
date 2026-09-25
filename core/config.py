@@ -1,8 +1,62 @@
 import os
-from dotenv import load_dotenv
+from pathlib import Path
+from dotenv import dotenv_values, load_dotenv
 
-# Load .env file if it exists
-load_dotenv()
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+_DB_KEYS = ("NNRIOT_DB_PATH", "NNRIOT_ANALYTICS_DB_PATH", "ANALYTICS_DB_PATH")
+_PROCESS_DB_ENV = {key: os.environ[key] for key in _DB_KEYS if key in os.environ}
+_IMPORTED_DOTENV = dotenv_values(PROJECT_ROOT / ".env")
+
+# Existing modules consume non-database settings directly from os.environ.
+# Preserve that behavior, while keeping database precedence explicit below.
+load_dotenv(PROJECT_ROOT / ".env", override=False)
+
+
+def _configured_path(value, env_keys, default):
+    if value is not None:
+        if not str(value).strip():
+            raise ValueError("Database path must not be empty")
+        return str(value)
+
+    dotenv = dotenv_values(PROJECT_ROOT / ".env")
+    for key in env_keys:
+        candidate = os.environ.get(key)
+        if candidate and (
+            key in _PROCESS_DB_ENV
+            or key not in _IMPORTED_DOTENV
+            or candidate != _IMPORTED_DOTENV[key]
+        ):
+            return candidate
+    for key in env_keys:
+        if dotenv.get(key):
+            return dotenv[key]
+    return default
+
+
+def _absolute_db_path(value, env_keys, default, require_exists):
+    selected = Path(_configured_path(value, env_keys, default)).expanduser()
+    if not selected.is_absolute():
+        selected = PROJECT_ROOT / selected
+    resolved = selected.resolve()
+    if require_exists and not resolved.is_file():
+        raise FileNotFoundError(f"Database file does not exist: {resolved}")
+    return str(resolved)
+
+
+def get_db_path(value=None, *, require_exists=False):
+    """Return the source database path, anchored to the project directory."""
+    return _absolute_db_path(value, ("NNRIOT_DB_PATH",), "training_data.db", require_exists)
+
+
+def get_analytics_db_path(value=None, *, require_exists=False):
+    """Return the analytics mart path, anchored to the project directory."""
+    return _absolute_db_path(
+        value,
+        ("NNRIOT_ANALYTICS_DB_PATH", "ANALYTICS_DB_PATH"),
+        "analytics.db",
+        require_exists,
+    )
+
 
 # App Configuration
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
@@ -13,8 +67,8 @@ CORS_ORIGINS = [
 ]
 
 # Database Configuration
-DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
-ANALYTICS_DB_PATH = os.environ.get("NNRIOT_ANALYTICS_DB_PATH") or os.environ.get("ANALYTICS_DB_PATH", "analytics.db")
+DB_PATH = get_db_path()
+ANALYTICS_DB_PATH = get_analytics_db_path()
 MAX_DB_SIZE = int(os.environ.get("NNRIOT_MAX_DB_SIZE_GB", "50")) * 1024 * 1024 * 1024
 
 # Riot API Configuration

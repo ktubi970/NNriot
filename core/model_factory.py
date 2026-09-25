@@ -11,6 +11,7 @@ import tensorflow as tf
 
 from core.generate_graph import build_multi_output_model, build_keras_model
 from core.feature_labels import VECTOR_DIM
+from core.calibration import load_calibration_artifact
 
 logger = logging.getLogger(__name__)
 
@@ -43,6 +44,7 @@ class ModelFactory:
             
         model = None
         if not force_rebuild and os.path.exists(path):
+            candidate = None
             try:
                 candidate = tf.keras.models.load_model(path)
                 
@@ -57,15 +59,29 @@ class ModelFactory:
                     expected_heads = set(ALL_LABEL_KEYS)
                     if actual_heads != expected_heads:
                         raise ValueError(f"Heads mismatch. Missing: {expected_heads - actual_heads}")
-                
-                candidate.is_calibrated = True
-                logger.info("Model %s restored from %s.", version, path)
-                return candidate, path
             except Exception as e:
                 logger.warning("Failed to load %s from %s: %s. Rebuilding...", version, path, e)
-                
+                candidate = None
+
+            if candidate is not None:
+                candidate.is_calibrated = False
+                candidate.calibration_temperature = None
+                candidate.calibration_metadata = None
+                try:
+                    metadata = load_calibration_artifact(path, input_dim=input_dim) if version == "v2" else None
+                    if metadata is not None:
+                        candidate.is_calibrated = True
+                        candidate.calibration_temperature = metadata["temperature"]
+                        candidate.calibration_metadata = metadata
+                except Exception as cal_err:
+                    logger.warning("Calibration loading encountered an error: %s", cal_err)
+                logger.info("Model %s restored from %s.", version, path)
+                return candidate, path
+
         # Rebuild
         logger.info("Building fresh %s architecture...", version)
         model = builder(input_dim=input_dim)
         model.is_calibrated = False
+        model.calibration_temperature = None
+        model.calibration_metadata = None
         return model, path

@@ -1,250 +1,313 @@
 #!/usr/bin/env python3
-"""
-train_pre_match_model.py - Calibrate and train pre-match baseline model.
-
-Fetches matches from training_data.db, sanitizes features to strictly pre-match
-signals (champions, roles, game_mode, game_version, season_id, region, career stats)
-with zero post-game metric leakage, vectorizes them into VECTOR_DIM (20,000),
-builds a multi-output model, and saves the calibrated model to scripts/model_v2.keras.
-"""
-
-import os
-import sys
-
-# Ensure repository root is on sys.path
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-REPO_ROOT = os.path.dirname(BASE_DIR)
-if REPO_ROOT not in sys.path:
-    sys.path.insert(0, REPO_ROOT)
-
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
+"""Train a pre-match candidate with chronological validation and an untouched test."""
+from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
+import hashlib
+import json
 import logging
-import random
+import os
+from pathlib import Path
+import sys
 import time
+from typing import Any
+
+BASE_DIR = Path(__file__).resolve().parent
+REPO_ROOT = BASE_DIR.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
 import numpy as np
-import tensorflow as tf
 
-from core import database
-from core import json_utils
-from core.feature_labels import LABEL_KEYS, VECTOR_DIM
-from core.generate_graph import build_multi_output_model
-from scripts.continuous_trainer import _build_targets, sparse_microbatch_generator
+from core import config, json_utils
+from core.feature_labels import VECTOR_DIM
+from core.pre_match_dataset import (
+    chronological_split,
+    load_records,
+    split_records,
+    to_pre_match_features,
+)
+from core.calibration import (
+    apply_temperature_to_probabilities,
+    fit_temperature,
+    load_calibration_artifact,
+    save_calibration_artifact,
+)
+from core.experiment import (
+    build_manifest,
+    load_frozen_splits,
+    read_manifest,
+    restore_splits,
+)
+from core.training_metrics import evaluate_winner
 
-DEFAULT_CHECKPOINT = os.path.join(BASE_DIR, "model_v2.keras")
-
-logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("train_pre_match_model")
 
 
-def to_pre_match_features(feat: dict) -> dict:
-    """
-    Extract strictly pre-match features, stripping all post-match leakage
-    (kills, deaths, assists, gold, kda, etc.).
-    """
-    if not isinstance(feat, dict):
-        return {}
-
-    # If raw match format with participants
-    if "participants" in feat or (
-        "info" in feat
-        and isinstance(feat.get("info"), dict)
-        and "participants" in feat["info"]
-    ):
-        return json_utils.extract_pre_match_features(feat)
-
-    # Standard matchup format with team_a and team_b
-    clean = {
-        "game_mode": feat.get("game_mode", "CLASSIC"),
-        "game_version": feat.get("game_version", "UNKNOWN"),
-        "season_id": feat.get("season_id"),
-    }
-    if "region" in feat and feat["region"]:
-        clean["region"] = feat["region"]
-
-    for team_key in ("team_a", "team_b"):
-        clean_team = []
-        for p in feat.get(team_key, []):
-            p_clean = {
-                "champion": p.get("champion")
-                or p.get("championName")
-                or p.get("champion_name", "UNKNOWN"),
-                "role": p.get("role") or p.get("teamPosition") or "UNKNOWN",
-            }
-            if "career_win_rate" in p:
-                p_clean["career_win_rate"] = float(p["career_win_rate"])
-            if "career_matches" in p:
-                p_clean["career_matches"] = int(p["career_matches"])
-            clean_team.append(p_clean)
-        clean[team_key] = clean_team
-    return clean
+def build_multi_output_model(input_dim: int):
+    # Keep dataset checks and --help available without loading TensorFlow.
+    from core.generate_graph import build_multi_output_model as build
+    return build(input_dim=input_dim)
 
 
-def fetch_training_records(limit: int = 5000) -> list[dict]:
-    """Fetch training records from the database that have valid labels."""
-    logger.info("Querying training records (limit=%d)...", limit)
-    with database.get_connection() as conn:
-        rows = conn.execute(
-            """
-            SELECT id, match_id, feature_json, winner_label, labels_json
-            FROM training_dataset
-            WHERE labels_json IS NOT NULL
-            ORDER BY id DESC
-            LIMIT ?
-            """,
-            (limit,),
-        ).fetchall()
+def fetch_training_records(limit: int = 5000, db_path: str | None = None) -> list[dict]:
+    """Read the newest eligible candidates without writing to the source database."""
+    return load_records(config.get_db_path(db_path, require_exists=True), limit=limit)
 
-    required = set(LABEL_KEYS)
-    valid = []
-    for r in rows:
-        d = dict(r)
-        d["feature_json"] = database._decode_compressed_json(d["feature_json"])
-        d["labels_json"] = database._decode_compressed_json(d["labels_json"])
-        if not d["feature_json"] or not d.get("labels_json"):
-            continue
-        if not required.issubset(d["labels_json"].keys()):
-            continue
-        valid.append(d)
 
-    logger.info("Found %d valid records with complete labels.", len(valid))
-    return valid
+def _winner_probabilities(model, x_sparse, batch_size: int) -> np.ndarray:
+    probabilities = []
+    for start in range(0, x_sparse.shape[0], batch_size):
+        predictions = model.predict_on_batch(x_sparse[start:start + batch_size].toarray())
+        probabilities.append(np.asarray(predictions["winner"])[:, 1])
+    return np.concatenate(probabilities)
+
+
+def _write_json(path: Path, value: dict) -> None:
+    with path.open("x", encoding="utf-8") as handle:
+        json.dump(value, handle, ensure_ascii=False, indent=2, allow_nan=False)
+        handle.write("\n")
 
 
 def train_model(
     records: list[dict],
     epochs: int = 5,
     batch_size: int = 64,
-    checkpoint_path: str = DEFAULT_CHECKPOINT,
+    checkpoint_path: str | None = None,
     dim: int = VECTOR_DIM,
-) -> tf.keras.Model:
-    """Train multi-output model on pre-match features and save checkpoint."""
-    # 1. Clean features
-    logger.info("Sanitizing %d records to strictly pre-match features...", len(records))
-    pre_match_features = [to_pre_match_features(r["feature_json"]) for r in records]
+    *,
+    seed: int = 42,
+    source_db: str | None = None,
+    split_manifest: dict | None = None,
+    split_strategy: str = "chronological",
+    calibrate: bool = False,
+) -> Any:
+    """Select on validation winner log-loss, then evaluate test exactly once.
 
-    # 2. Vectorize features
-    logger.info("Vectorizing features to dim=%d...", dim)
-    t0 = time.time()
-    x_sparse = json_utils.json_to_vector(pre_match_features, dim=dim)
-    y_targets = _build_targets(records)
-    logger.info(
-        "Vectorization complete in %.2fs. Shape: %s, nnz: %d",
-        time.time() - t0,
-        x_sparse.shape,
-        x_sparse.nnz,
-    )
+    Outputs are candidate artifacts. They are neither statistically calibrated
+    nor installed as the application's active model.
+    """
+    for name, value in (("epochs", epochs), ("batch_size", batch_size), ("dim", dim)):
+        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
+            raise ValueError(f"{name} must be a positive integer")
+    if checkpoint_path is None:
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
+        checkpoint_path = str(REPO_ROOT / "runs" / f"pre_match_{stamp}" / "model.keras")
+    output = Path(checkpoint_path).resolve()
+    if output.suffix != ".keras":
+        raise ValueError("checkpoint_path must end in .keras")
+    if output == (BASE_DIR / "model_v2.keras").resolve():
+        raise ValueError("Use a separate candidate checkpoint, not the active model")
+    active_env_checkpoint = os.environ.get("NNRIOT_CHECKPOINT_PATH")
+    if active_env_checkpoint and output == Path(active_env_checkpoint).resolve():
+        raise ValueError("Use a separate candidate checkpoint, not the configured active model")
 
-    # 3. Build model
-    logger.info("Instantiating build_multi_output_model(input_dim=%d)...", dim)
-    model = build_multi_output_model(input_dim=dim)
-    logger.info(
-        "Model built. Input shape: %s, output heads: %d",
-        model.input_shape,
-        len(model.output_names),
-    )
+    manifest_path = output.with_suffix(".split.json")
+    report_path = output.with_suffix(".metrics.json")
+    calibration_path = output.with_suffix(".calibration.json")
+    candidate = output.with_name(output.stem + ".candidate.keras")
+    for artifact in (output, manifest_path, report_path, candidate, calibration_path):
+        if artifact.exists():
+            raise FileExistsError(f"Refusing to overwrite existing artifact: {artifact}")
 
-    # 4. Train
-    logger.info("Starting training for %d epochs (batch_size=%d)...", epochs, batch_size)
-    for epoch in range(1, epochs + 1):
-        t_epoch = time.time()
-        batch_losses = []
-        last_metrics = {}
-        for x_batch, y_batch in sparse_microbatch_generator(
-            x_sparse, y_targets, batch_size=batch_size
-        ):
-            metrics = model.train_on_batch(x_batch, y_batch, return_dict=True)
-            batch_losses.append(metrics["loss"])
-            last_metrics = metrics
-
-        avg_loss = float(np.mean(batch_losses))
-        winner_acc = last_metrics.get("winner_accuracy", 0.0)
-        total_kills_mae = last_metrics.get("total_kills_mae", 0.0)
-        logger.info(
-            "Epoch %d/%d - Loss: %.4f - Winner Acc: %.3f - Total Kills MAE: %.2f (%.2fs)",
-            epoch,
-            epochs,
-            avg_loss,
-            winner_acc,
-            total_kills_mae,
-            time.time() - t_epoch,
+    if split_manifest is not None:
+        if split_strategy != "chronological":
+            raise ValueError("Cannot specify a non-default split_strategy alongside split_manifest")
+        splits = restore_splits(records, split_manifest)
+        split_meta = split_manifest.get(
+            "split_metadata",
+            {"requested_strategy": "frozen", "effective_strategy": "frozen", "fallback_reason": None},
         )
+    else:
+        splits, split_meta = split_records(records, strategy=split_strategy)
 
-    # 5. Save model
-    logger.info("Saving calibrated model to %s...", checkpoint_path)
-    os.makedirs(os.path.dirname(os.path.abspath(checkpoint_path)), exist_ok=True)
-    model.save(checkpoint_path)
-    logger.info(
-        "Model successfully saved to %s (size: %.1f MB)",
-        checkpoint_path,
-        os.path.getsize(checkpoint_path) / (1024 * 1024),
+    if calibrate:
+        val_rows = splits["validation"]
+        if len(val_rows) < 20:
+            raise ValueError(f"Calibration requires at least 20 validation rows, got {len(val_rows)}")
+        val_labels = set(r["labels_json"]["winner"] for r in val_rows)
+        if val_labels != {0, 1}:
+            raise ValueError("Calibration requires both classes 0 and 1 in validation partition")
+
+    counts = {name: len(rows) for name, rows in splits.items()}
+    logger.info("Dataset splits: %s", counts)
+    manifest = build_manifest(splits, source_db=source_db, split_metadata=split_meta)
+    dataset_sha256 = manifest["dataset_sha256"]
+    split_sha256 = manifest["split_sha256"]
+    features = {name: [to_pre_match_features(r["feature_json"]) for r in rows]
+                for name, rows in splits.items()}
+    # Materialize the frozen membership before any training. A failed run keeps
+    # its manifest for diagnosis; subsequent runs must use a fresh output path.
+    output.parent.mkdir(parents=True, exist_ok=True)
+    _write_json(manifest_path, manifest)
+    x = {name: json_utils.json_to_vector(rows, dim=dim) for name, rows in features.items()}
+    y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
+         for name, rows in splits.items()}
+    train_rate = float(y["train"].mean())
+
+    import tensorflow as tf
+    from core.generate_graph import LOSS_WEIGHTS
+    from core.training_utils import _build_targets, sparse_microbatch_generator
+
+    tf.keras.utils.set_random_seed(seed)
+    model = build_multi_output_model(input_dim=dim)
+    targets = _build_targets(splits["train"])
+    best_loss = float("inf")
+    selected_epoch = None
+    history = []
+    started = time.monotonic()
+    for epoch in range(1, epochs + 1):
+        total_loss = 0.0
+        seen = 0
+        for xb, yb in sparse_microbatch_generator(x["train"], targets, batch_size=batch_size):
+            model.reset_metrics()
+            result = model.train_on_batch(xb, yb, return_dict=True)
+            loss = float(result["loss"])
+            if not np.isfinite(loss):
+                raise ValueError("Training produced a non-finite loss")
+            total_loss += loss * len(xb)
+            seen += len(xb)
+        validation = evaluate_winner(y["validation"],
+            _winner_probabilities(model, x["validation"], batch_size), train_rate)
+        val_loss = validation["model"]["log_loss"]
+        history.append({"epoch": epoch, "train_loss": total_loss / seen,
+                        "validation": validation})
+        logger.info("Epoch %d/%d: train_loss=%.4f validation winner log_loss=%.4f accuracy=%.3f",
+                    epoch, epochs, total_loss / seen, val_loss,
+                    validation["model"]["accuracy"])
+        if val_loss < best_loss:
+            best_loss = val_loss
+            selected_epoch = epoch
+            model.save(candidate)
+
+    # Reload the selected epoch (including its optimizer state); the test set
+    # has not been passed to the model or used to choose this checkpoint.
+    del model
+    tf.keras.backend.clear_session()
+    model = tf.keras.models.load_model(candidate)
+
+    raw = {name: _winner_probabilities(model, x[name], batch_size)
+           for name in ("train", "validation")}
+    fit = fit_temperature(raw["validation"], y["validation"]) if calibrate else None
+    raw["test"] = _winner_probabilities(model, x["test"], batch_size)
+    metrics = {name: evaluate_winner(y[name], raw[name], train_rate, diagnostics=True)
+               for name in ("train", "validation", "test")}
+    calibrated_metrics = None
+    if fit is not None:
+        calibrated_metrics = {
+            name: evaluate_winner(
+                y[name],
+                apply_temperature_to_probabilities(raw[name], fit["temperature"]),
+                train_rate,
+                diagnostics=True,
+            )
+            for name in ("train", "validation", "test")
+        }
+
+    report = {
+        "schema_version": 1,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_db": manifest["source_db"], "dataset_sha256": dataset_sha256,
+        "split_sha256": split_sha256,
+        "checkpoint": str(output), "split_manifest": str(manifest_path),
+        "parameters": {"epochs": epochs, "batch_size": batch_size, "dim": dim, "seed": seed},
+        "tensorflow_version": tf.__version__,
+        "gpu_devices": [device.name for device in tf.config.list_physical_devices("GPU")],
+        "split_counts": counts, "train_positive_rate": train_rate,
+        "selection_metric": "validation.winner.log_loss", "selected_epoch": selected_epoch,
+        "is_calibrated": False, "evaluation_target": "winner",
+        "baseline_policy": "constant positive rate fitted on training split only",
+        "active_heads": [name for name, weight in LOSS_WEIGHTS.items() if weight > 0],
+        "disabled_heads": [name for name, weight in LOSS_WEIGHTS.items() if weight == 0],
+        "limitations": [
+            "No probability calibration fitted." if fit is None else "Winner-only temperature calibration fitted on validation split.",
+            "Chronological holdout only; players may overlap between splits.",
+            "Only winner is evaluated; other heads are not validated.",
+            "A small pilot does not establish predictive quality."
+        ],
+        "metrics": metrics, "history": history,
+        "elapsed_seconds": time.monotonic() - started,
+    }
+    # The application never reads this distinct output unless explicitly promoted.
+    if output.exists():
+        raise FileExistsError(f"Checkpoint appeared during training: {output}")
+    candidate.replace(output)
+
+    calibration_artifact_path = None
+    if fit is not None:
+        calibration_artifact_path = save_calibration_artifact(
+            output, manifest_path, fit, input_dim=dim
+        )
+        verified = load_calibration_artifact(output, input_dim=dim)
+        if verified is None:
+            raise ValueError("written calibration artifact failed verification")
+        model.is_calibrated = True
+        model.calibration_temperature = verified["temperature"]
+        model.calibration_metadata = verified
+    else:
+        model.is_calibrated = False
+        model.calibration_temperature = None
+        model.calibration_metadata = None
+
+    report.update(
+        is_calibrated=model.is_calibrated,
+        calibrated_heads=["winner"] if fit is not None else [],
+        calibrated_metrics=calibrated_metrics,
+        calibration_artifact=str(calibration_artifact_path) if calibration_artifact_path else None,
     )
-
+    _write_json(report_path, report)
+    logger.info("Candidate checkpoint: %s", output)
+    logger.info("Held-out test: %s", json.dumps(metrics["test"]))
+    logger.info("Evaluation report: %s", report_path)
     return model
 
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Train pre-match baseline model calibrated to 20,000 dimensions."
-    )
-    parser.add_argument(
-        "--samples",
-        type=int,
-        default=5000,
-        help="Number of records to fetch for training (default: 5000)",
-    )
-    parser.add_argument(
-        "--epochs",
-        type=int,
-        default=5,
-        help="Number of training epochs (default: 5)",
-    )
-    parser.add_argument(
-        "--batch-size",
-        type=int,
-        default=64,
-        help="Micro-batch size (default: 64)",
-    )
-    parser.add_argument(
-        "--dim",
-        type=int,
-        default=VECTOR_DIM,
-        help="Input vector dimension (default: 20000)",
-    )
-    parser.add_argument(
-        "--output",
-        type=str,
-        default=DEFAULT_CHECKPOINT,
-        help="Output checkpoint path (default: scripts/model_v2.keras)",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42,
-        help="Random seed (default: 42)",
-    )
-    args = parser.parse_args()
-
-    random.seed(args.seed)
-    np.random.seed(args.seed)
-    tf.random.set_seed(args.seed)
-
-    records = fetch_training_records(limit=args.samples)
-    if not records:
-        logger.error("No valid training records found in database.")
-        sys.exit(1)
-
-    random.shuffle(records)
-    train_model(
-        records=records,
-        epochs=args.epochs,
-        batch_size=args.batch_size,
-        checkpoint_path=args.output,
-        dim=args.dim,
-    )
-    logger.info("Training complete!")
+def main(argv=None):
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--db", required=True, help="Explicit source SQLite database (read-only)")
+    parser.add_argument("--samples", type=int, default=5000, help="Newest candidate matches, total across splits")
+    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--dim", type=int, default=VECTOR_DIM)
+    parser.add_argument("--output", help="New .keras candidate path; defaults to a unique directory in runs/")
+    parser.add_argument("--split-strategy", choices=["chronological", "patch"], default=None,
+                        help="Holdout split strategy: chronological or patch")
+    parser.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
+    parser.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args(argv)
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    if args.split_strategy is not None and args.split_manifest is not None:
+        parser.exit(2, "Training aborted: Cannot specify both --split-strategy and --split-manifest\n")
+    try:
+        args.db = config.get_db_path(args.db, require_exists=True)
+        if args.split_manifest is not None:
+            manifest_file = Path(args.split_manifest)
+            if not manifest_file.exists():
+                parser.exit(2, f"Training aborted: Manifest file not found: {args.split_manifest}\n")
+            manifest = read_manifest(manifest_file)
+            if args.samples != 5000:
+                logger.info("--samples argument is ignored when replaying a frozen manifest.")
+            splits = load_frozen_splits(args.db, manifest)
+            records = [r for name in ("train", "validation", "test") for r in splits[name]]
+            logger.info("Replaying %d frozen matches from %s using manifest %s",
+                        len(records), Path(args.db).resolve(), manifest_file)
+            train_model(records, epochs=args.epochs, batch_size=args.batch_size,
+                        checkpoint_path=args.output, dim=args.dim, seed=args.seed,
+                        source_db=args.db, split_manifest=manifest, calibrate=args.calibrate)
+        else:
+            strategy = args.split_strategy or "chronological"
+            records = fetch_training_records(limit=args.samples, db_path=args.db)
+            logger.info("Using %d eligible matches from %s (split_strategy=%s)",
+                        len(records), Path(args.db).resolve(), strategy)
+            train_model(records, epochs=args.epochs, batch_size=args.batch_size,
+                        checkpoint_path=args.output, dim=args.dim, seed=args.seed,
+                        source_db=args.db, split_strategy=strategy, calibrate=args.calibrate)
+    except (ValueError, FileExistsError, FileNotFoundError) as exc:
+        parser.exit(2, f"Training aborted: {exc}\n")
 
 
 if __name__ == "__main__":
