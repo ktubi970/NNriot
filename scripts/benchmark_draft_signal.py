@@ -15,7 +15,6 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core import config
 from core.pre_match_dataset import load_records, split_records
 from core.draft_features import batch_extract_draft_features
 from core.training_metrics import evaluate_winner
@@ -26,7 +25,6 @@ logger = logging.getLogger("benchmark_draft_signal")
 def run_draft_signal_benchmark(
     records: list[dict[str, Any]],
     min_samples: int = 100,
-    n_splits: int = 3,
 ) -> dict[str, Any]:
     """Evaluate whether draft features achieve statistically significant lift over random chance."""
     if len(records) < min_samples:
@@ -108,12 +106,12 @@ def run_draft_signal_benchmark(
     }
 
 
-def main():
+def main(argv: list[str] | None = None):
     parser = argparse.ArgumentParser(description="Benchmark draft signal on pre-match matches.")
     parser.add_argument("--db", type=str, required=True, help="Path to SQLite database.")
     parser.add_argument("--samples", type=int, default=10000, help="Number of samples to evaluate.")
     parser.add_argument("--output", type=str, default="runs/draft_signal_report.json", help="Report output path.")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     records = load_records(args.db, limit=args.samples)
     report = run_draft_signal_benchmark(records)

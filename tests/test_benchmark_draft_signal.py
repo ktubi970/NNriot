@@ -65,9 +65,10 @@ def test_benchmark_detects_signal_when_present():
     assert "test_auc" in result
     assert "auc_ci_95" in result
     assert result["auc_ci_95"][0] <= result["test_auc"] <= result["auc_ci_95"][1]
-    assert result["verdict"] in ("SIGNAL_CONFIRMED", "INCONCLUSIVE", "NO_SIGNAL")
+    assert result["verdict"] == "SIGNAL_CONFIRMED"
+    assert result["test_auc"] > 0.60
+    assert result["p_value_vs_null"] < 0.05
     assert result["sample_counts"]["train"] + result["sample_counts"]["validation"] + result["sample_counts"]["test"] == 100
-    assert 0.0 <= result["p_value_vs_null"] <= 1.0
 
 
 def test_benchmark_raises_on_insufficient_samples():
@@ -133,20 +134,14 @@ def test_benchmark_cli_main(tmp_path, monkeypatch):
                 ),
             )
 
-    monkeypatch.setattr(
-        "sys.argv",
-        [
-            "benchmark_draft_signal.py",
-            "--db",
-            str(db_path),
-            "--samples",
-            "100",
-            "--output",
-            str(out_path),
-        ],
-    )
-
-    main()
+    main([
+        "--db",
+        str(db_path),
+        "--samples",
+        "100",
+        "--output",
+        str(out_path),
+    ])
 
     assert out_path.exists()
     with out_path.open("r", encoding="utf-8") as f:
