@@ -6,6 +6,11 @@ import numpy as np
 import pytest
 from sklearn.ensemble import HistGradientBoostingClassifier
 
+from core.draft_features import (
+    TABULAR_FEATURE_DIM,
+    extract_tabular_draft_features,
+    get_tabular_feature_names,
+)
 from scripts.train_tree_baseline import extract_tabular_features, train_tree_model
 
 
@@ -70,16 +75,16 @@ def test_tree_roundtrip_joblib_equality_and_unseen_champion(tmp_path):
     bundle = joblib.load(out_dir / 'model.joblib')
     model = bundle['model']
     encoder = bundle['encoder']
-    assert len(bundle['feature_names']) == 24
+    assert encoder is None
+    assert len(bundle['feature_names']) == TABULAR_FEATURE_DIM
+    assert bundle['feature_names'] == get_tabular_feature_names()
 
     unseen_feat = deepcopy(rows[0]['feature_json'])
     for p in unseen_feat['team_a']:
         p['championName'] = 'NeverSeenChampion'
-    vals, _ = extract_tabular_features(unseen_feat)
-    encoded = encoder.transform([vals])
-    assert encoded[0, 0] == -1  # unseen category encoded as -1
+    encoded, _ = extract_tabular_draft_features(unseen_feat)
 
-    probs = model.predict_proba(encoded)
+    probs = model.predict_proba([encoded])
     assert probs.shape == (1, 2)
     assert np.isclose(probs.sum(), 1.0)
 

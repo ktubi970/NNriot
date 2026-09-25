@@ -44,10 +44,16 @@ from core.training_metrics import evaluate_winner
 logger = logging.getLogger("train_tree_baseline")
 
 ROLE_ORDER = {"TOP": 0, "JUNGLE": 1, "MIDDLE": 2, "BOTTOM": 3, "UTILITY": 4}
+TABULAR_CATEGORICAL_FEATURE_INDICES: list[int] = list(range(10))
 
 
 def extract_tabular_features(feat: dict) -> tuple[list[str], list[str]]:
-    """Extract a normalized 24-column categorical row and stable names."""
+    """Extract a legacy normalized 24-column categorical row and stable names.
+
+    .. deprecated::
+        Use :func:`core.draft_features.extract_tabular_draft_features` or
+        :func:`core.draft_features.batch_extract_draft_features` instead.
+    """
     clean = to_pre_match_features(feat)
     values: list[str] = []
     names: list[str] = []
@@ -152,7 +158,7 @@ def train_tree_model(
     out_path.mkdir(parents=True, exist_ok=True)
     _write_json(out_path / "model.split.json", manifest)
 
-    cat_features = list(range(10))
+    cat_features = TABULAR_CATEGORICAL_FEATURE_INDICES
     best = None
     history = []
     for iterations in (50, 100, 150):
