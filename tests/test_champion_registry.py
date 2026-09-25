@@ -1,4 +1,3 @@
-import pytest
 from core.champion_registry import (
     normalize_champion_name,
     champion_to_id,
@@ -23,6 +22,28 @@ def test_normalize_champion_name_aliases():
     assert normalize_champion_name("Renata") == "Renata"
     assert normalize_champion_name("  Aatrox  ") == "Aatrox"
 
+def test_normalize_and_id_for_spaced_and_punctuated_names():
+    cases = [
+        ("Master Yi", "MasterYi"),
+        ("Jarvan IV", "JarvanIV"),
+        ("Dr. Mundo", "DrMundo"),
+        ("Kai'Sa", "Kaisa"),
+        ("Cho'Gath", "Chogath"),
+        ("Vel'Koz", "Velkoz"),
+        ("Tahm Kench", "TahmKench"),
+        ("Twisted Fate", "TwistedFate"),
+        ("Xin Zhao", "XinZhao"),
+        ("Aurelion Sol", "AurelionSol"),
+        ("Lee Sin", "LeeSin"),
+        ("Miss Fortune", "MissFortune"),
+    ]
+    for raw_name, canonical_name in cases:
+        assert normalize_champion_name(raw_name) == canonical_name
+        cid = champion_to_id(raw_name)
+        assert cid > 0
+        assert cid == champion_to_id(canonical_name)
+        assert id_to_champion(cid) == canonical_name
+
 def test_champion_to_id_mapping():
     aatrox_id = champion_to_id("Aatrox")
     ahri_id = champion_to_id("Ahri")
@@ -37,6 +58,10 @@ def test_unknown_champion_fallback():
     assert champion_to_id("") == UNK_CHAMPION_ID
     assert champion_to_id(None) == UNK_CHAMPION_ID
     assert id_to_champion(UNK_CHAMPION_ID) == "UNKNOWN"
+
+def test_out_of_range_id_fallback():
+    assert id_to_champion(-1) == "UNKNOWN"
+    assert id_to_champion(999) == "UNKNOWN"
 
 def test_all_ids_are_contiguous():
     for cid in range(NUM_CHAMPIONS):

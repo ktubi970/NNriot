@@ -7,8 +7,14 @@ from __future__ import annotations
 
 UNK_CHAMPION_ID = 0
 
+
+def _clean_key(name: str) -> str:
+    """Strip all non-alphanumeric characters and lowercase."""
+    return "".join(c for c in name if c.isalnum()).lower()
+
+
 # Common Riot API aliases and formatting variations
-_ALIASES: dict[str, str] = {
+_RAW_ALIASES: dict[str, str] = {
     "wukong": "MonkeyKing",
     "monkeyking": "MonkeyKing",
     "nunu & willump": "Nunu",
@@ -69,32 +75,35 @@ _RAW_CHAMPIONS: list[str] = [
 CANONICAL_CHAMPIONS: tuple[str, ...] = tuple(_RAW_CHAMPIONS)
 NUM_CHAMPIONS: int = len(CANONICAL_CHAMPIONS)
 
-_CHAMP_TO_ID: dict[str, int] = {name.lower(): idx for idx, name in enumerate(CANONICAL_CHAMPIONS)}
+_CHAMP_TO_ID: dict[str, int] = {_clean_key(name): idx for idx, name in enumerate(CANONICAL_CHAMPIONS)}
 _ID_TO_CHAMP: dict[int, str] = {idx: name for idx, name in enumerate(CANONICAL_CHAMPIONS)}
+_ALIASES: dict[str, str] = {_clean_key(k): v for k, v in _RAW_ALIASES.items()}
 
 
 def normalize_champion_name(name: str | None) -> str:
-    """Normalize champion name, resolving known aliases and casing."""
+    """Normalize champion name, resolving known aliases, casing, spaces, and punctuation."""
     if not isinstance(name, str):
         return "UNKNOWN"
     clean = name.strip()
     if not clean:
         return "UNKNOWN"
-    lower = clean.lower()
-    if lower in _ALIASES:
-        return _ALIASES[lower]
-    # Check if lower matches a known canonical champ
-    if lower in _CHAMP_TO_ID:
-        return _ID_TO_CHAMP[_CHAMP_TO_ID[lower]]
+    key = _clean_key(clean)
+    if key in _ALIASES:
+        return _ALIASES[key]
+    # Check if key matches a known canonical champion
+    if key in _CHAMP_TO_ID:
+        return _ID_TO_CHAMP[_CHAMP_TO_ID[key]]
     return clean
 
 
 def champion_to_id(name: str | None) -> int:
     """Return the integer ID for a champion, defaulting to UNK_CHAMPION_ID (0)."""
     norm = normalize_champion_name(name)
-    return _CHAMP_TO_ID.get(norm.lower(), UNK_CHAMPION_ID)
+    return _CHAMP_TO_ID.get(_clean_key(norm), UNK_CHAMPION_ID)
 
 
 def id_to_champion(champ_id: int) -> str:
     """Return the canonical champion name for an ID."""
+    if not isinstance(champ_id, int):
+        return "UNKNOWN"
     return _ID_TO_CHAMP.get(champ_id, "UNKNOWN")
