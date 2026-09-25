@@ -9,12 +9,12 @@ application logic.
 """
 
 from typing import List, Dict, Any, Optional
-from core import database
+from core import database, config
 
 class BaseRepository:
     """Base repository providing common database connection utilities."""
     def __init__(self, db_path: str = None):
-        self.db_path = db_path or database.DB_PATH
+        self.db_path = config.get_db_path(db_path, require_exists=True)
         
     def get_connection(self):
         return database.get_connection(self.db_path)

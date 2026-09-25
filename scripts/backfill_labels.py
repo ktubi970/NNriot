@@ -14,8 +14,9 @@ import json
 import gzip
 import base64
 import logging
+import argparse
 
-from core import database
+from core import config, database
 from core.feature_labels import extract_labels
 
 logger = logging.getLogger(__name__)
@@ -109,7 +110,20 @@ def backfill_labels(db_path: str = database.DB_PATH, chunk_size: int = _CHUNK_SI
     return stats
 
 
-if __name__ == "__main__":
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Backfill missing training labels")
+    parser.add_argument("--db", help="Existing source SQLite database")
+    args = parser.parse_args(argv)
+    try:
+        db_path = config.get_db_path(args.db, require_exists=True)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    result = backfill_labels()
+    print(f"Source database: {db_path}")
+    result = backfill_labels(db_path=db_path)
     print(f"Backfill result: {result}")
+    return result
+
+
+if __name__ == "__main__":
+    main()

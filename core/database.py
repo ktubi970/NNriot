@@ -13,14 +13,17 @@ import os
 import time
 import logging
 import datetime as _dt
-from contextlib import contextmanager
+from contextlib import closing, contextmanager
+from pathlib import Path
+
+from core import config
 
 # ---------------------------------------------------------------------------
 # Configuration
 # ---------------------------------------------------------------------------
 
 # Use environment variable or fall back to a relative path
-DB_PATH = os.environ.get("NNRIOT_DB_PATH", "training_data.db")
+DB_PATH = config.DB_PATH
 
 # Current schema version – bump this whenever you add a migration below
 SCHEMA_VERSION = 12
@@ -927,171 +930,61 @@ def get_player_by_name_tag(
 
 
 def get_player_match_history(
-    puuid: str, limit: int = 10, max_scan: int = 200, db_path: str = DB_PATH
+    puuid: str, limit: int = 10, db_path: str = DB_PATH
 ) -> list[dict]:
-    """
-    Retrieve actual match records for a player.
-    Prefers the indexed match_participants table for O(1) performance.
-    Falls back to bounded raw_json decompression scan if match_participants
-    has no records for this player (e.g. historical data before migration),
-    and populates match_participants on the fly (write-through cache).
+    """Read indexed player history without changing or repairing the database.
+
+    Legacy raw-only matches require explicit backfill_match_participants first.
+    Missing schema is a setup error and is deliberately not hidden.
     """
     if not puuid:
         return []
-
     matches = []
-    with get_connection(db_path) as conn:
-        # Check if match_participants table exists and query it
-        try:
-            p_rows = conn.execute(
-                """
-                SELECT match_id, champion_name, team_position, win, kills, deaths, assists,
-                       total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json
-                FROM match_participants
-                WHERE puuid = ?
-                ORDER BY game_creation_time DESC
-                LIMIT ?
-                """,
-                (puuid, limit),
-            ).fetchall()
-
-            for r in p_rows:
-                dur_secs = r["game_duration"] or 0
-                dur_mins = max(1, dur_secs // 60)
-                kills = r["kills"] or 0
-                deaths = r["deaths"] or 0
-                assists = r["assists"] or 0
-                kda = round((kills + assists) / max(1, deaths), 2)
-                cs = r["total_cs"] or 0
-                items = json.loads(r["items_json"]) if r["items_json"] else [0] * 7
-
-                matches.append(
-                    {
-                        "match_id": r["match_id"],
-                        "champion": r["champion_name"] or "Unknown",
-                        "role": r["team_position"] or "UNKNOWN",
-                        "win": bool(r["win"]),
-                        "kills": kills,
-                        "deaths": deaths,
-                        "assists": assists,
-                        "kda": str(kda),
-                        "cs": cs,
-                        "cs_per_min": f"{(cs / dur_mins):.1f}",
-                        "gold": r["gold_earned"] or 0,
-                        "duration": f"{dur_mins}:{dur_secs % 60:02d}",
-                        "game_mode": r["game_mode"] or "CLASSIC",
-                        "game_creation_time": r["game_creation_time"] or 0,
-                        "items": items,
-                    }
-                )
-
-            if len(matches) >= limit:
-                return matches
-        except sqlite3.OperationalError:
-            # Table might not exist in old unmigrated test DBs
-            pass
-
-        # If we got matches from match_participants, return them
-        if matches:
-            return matches
-
-        # Fallback: scan recent matches and populate match_participants on the fly
-        cursor = conn.execute(
+    uri = Path(db_path).resolve().as_uri() + "?mode=ro"
+    with closing(sqlite3.connect(uri, uri=True)) as conn:
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA query_only=ON")
+        p_rows = conn.execute(
             """
-            SELECT match_id, raw_json, game_mode, game_creation_time, game_duration
-            FROM matches
+            SELECT match_id, champion_name, team_position, win, kills, deaths, assists,
+                   total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json
+            FROM match_participants
+            WHERE puuid = ?
             ORDER BY game_creation_time DESC
             LIMIT ?
             """,
-            (max_scan,),
-        )
+            (puuid, limit),
+        ).fetchall()
 
-        p_inserts = []
-        while True:
-            chunk = cursor.fetchmany(50)
-            if not chunk:
-                break
-            for r in chunk:
-                raw = _decode_compressed_json(r["raw_json"])
-                if not raw:
-                    continue
-                info = raw.get("info", {})
-                participants = info.get("participants", [])
-                p_data = next((p for p in participants if p.get("puuid") == puuid), None)
-                if not p_data:
-                    continue
+        for r in p_rows:
+            dur_secs = r["game_duration"] or 0
+            dur_mins = max(1, dur_secs // 60)
+            kills = r["kills"] or 0
+            deaths = r["deaths"] or 0
+            assists = r["assists"] or 0
+            kda = round((kills + assists) / max(1, deaths), 2)
+            cs = r["total_cs"] or 0
+            items = json.loads(r["items_json"]) if r["items_json"] else [0] * 7
 
-                dur_secs = r["game_duration"] or info.get("gameDuration", 0)
-                dur_mins = max(1, dur_secs // 60)
-                kills = p_data.get("kills", 0)
-                deaths = p_data.get("deaths", 0)
-                assists = p_data.get("assists", 0)
-                kda = round((kills + assists) / max(1, deaths), 2)
-                cs = p_data.get("totalMinionsKilled", 0) + p_data.get("neutralMinionsKilled", 0)
-                items = [p_data.get(f"item{i}", 0) for i in range(7)]
-                game_creation = r["game_creation_time"] or info.get("gameCreation", 0)
-                champ = p_data.get("championName", "Unknown")
-                role = p_data.get("teamPosition") or p_data.get("individualPosition", "UNKNOWN")
-                win_val = bool(p_data.get("win", False))
-                gold = p_data.get("goldEarned", 0)
-                gmode = r["game_mode"] or info.get("gameMode", "CLASSIC")
-
-                matches.append(
-                    {
-                        "match_id": r["match_id"],
-                        "champion": champ,
-                        "role": role,
-                        "win": win_val,
-                        "kills": kills,
-                        "deaths": deaths,
-                        "assists": assists,
-                        "kda": str(kda),
-                        "cs": cs,
-                        "cs_per_min": f"{(cs / dur_mins):.1f}",
-                        "gold": gold,
-                        "duration": f"{dur_mins}:{dur_secs % 60:02d}",
-                        "game_mode": gmode,
-                        "game_creation_time": game_creation,
-                        "items": items,
-                    }
-                )
-                p_inserts.append(
-                    (
-                        r["match_id"],
-                        puuid,
-                        champ,
-                        role,
-                        1 if win_val else 0,
-                        kills,
-                        deaths,
-                        assists,
-                        cs,
-                        gold,
-                        game_creation,
-                        dur_secs,
-                        gmode,
-                        json.dumps(items),
-                    )
-                )
-                if len(matches) >= limit:
-                    break
-            if len(matches) >= limit:
-                break
-
-        # Cache extracted matches into match_participants if table exists
-        if p_inserts:
-            try:
-                conn.executemany(
-                    """
-                    INSERT OR IGNORE INTO match_participants
-                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
-                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    p_inserts,
-                )
-            except sqlite3.OperationalError:
-                pass
+            matches.append(
+                {
+                    "match_id": r["match_id"],
+                    "champion": r["champion_name"] or "Unknown",
+                    "role": r["team_position"] or "UNKNOWN",
+                    "win": bool(r["win"]),
+                    "kills": kills,
+                    "deaths": deaths,
+                    "assists": assists,
+                    "kda": str(kda),
+                    "cs": cs,
+                    "cs_per_min": f"{(cs / dur_mins):.1f}",
+                    "gold": r["gold_earned"] or 0,
+                    "duration": f"{dur_mins}:{dur_secs % 60:02d}",
+                    "game_mode": r["game_mode"] or "CLASSIC",
+                    "game_creation_time": r["game_creation_time"] or 0,
+                    "items": items,
+                }
+            )
 
     return matches
 

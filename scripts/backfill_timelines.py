@@ -35,11 +35,17 @@ Usage:
 """
 
 import argparse
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 import logging
 import time
 from collections import defaultdict
 
-from core import database
+from core import config, database
 from core import riot_api
 
 logger = logging.getLogger(__name__)
@@ -215,34 +221,37 @@ def backfill_timelines(
     return stats
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(
         description="Backfill Riot timelines for matches without one."
     )
+    parser.add_argument("--db", help="Existing source SQLite database")
     parser.add_argument(
-        "--chunk",
-        type=int,
-        default=_CHUNK_SIZE,
+        "--chunk", type=int, default=_CHUNK_SIZE,
         help="Parallel fetch batch size (default 5).",
     )
     parser.add_argument(
-        "--limit",
-        type=int,
-        default=None,
+        "--limit", type=int, default=None,
         help="Stop after this many matches processed.",
     )
     parser.add_argument(
-        "--sleep",
-        type=float,
-        default=_SLEEP_BETWEEN_CHUNKS,
+        "--sleep", type=float, default=_SLEEP_BETWEEN_CHUNKS,
         help="Seconds to sleep between chunks (default 1.2).",
     )
-    args = parser.parse_args()
-
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s"
-    )
+    args = parser.parse_args(argv)
+    try:
+        db_path = config.get_db_path(args.db, require_exists=True)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
+    print(f"Source database: {db_path}")
     result = backfill_timelines(
-        chunk_size=args.chunk, limit=args.limit, sleep_between_chunks=args.sleep
+        db_path=db_path, chunk_size=args.chunk, limit=args.limit,
+        sleep_between_chunks=args.sleep,
     )
     print(f"Result: {result}")
+    return result
+
+
+if __name__ == "__main__":
+    main()

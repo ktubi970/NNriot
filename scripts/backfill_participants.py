@@ -13,7 +13,7 @@ REPO_ROOT = os.path.dirname(BASE_DIR)
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from core import database
+from core import config, database
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("backfill_participants")
@@ -42,11 +42,19 @@ def run_backfill(batch_size: int = 500, max_matches: int = None, db_path: str = 
     logger.info("Finished backfill: %d total matches processed in %.2f seconds.", total_backfilled, total_time)
     return total_backfilled
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Backfill match_participants table")
     parser.add_argument("--batch-size", type=int, default=500, help="Matches per transaction batch")
     parser.add_argument("--max", type=int, default=None, help="Max matches to backfill")
-    parser.add_argument("--db", type=str, default=database.DB_PATH, help="Path to database")
-    args = parser.parse_args()
+    parser.add_argument("--db", help="Existing source SQLite database")
+    args = parser.parse_args(argv)
+    try:
+        db_path = config.get_db_path(args.db, require_exists=True)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
+    print(f"Source database: {db_path}")
+    return run_backfill(batch_size=args.batch_size, max_matches=args.max, db_path=db_path)
 
-    run_backfill(batch_size=args.batch_size, max_matches=args.max, db_path=args.db)
+
+if __name__ == "__main__":
+    main()
