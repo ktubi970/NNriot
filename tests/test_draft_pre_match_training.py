@@ -1,5 +1,4 @@
 import pytest
-import numpy as np
 from scripts.train_pre_match_model import train_model
 from core.generate_graph import build_draft_dense_model
 from core.draft_features import DENSE_FEATURE_DIM
@@ -93,3 +92,47 @@ def test_model_with_report_proxy():
 
     wrapped.new_attr = 42
     assert m.new_attr == 42
+
+    with pytest.raises(AttributeError):
+        wrapped.model = "override"
+    with pytest.raises(AttributeError):
+        wrapped.report = "override"
+    with pytest.raises(AttributeError):
+        wrapped.count = 99
+
+
+def test_get_feat_unparsed_json():
+    import json
+    from scripts.train_pre_match_model import _get_feat
+
+    direct_dict = {
+        "team_a": [{"champion": "Ahri", "role": "MIDDLE"}],
+        "team_b": [{"champion": "Zed", "role": "MIDDLE"}],
+    }
+    assert _get_feat({"feature_json": direct_dict}) == direct_dict
+
+    json_str = json.dumps(direct_dict)
+    assert _get_feat({"feature_json": json_str}) == direct_dict
+
+    legacy_match = {
+        "info": {
+            "participants": [
+                {"championName": "Ahri", "teamPosition": "MIDDLE", "teamId": 100},
+                {"championName": "Zed", "teamPosition": "MIDDLE", "teamId": 200},
+            ]
+        }
+    }
+    legacy_res = _get_feat({"feature_json": json.dumps(legacy_match)})
+    assert isinstance(legacy_res, dict)
+    assert "team_a" in legacy_res and "team_b" in legacy_res
+    assert legacy_res["team_a"][0]["champion"] == "Ahri"
+    assert legacy_res["team_b"][0]["champion"] == "Zed"
+
+    malformed_res = _get_feat({"feature_json": "not_valid_json{"})
+    assert isinstance(malformed_res, dict)
+    assert "team_a" in malformed_res and "team_b" in malformed_res
+
+    none_res = _get_feat({"feature_json": None})
+    assert isinstance(none_res, dict)
+    assert "team_a" in none_res and "team_b" in none_res
+

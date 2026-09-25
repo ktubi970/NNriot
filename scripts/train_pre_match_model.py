@@ -60,6 +60,8 @@ def build_draft_dense_model(input_dim: int | None = None):
 
 
 class ModelWithReport(tuple):
+    __slots__ = ()
+
     def __new__(cls, model, report):
         return super().__new__(cls, (model, report))
 
@@ -75,7 +77,10 @@ class ModelWithReport(tuple):
         return getattr(self[0], name)
 
     def __setattr__(self, name, value):
-        setattr(self[0], name, value)
+        if name in dir(ModelWithReport) or name in dir(tuple):
+            super().__setattr__(name, value)
+        else:
+            setattr(self[0], name, value)
 
     def __dir__(self):
         return sorted(set(super().__dir__() + dir(self[0])))
@@ -104,6 +109,18 @@ def _write_json(path: Path, value: dict) -> None:
     with path.open("x", encoding="utf-8") as handle:
         json.dump(value, handle, ensure_ascii=False, indent=2, allow_nan=False)
         handle.write("\n")
+
+
+def _get_feat(r: dict) -> dict:
+    fj = r.get("feature_json") or {}
+    if isinstance(fj, str):
+        try:
+            fj = json.loads(fj)
+        except (ValueError, TypeError):
+            fj = {}
+    if isinstance(fj, dict) and "team_a" in fj and "team_b" in fj:
+        return fj
+    return to_pre_match_features(fj)
 
 
 def train_model(
@@ -187,12 +204,6 @@ def train_model(
 
     if feature_version == "v2_draft":
         from core.draft_features import batch_extract_draft_features
-        def _get_feat(r):
-            fj = r.get("feature_json") or {}
-            if "team_a" in fj and "team_b" in fj:
-                return fj
-            return to_pre_match_features(fj)
-
         x = {name: batch_extract_draft_features([_get_feat(r) for r in rows], mode="dense")
              for name, rows in splits.items()}
     else:
