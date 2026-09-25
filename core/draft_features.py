@@ -30,13 +30,28 @@ TABULAR_FEATURE_DIM: int = 10 + NUM_CHAMPIONS
 # Dense Neural: 5 one-hot roles for Team A (5*N) + 5 one-hot roles for Team B (5*N) + comp diff (N)
 DENSE_FEATURE_DIM: int = 11 * NUM_CHAMPIONS
 
+# Precomputed feature names to avoid repeated string allocations in hot loops
+TABULAR_FEATURE_NAMES: tuple[str, ...] = tuple(
+    [f"team_a_{role}" for role in ROLE_NAMES]
+    + [f"team_b_{role}" for role in ROLE_NAMES]
+    + [f"comp_diff_champ_{cid}" for cid in range(NUM_CHAMPIONS)]
+)
 
-def _order_team_participants(participants: list[dict[str, Any]]) -> list[int]:
+
+def get_tabular_feature_names() -> list[str]:
+    """Return precomputed list of tabular feature names."""
+    return list(TABULAR_FEATURE_NAMES)
+
+
+def _order_team_participants(participants: Any) -> list[int]:
     """Extract 5 champion IDs ordered strictly by [TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY].
 
     If roles are unassigned or duplicated, maps greedily and fills remaining slots with UNK.
     """
     ordered_ids = [UNK_CHAMPION_ID] * 5
+    if not isinstance(participants, (list, tuple)):
+        return ordered_ids
+
     assigned_slots: set[int] = set()
     unassigned_players: list[int] = []
 
@@ -65,39 +80,22 @@ def _order_team_participants(participants: list[dict[str, Any]]) -> list[int]:
     return ordered_ids
 
 
-def extract_tabular_draft_features(features: dict[str, Any]) -> tuple[np.ndarray, list[str]]:
-    """Extract a 1D vector of length TABULAR_FEATURE_DIM and corresponding feature names.
-
-    Vector structure:
-      - [0:5]: Team A champion IDs (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
-      - [5:10]: Team B champion IDs (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
-      - [10:10+NUM_CHAMPIONS]: Composition diff (+1.0 for Team B presence, -1.0 for Team A presence)
-    """
+def _fill_tabular_vector(vec: np.ndarray, features: dict[str, Any]) -> None:
+    """Fill a 1D slice or array directly with tabular draft features."""
     if not isinstance(features, dict):
         features = {}
 
-    team_a = features.get("team_a") or []
-    team_b = features.get("team_b") or []
+    team_a = features.get("team_a")
+    team_b = features.get("team_b")
 
     a_ids = _order_team_participants(team_a)
     b_ids = _order_team_participants(team_b)
 
-    vec = np.zeros(TABULAR_FEATURE_DIM, dtype=np.float32)
-    names: list[str] = []
-
-    for role_name in ROLE_NAMES:
-        names.append(f"team_a_{role_name}")
-    for role_name in ROLE_NAMES:
-        names.append(f"team_b_{role_name}")
-
     vec[0:5] = a_ids
     vec[5:10] = b_ids
 
-    # Composition diff
+    # Composition diff (+1.0 for Team B presence, -1.0 for Team A presence)
     offset = 10
-    for cid in range(NUM_CHAMPIONS):
-        names.append(f"comp_diff_champ_{cid}")
-
     for cid in a_ids:
         if cid != UNK_CHAMPION_ID:
             vec[offset + cid] -= 1.0
@@ -106,27 +104,30 @@ def extract_tabular_draft_features(features: dict[str, Any]) -> tuple[np.ndarray
         if cid != UNK_CHAMPION_ID:
             vec[offset + cid] += 1.0
 
-    return vec, names
 
-
-def extract_dense_draft_features(features: dict[str, Any]) -> np.ndarray:
-    """Extract a 1D float32 vector of length DENSE_FEATURE_DIM for neural networks.
+def extract_tabular_draft_features(features: dict[str, Any]) -> tuple[np.ndarray, list[str]]:
+    """Extract a 1D vector of length TABULAR_FEATURE_DIM and corresponding feature names.
 
     Vector structure:
-      - 5 one-hot segments for Team A roles (5 * NUM_CHAMPIONS)
-      - 5 one-hot segments for Team B roles (5 * NUM_CHAMPIONS)
-      - 1 composition diff segment (NUM_CHAMPIONS)
+      - [0:5]: Team A champion IDs (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
+      - [5:10]: Team B champion IDs (TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY)
+      - [10:10+NUM_CHAMPIONS]: Composition diff (+1.0 for Team B presence, -1.0 for Team A presence)
     """
+    vec = np.zeros(TABULAR_FEATURE_DIM, dtype=np.float32)
+    _fill_tabular_vector(vec, features)
+    return vec, list(TABULAR_FEATURE_NAMES)
+
+
+def _fill_dense_vector(dense: np.ndarray, features: dict[str, Any]) -> None:
+    """Fill a 1D slice or array directly with dense draft features."""
     if not isinstance(features, dict):
         features = {}
 
-    team_a = features.get("team_a") or []
-    team_b = features.get("team_b") or []
+    team_a = features.get("team_a")
+    team_b = features.get("team_b")
 
     a_ids = _order_team_participants(team_a)
     b_ids = _order_team_participants(team_b)
-
-    dense = np.zeros(DENSE_FEATURE_DIM, dtype=np.float32)
 
     # Team A roles
     for slot, cid in enumerate(a_ids):
@@ -148,6 +149,17 @@ def extract_dense_draft_features(features: dict[str, Any]) -> np.ndarray:
         if cid != UNK_CHAMPION_ID:
             dense[diff_offset + cid] += 1.0
 
+
+def extract_dense_draft_features(features: dict[str, Any]) -> np.ndarray:
+    """Extract a 1D float32 vector of length DENSE_FEATURE_DIM for neural networks.
+
+    Vector structure:
+      - 5 one-hot segments for Team A roles (5 * NUM_CHAMPIONS)
+      - 5 one-hot segments for Team B roles (5 * NUM_CHAMPIONS)
+      - 1 composition diff segment (NUM_CHAMPIONS)
+    """
+    dense = np.zeros(DENSE_FEATURE_DIM, dtype=np.float32)
+    _fill_dense_vector(dense, features)
     return dense
 
 
@@ -159,12 +171,12 @@ def batch_extract_draft_features(
     if mode == "tabular":
         out = np.zeros((n, TABULAR_FEATURE_DIM), dtype=np.float32)
         for i, feat in enumerate(features_list):
-            out[i], _ = extract_tabular_draft_features(feat)
+            _fill_tabular_vector(out[i], feat)
         return out
     elif mode == "dense":
         out = np.zeros((n, DENSE_FEATURE_DIM), dtype=np.float32)
         for i, feat in enumerate(features_list):
-            out[i] = extract_dense_draft_features(feat)
+            _fill_dense_vector(out[i], feat)
         return out
     else:
         raise ValueError(f"Unknown mode: {mode}. Must be 'tabular' or 'dense'.")

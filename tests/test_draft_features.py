@@ -5,6 +5,8 @@ from core.draft_features import (
     ROLE_NAMES,
     TABULAR_FEATURE_DIM,
     DENSE_FEATURE_DIM,
+    TABULAR_FEATURE_NAMES,
+    get_tabular_feature_names,
     extract_tabular_draft_features,
     extract_dense_draft_features,
     batch_extract_draft_features,
@@ -31,6 +33,19 @@ def sample_match_features():
         "game_mode": "CLASSIC",
         "game_version": "14.1.1",
     }
+
+
+def test_tabular_feature_names_constant():
+    names = get_tabular_feature_names()
+    assert len(names) == TABULAR_FEATURE_DIM
+    assert isinstance(TABULAR_FEATURE_NAMES, tuple)
+    assert names == list(TABULAR_FEATURE_NAMES)
+    assert names[0] == "team_a_TOP"
+    assert names[4] == "team_a_UTILITY"
+    assert names[5] == "team_b_TOP"
+    assert names[9] == "team_b_UTILITY"
+    assert names[10] == "comp_diff_champ_0"
+    assert names[-1] == f"comp_diff_champ_{NUM_CHAMPIONS - 1}"
 
 
 def test_extract_tabular_draft_features_shape(sample_match_features):
@@ -85,8 +100,19 @@ def test_batch_extract_draft_features(sample_match_features):
     batch = [sample_match_features, sample_match_features]
     tabular_batch = batch_extract_draft_features(batch, mode="tabular")
     assert tabular_batch.shape == (2, TABULAR_FEATURE_DIM)
+
+    # Numerical equality verification against single extraction
+    single_tabular, _ = extract_tabular_draft_features(sample_match_features)
+    np.testing.assert_array_equal(tabular_batch[0], single_tabular)
+    np.testing.assert_array_equal(tabular_batch[1], single_tabular)
+
     dense_batch = batch_extract_draft_features(batch, mode="dense")
     assert dense_batch.shape == (2, DENSE_FEATURE_DIM)
+
+    # Numerical equality verification against single extraction
+    single_dense = extract_dense_draft_features(sample_match_features)
+    np.testing.assert_array_equal(dense_batch[0], single_dense)
+    np.testing.assert_array_equal(dense_batch[1], single_dense)
 
 
 def test_batch_extract_invalid_mode(sample_match_features):
@@ -138,3 +164,11 @@ def test_alternate_keys_and_empty_teams():
     assert vec[2] == UNK_CHAMPION_ID
     # Empty team B has UNK_CHAMPION_ID for all slots
     assert all(vec[5:10] == UNK_CHAMPION_ID)
+
+
+def test_non_list_participants():
+    features = {"team_a": None, "team_b": "invalid_string"}
+    vec, names = extract_tabular_draft_features(features)
+    assert vec.shape == (TABULAR_FEATURE_DIM,)
+    assert np.all(vec[:10] == UNK_CHAMPION_ID)
+    assert np.all(vec[10:] == 0.0)
