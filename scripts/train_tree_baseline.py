@@ -22,6 +22,11 @@ from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.preprocessing import OrdinalEncoder
 
 from core import config
+from core.draft_features import (
+    TABULAR_FEATURE_DIM,
+    batch_extract_draft_features,
+    get_tabular_feature_names,
+)
 from core.experiment import (
     SPLIT_NAMES,
     build_manifest,
@@ -118,16 +123,16 @@ def train_tree_model(
         if expected_counts and actual_counts != expected_counts:
             raise ValueError(f"split_counts mismatch: expected {expected_counts}, got {actual_counts}")
 
-    raw_X: dict[str, list[list[str]]] = {}
-    feature_names: list[str] = []
-    for name in SPLIT_NAMES:
-        rows_X = []
-        for r in splits[name]:
-            vals, names = extract_tabular_features(r.get("feature_json", {}))
-            if not feature_names:
-                feature_names = names
-            rows_X.append(vals)
-        raw_X[name] = rows_X
+    feature_names = get_tabular_feature_names()
+    X = {
+        name: batch_extract_draft_features(
+            [r.get("feature_json", {}) for r in splits[name]], mode="tabular"
+        )
+        for name in SPLIT_NAMES
+    }
+    X_train = X["train"]
+    X_validation = X["validation"]
+    X_test = X["test"]
 
     y = {
         name: np.asarray([r["labels_json"]["winner"] for r in splits[name]], dtype=int)
@@ -147,18 +152,12 @@ def train_tree_model(
     out_path.mkdir(parents=True, exist_ok=True)
     _write_json(out_path / "model.split.json", manifest)
 
-    encoder = OrdinalEncoder(
-        handle_unknown="use_encoded_value", unknown_value=-1, max_categories=255
-    )
-    X_train = encoder.fit_transform(raw_X["train"])
-    X_validation = encoder.transform(raw_X["validation"])
-    X_test = encoder.transform(raw_X["test"])
-
+    cat_features = list(range(10))
     best = None
     history = []
     for iterations in (50, 100, 150):
         model = HistGradientBoostingClassifier(
-            categorical_features=list(range(24)),
+            categorical_features=cat_features,
             max_iter=iterations,
             max_leaf_nodes=15,
             min_samples_leaf=20,
@@ -207,7 +206,7 @@ def train_tree_model(
     # Save joblib bundle and metrics
     bundle = {
         "model": selected,
-        "encoder": encoder,
+        "encoder": None,
         "feature_names": feature_names,
         "max_iter": selected_iter,
     }
