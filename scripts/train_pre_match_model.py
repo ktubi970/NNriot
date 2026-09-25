@@ -53,16 +53,50 @@ def build_multi_output_model(input_dim: int):
     return build(input_dim=input_dim)
 
 
+def build_draft_dense_model(input_dim: int | None = None):
+    # Keep dataset checks and --help available without loading TensorFlow.
+    from core.generate_graph import build_draft_dense_model as build
+    return build(input_dim=input_dim)
+
+
+class ModelWithReport(tuple):
+    def __new__(cls, model, report):
+        return super().__new__(cls, (model, report))
+
+    @property
+    def model(self):
+        return self[0]
+
+    @property
+    def report(self):
+        return self[1]
+
+    def __getattr__(self, name):
+        return getattr(self[0], name)
+
+    def __setattr__(self, name, value):
+        setattr(self[0], name, value)
+
+    def __dir__(self):
+        return sorted(set(super().__dir__() + dir(self[0])))
+
+
 def fetch_training_records(limit: int = 5000, db_path: str | None = None) -> list[dict]:
     """Read the newest eligible candidates without writing to the source database."""
     return load_records(config.get_db_path(db_path, require_exists=True), limit=limit)
 
 
-def _winner_probabilities(model, x_sparse, batch_size: int) -> np.ndarray:
+def _winner_probabilities(model, x, batch_size: int) -> np.ndarray:
     probabilities = []
-    for start in range(0, x_sparse.shape[0], batch_size):
-        predictions = model.predict_on_batch(x_sparse[start:start + batch_size].toarray())
-        probabilities.append(np.asarray(predictions["winner"])[:, 1])
+    for start in range(0, x.shape[0], batch_size):
+        batch_x = x[start:start + batch_size]
+        if hasattr(batch_x, "toarray"):
+            batch_x = batch_x.toarray()
+        predictions = model.predict_on_batch(batch_x)
+        if isinstance(predictions, dict):
+            probabilities.append(np.asarray(predictions["winner"])[:, 1])
+        else:
+            probabilities.append(np.asarray(predictions)[:, 1])
     return np.concatenate(probabilities)
 
 
@@ -77,19 +111,28 @@ def train_model(
     epochs: int = 5,
     batch_size: int = 64,
     checkpoint_path: str | None = None,
-    dim: int = VECTOR_DIM,
+    dim: int | None = None,
     *,
     seed: int = 42,
     source_db: str | None = None,
     split_manifest: dict | None = None,
     split_strategy: str = "chronological",
     calibrate: bool = False,
+    feature_version: str = "v1_hasher",
 ) -> Any:
     """Select on validation winner log-loss, then evaluate test exactly once.
 
     Outputs are candidate artifacts. They are neither statistically calibrated
     nor installed as the application's active model.
     """
+    if feature_version not in ("v1_hasher", "v2_draft"):
+        raise ValueError(f"feature_version must be 'v1_hasher' or 'v2_draft', got {feature_version!r}")
+    if dim is None:
+        if feature_version == "v2_draft":
+            from core.draft_features import DENSE_FEATURE_DIM
+            dim = DENSE_FEATURE_DIM
+        else:
+            dim = VECTOR_DIM
     for name, value in (("epochs", epochs), ("batch_size", batch_size), ("dim", dim)):
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ValueError(f"{name} must be a positive integer")
@@ -137,13 +180,26 @@ def train_model(
     manifest = build_manifest(splits, source_db=source_db, split_metadata=split_meta)
     dataset_sha256 = manifest["dataset_sha256"]
     split_sha256 = manifest["split_sha256"]
-    features = {name: [to_pre_match_features(r["feature_json"]) for r in rows]
-                for name, rows in splits.items()}
     # Materialize the frozen membership before any training. A failed run keeps
     # its manifest for diagnosis; subsequent runs must use a fresh output path.
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_json(manifest_path, manifest)
-    x = {name: json_utils.json_to_vector(rows, dim=dim) for name, rows in features.items()}
+
+    if feature_version == "v2_draft":
+        from core.draft_features import batch_extract_draft_features
+        def _get_feat(r):
+            fj = r.get("feature_json") or {}
+            if "team_a" in fj and "team_b" in fj:
+                return fj
+            return to_pre_match_features(fj)
+
+        x = {name: batch_extract_draft_features([_get_feat(r) for r in rows], mode="dense")
+             for name, rows in splits.items()}
+    else:
+        features = {name: [to_pre_match_features(r["feature_json"]) for r in rows]
+                    for name, rows in splits.items()}
+        x = {name: json_utils.json_to_vector(rows, dim=dim) for name, rows in features.items()}
+
     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
          for name, rows in splits.items()}
     train_rate = float(y["train"].mean())
@@ -153,8 +209,13 @@ def train_model(
     from core.training_utils import _build_targets, sparse_microbatch_generator
 
     tf.keras.utils.set_random_seed(seed)
-    model = build_multi_output_model(input_dim=dim)
+    if feature_version == "v2_draft":
+        model = build_draft_dense_model(input_dim=dim)
+    else:
+        model = build_multi_output_model(input_dim=dim)
     targets = _build_targets(splits["train"])
+    if feature_version == "v2_draft":
+        targets = {"winner": targets["winner"]}
     best_loss = float("inf")
     selected_epoch = None
     history = []
@@ -213,15 +274,21 @@ def train_model(
         "source_db": manifest["source_db"], "dataset_sha256": dataset_sha256,
         "split_sha256": split_sha256,
         "checkpoint": str(output), "split_manifest": str(manifest_path),
-        "parameters": {"epochs": epochs, "batch_size": batch_size, "dim": dim, "seed": seed},
+        "parameters": {
+            "epochs": epochs,
+            "batch_size": batch_size,
+            "dim": dim,
+            "seed": seed,
+            "feature_version": feature_version,
+        },
         "tensorflow_version": tf.__version__,
         "gpu_devices": [device.name for device in tf.config.list_physical_devices("GPU")],
         "split_counts": counts, "train_positive_rate": train_rate,
         "selection_metric": "validation.winner.log_loss", "selected_epoch": selected_epoch,
         "is_calibrated": False, "evaluation_target": "winner",
         "baseline_policy": "constant positive rate fitted on training split only",
-        "active_heads": [name for name, weight in LOSS_WEIGHTS.items() if weight > 0],
-        "disabled_heads": [name for name, weight in LOSS_WEIGHTS.items() if weight == 0],
+        "active_heads": ["winner"] if feature_version == "v2_draft" else [name for name, weight in LOSS_WEIGHTS.items() if weight > 0],
+        "disabled_heads": [name for name in LOSS_WEIGHTS if name != "winner"] if feature_version == "v2_draft" else [name for name, weight in LOSS_WEIGHTS.items() if weight == 0],
         "limitations": [
             "No probability calibration fitted." if fit is None else "Winner-only temperature calibration fitted on validation split.",
             "Chronological holdout only; players may overlap between splits.",
@@ -262,7 +329,7 @@ def train_model(
     logger.info("Candidate checkpoint: %s", output)
     logger.info("Held-out test: %s", json.dumps(metrics["test"]))
     logger.info("Evaluation report: %s", report_path)
-    return model
+    return ModelWithReport(model, report)
 
 
 def main(argv=None):
@@ -271,13 +338,15 @@ def main(argv=None):
     parser.add_argument("--samples", type=int, default=5000, help="Newest candidate matches, total across splits")
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=64)
-    parser.add_argument("--dim", type=int, default=VECTOR_DIM)
+    parser.add_argument("--dim", type=int, default=None)
     parser.add_argument("--output", help="New .keras candidate path; defaults to a unique directory in runs/")
     parser.add_argument("--split-strategy", choices=["chronological", "patch"], default=None,
                         help="Holdout split strategy: chronological or patch")
     parser.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
     parser.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft"], default="v1_hasher",
+                        help="Feature extraction version: v1_hasher (sparse hashing) or v2_draft (dense domain)")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     if args.split_strategy is not None and args.split_manifest is not None:
@@ -297,7 +366,8 @@ def main(argv=None):
                         len(records), Path(args.db).resolve(), manifest_file)
             train_model(records, epochs=args.epochs, batch_size=args.batch_size,
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
-                        source_db=args.db, split_manifest=manifest, calibrate=args.calibrate)
+                        source_db=args.db, split_manifest=manifest, calibrate=args.calibrate,
+                        feature_version=args.feature_version)
         else:
             strategy = args.split_strategy or "chronological"
             records = fetch_training_records(limit=args.samples, db_path=args.db)
@@ -305,7 +375,8 @@ def main(argv=None):
                         len(records), Path(args.db).resolve(), strategy)
             train_model(records, epochs=args.epochs, batch_size=args.batch_size,
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
-                        source_db=args.db, split_strategy=strategy, calibrate=args.calibrate)
+                        source_db=args.db, split_strategy=strategy, calibrate=args.calibrate,
+                        feature_version=args.feature_version)
     except (ValueError, FileExistsError, FileNotFoundError) as exc:
         parser.exit(2, f"Training aborted: {exc}\n")
 

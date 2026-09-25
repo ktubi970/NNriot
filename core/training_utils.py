@@ -93,7 +93,9 @@ def sparse_microbatch_generator(x_sparse, y_dense, batch_size=32):
         end_idx = min(start_idx + batch_size, n_samples)
         batch_indices = indices[start_idx:end_idx]
 
-        x_batch = x_sparse[batch_indices].toarray()
+        x_batch = x_sparse[batch_indices]
+        if hasattr(x_batch, "toarray"):
+            x_batch = x_batch.toarray()
         if isinstance(y_dense, dict):
             y_batch = {k: v[batch_indices] for k, v in y_dense.items()}
         else:

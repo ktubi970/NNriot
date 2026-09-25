@@ -221,6 +221,29 @@ def build_multi_output_model(input_dim: int = 20000, dropout_rate: float = 0.3) 
     return model
 
 
+def build_draft_dense_model(input_dim: int | None = None, dropout_rate: float = 0.2) -> tf.keras.Model:
+    """Compact, focused MLP specifically for dense draft features."""
+    if input_dim is None:
+        from core.draft_features import DENSE_FEATURE_DIM
+        input_dim = DENSE_FEATURE_DIM
+
+    inputs = tf.keras.Input(shape=(input_dim,), name="Input")
+    x = tf.keras.layers.Dense(512, activation="relu", name="Draft_Dense1")(inputs)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    x = tf.keras.layers.Dense(256, activation="relu", name="Draft_Dense2")(x)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    x = tf.keras.layers.Dense(64, activation="relu", name="Draft_Dense3")(x)
+    outputs = {"winner": tf.keras.layers.Dense(2, activation="softmax", name="winner")(x)}
+
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_DraftDense")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss={"winner": "categorical_crossentropy"},
+        metrics={"winner": ["accuracy"]},
+    )
+    return model
+
+
 if __name__ == "__main__":
     # Sanity build of the current multi-output model — does NOT save a checkpoint
     # (training is handled by continuous_trainer.py). The old code saved a legacy
