@@ -133,7 +133,7 @@ def _get_feat(r: dict) -> dict:
 def _log_selective_metrics_summary(metrics: dict, title_prefix: str = "") -> None:
     for split_name in ("validation", "test"):
         split_eval = metrics.get(split_name, {})
-        diag = split_eval.get("diagnostics") or split_eval.get("model", {}).get("diagnostics", {})
+        diag = split_eval.get("model", {}).get("diagnostics", {})
         selective = diag.get("selective_metrics", {})
         if not selective:
             continue
@@ -453,7 +453,6 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets"], default="deepsets",
                         help="Feature extraction version: v1_hasher, v2_draft, v3_enriched, or deepsets (equivariant DeepSets)")
-    parser.add_argument("--warmup", type=int, default=None, help="Number of warmup matches for point-in-time player priors")
     parser.add_argument("--architecture", choices=["auto", "mlp", "deepsets"], default="auto")
     parser.add_argument("--no-pcgrad", action="store_true", help="Disable PCGrad gradient deconfliction")
     args = parser.parse_args(argv)
@@ -482,7 +481,7 @@ def main(argv=None):
             strategy = args.split_strategy or "chronological"
             if args.feature_version in ("v3_enriched", "deepsets"):
                 from core.point_in_time_dataset import load_enriched_records
-                warmup = args.warmup if args.warmup is not None else min(8000, max(500, args.samples // 5))
+                warmup = min(3000, max(500, args.samples // 3))
                 records = load_enriched_records(db_path=args.db, limit=args.samples, warmup_matches=warmup)
             else:
                 records = fetch_training_records(limit=args.samples, db_path=args.db)

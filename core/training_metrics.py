@@ -120,7 +120,7 @@ def _calibration_slope(labels: np.ndarray, probabilities: np.ndarray) -> dict:
             }
 
 
-def compute_calibration_diagnostics(y_true, probabilities, *, num_bins: int = 10) -> dict:
+def compute_calibration_diagnostics(y_true, probabilities, *, num_bins: int = 10, selective: bool = True) -> dict:
     if type(num_bins) is not int or num_bins < 1:
         raise ValueError("num_bins must be a positive integer")
 
@@ -150,7 +150,7 @@ def compute_calibration_diagnostics(y_true, probabilities, *, num_bins: int = 10
 
     slope_info = _calibration_slope(labels, p)
 
-    return {
+    out = {
         "quantile_ece": float(quantile_ece),
         "binning": {
             "method": "quantile",
@@ -166,35 +166,13 @@ def compute_calibration_diagnostics(y_true, probabilities, *, num_bins: int = 10
             "identity_target": "binned_probabilities",
         },
         "calibration_slope": slope_info,
-        "selective_metrics": stratify_by_conviction(labels, p),
     }
+    if selective:
+        out["selective_metrics"] = stratify_by_conviction(labels, p)
+    return out
 
 
-class WinnerReport(dict):
-    """Evaluation report dictionary that preserves legacy keys while allowing diagnostics accessor."""
-
-    def __getitem__(self, key):
-        if key == "diagnostics" and "diagnostics" not in dict.keys(self):
-            model = dict.get(self, "model")
-            if isinstance(model, dict) and "diagnostics" in model:
-                return model["diagnostics"]
-        return super().__getitem__(key)
-
-    def __contains__(self, key):
-        if key == "diagnostics" and not dict.__contains__(self, key):
-            model = dict.get(self, "model")
-            return isinstance(model, dict) and "diagnostics" in model
-        return super().__contains__(key)
-
-    def get(self, key, default=None):
-        if key == "diagnostics" and "diagnostics" not in dict.keys(self):
-            model = dict.get(self, "model")
-            if isinstance(model, dict) and "diagnostics" in model:
-                return model["diagnostics"]
-        return super().get(key, default)
-
-
-def _winner_scores(labels: np.ndarray, probabilities: np.ndarray, *, diagnostics: bool = False) -> dict:
+def _winner_scores(labels: np.ndarray, probabilities: np.ndarray, *, diagnostics: bool = False, selective: bool = True) -> dict:
     # Ten equal-width probability bins, including p=1 in the final bin.
     bins = np.minimum((probabilities * 10).astype(int), 9)
     calibration_error = 0.0
@@ -217,11 +195,11 @@ def _winner_scores(labels: np.ndarray, probabilities: np.ndarray, *, diagnostics
         "calibration_error": float(calibration_error),
     }
     if diagnostics:
-        scores["diagnostics"] = compute_calibration_diagnostics(labels, probabilities)
+        scores["diagnostics"] = compute_calibration_diagnostics(labels, probabilities, selective=selective)
     return scores
 
 
-def evaluate_winner(y_true, probabilities, train_positive_rate: float | str = 0.5, *, diagnostics: bool = False) -> WinnerReport:
+def evaluate_winner(y_true, probabilities, train_positive_rate: float = 0.5, *, diagnostics: bool = False) -> dict:
     """Score P(winner=1) without fitting or calibrating on evaluation outcomes.
 
     Inputs must be equally sized, nonempty one-dimensional arrays. The baseline
@@ -234,33 +212,18 @@ def evaluate_winner(y_true, probabilities, train_positive_rate: float | str = 0.
     ROC AUC is undefined (None) for a split with only one observed class.
     """
     labels, probabilities = _validate_labels_and_probabilities(y_true, probabilities)
+    train_rate = np.asarray(train_positive_rate, dtype=float)
 
-    if isinstance(train_positive_rate, str):
-        if train_positive_rate == "winner":
-            train_rate_val = 0.5
-            diagnostics = True
-        else:
-            try:
-                train_rate_val = float(train_positive_rate)
-            except ValueError:
-                raise ValueError(
-                    f"train_positive_rate string must be convertible to float or 'winner', got {train_positive_rate!r}"
-                )
-            if not np.isfinite(train_rate_val) or not 0 <= train_rate_val <= 1:
-                raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
-    else:
-        train_rate = np.asarray(train_positive_rate, dtype=float)
-        if train_rate.ndim != 0 or not np.isfinite(train_rate) or not 0 <= train_rate <= 1:
-            raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
-        train_rate_val = float(train_rate)
+    if train_rate.ndim != 0 or not np.isfinite(train_rate) or not 0 <= train_rate <= 1:
+        raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
 
-    model = _winner_scores(labels, probabilities, diagnostics=diagnostics)
+    model = _winner_scores(labels, probabilities, diagnostics=diagnostics, selective=True)
     baseline = _winner_scores(
-        labels, np.full(labels.shape, float(train_rate_val)), diagnostics=diagnostics
+        labels, np.full(labels.shape, float(train_rate)), diagnostics=diagnostics, selective=False
     )
-    return WinnerReport({
+    return {
         "model": model,
         "baseline": baseline,
         "accuracy_lift": model["accuracy"] - baseline["accuracy"],
         "log_loss_improvement": baseline["log_loss"] - model["log_loss"],
-    })
+    }

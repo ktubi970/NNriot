@@ -207,8 +207,9 @@ def test_selective_metrics_integrated_into_calibration_diagnostics():
 
     # Also test via evaluate_winner with diagnostics=True
     report = evaluate_winner(y, p, 0.5, diagnostics=True)
-    assert "selective_metrics" in report["diagnostics"]
     assert "selective_metrics" in report["model"]["diagnostics"]
-    assert report["diagnostics"]["selective_metrics"] == selective
+    assert report["model"]["diagnostics"]["selective_metrics"] == selective
     assert report["model"]["accuracy"] == pytest.approx(selective["conviction_ge_0pct"]["accuracy"])
+    # Verify constant baseline skips selective metrics
+    assert "selective_metrics" not in report["baseline"]["diagnostics"]
 

@@ -109,10 +109,10 @@ def test_evaluation_includes_selective_metrics():
     y_true = np.array([1, 0, 1, 0, 1, 1, 0, 0])
     y_prob = np.array([0.65, 0.35, 0.52, 0.48, 0.70, 0.60, 0.40, 0.30])
 
-    report = evaluate_winner(y_true, y_prob, "winner")
-    assert "selective_metrics" in report["diagnostics"]
-    assert "conviction_ge_4pct" in report["diagnostics"]["selective_metrics"]
-    assert report["diagnostics"]["selective_metrics"]["conviction_ge_4pct"]["accuracy"] >= 0.60
+    report = evaluate_winner(y_true, y_prob, train_positive_rate=0.5, diagnostics=True)
+    assert "selective_metrics" in report["model"]["diagnostics"]
+    assert "conviction_ge_4pct" in report["model"]["diagnostics"]["selective_metrics"]
+    assert report["model"]["diagnostics"]["selective_metrics"]["conviction_ge_4pct"]["accuracy"] >= 0.60
 
 
 
