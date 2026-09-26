@@ -93,10 +93,17 @@ def fetch_training_records(limit: int = 5000, db_path: str | None = None) -> lis
 
 def _winner_probabilities(model, x, batch_size: int) -> np.ndarray:
     probabilities = []
-    for start in range(0, x.shape[0], batch_size):
-        batch_x = x[start:start + batch_size]
-        if hasattr(batch_x, "toarray"):
-            batch_x = batch_x.toarray()
+    n = len(x["team_a"]) if isinstance(x, dict) else x.shape[0]
+    for start in range(0, n, batch_size):
+        if isinstance(x, dict):
+            batch_x = {
+                "team_a": x["team_a"][start:start + batch_size],
+                "team_b": x["team_b"][start:start + batch_size],
+            }
+        else:
+            batch_x = x[start:start + batch_size]
+            if hasattr(batch_x, "toarray"):
+                batch_x = batch_x.toarray()
         predictions = model.predict_on_batch(batch_x)
         if isinstance(predictions, dict):
             probabilities.append(np.asarray(predictions["winner"])[:, 1])
@@ -135,17 +142,25 @@ def train_model(
     split_manifest: dict | None = None,
     split_strategy: str = "chronological",
     calibrate: bool = False,
-    feature_version: str = "v1_hasher",
+    feature_version: str = "deepsets",
+    architecture: str = "auto",
+    use_pcgrad: bool = True,
 ) -> Any:
     """Select on validation winner log-loss, then evaluate test exactly once.
 
     Outputs are candidate artifacts. They are neither statistically calibrated
     nor installed as the application's active model.
     """
-    if feature_version not in ("v1_hasher", "v2_draft"):
-        raise ValueError(f"feature_version must be 'v1_hasher' or 'v2_draft', got {feature_version!r}")
+    if feature_version not in ("v1_hasher", "v2_draft", "v3_enriched", "deepsets"):
+        raise ValueError(f"feature_version must be 'v1_hasher', 'v2_draft', 'v3_enriched', or 'deepsets', got {feature_version!r}")
     if dim is None:
-        if feature_version == "v2_draft":
+        if feature_version == "deepsets":
+            from core.deepsets_dataset import PLAYER_TENSOR_DIM
+            dim = PLAYER_TENSOR_DIM
+        elif feature_version == "v3_enriched":
+            from core.enriched_features import ENRICHED_DENSE_DIM
+            dim = ENRICHED_DENSE_DIM
+        elif feature_version == "v2_draft":
             from core.draft_features import DENSE_FEATURE_DIM
             dim = DENSE_FEATURE_DIM
         else:
@@ -202,7 +217,15 @@ def train_model(
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_json(manifest_path, manifest)
 
-    if feature_version == "v2_draft":
+    if feature_version == "deepsets":
+        from core.deepsets_dataset import batch_extract_team_tensors
+        x = {name: batch_extract_team_tensors([_get_feat(r) for r in rows])
+             for name, rows in splits.items()}
+    elif feature_version == "v3_enriched":
+        from core.enriched_features import batch_extract_enriched_features
+        x = {name: batch_extract_enriched_features([_get_feat(r) for r in rows], mode="dense")
+             for name, rows in splits.items()}
+    elif feature_version == "v2_draft":
         from core.draft_features import batch_extract_draft_features
         x = {name: batch_extract_draft_features([_get_feat(r) for r in rows], mode="dense")
              for name, rows in splits.items()}
@@ -216,32 +239,56 @@ def train_model(
     train_rate = float(y["train"].mean())
 
     import tensorflow as tf
-    from core.generate_graph import LOSS_WEIGHTS
+    from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD, build_enriched_model
     from core.training_utils import _build_targets, sparse_microbatch_generator
 
     tf.keras.utils.set_random_seed(seed)
-    if feature_version == "v2_draft":
+    if feature_version == "deepsets" or architecture == "deepsets":
+        from core.equivariant_model import build_equivariant_deepsets_model
+        model = build_equivariant_deepsets_model(player_feature_dim=dim)
+    elif feature_version == "v3_enriched":
+        model = build_enriched_model(input_dim=dim)
+    elif feature_version == "v2_draft":
         model = build_draft_dense_model(input_dim=dim)
     else:
         model = build_multi_output_model(input_dim=dim)
     targets = _build_targets(splits["train"])
-    if feature_version == "v2_draft":
+    if feature_version in ("v2_draft", "v3_enriched"):
         targets = {"winner": targets["winner"]}
     best_loss = float("inf")
     selected_epoch = None
     history = []
     started = time.monotonic()
+    loss_fns = {k: tf.keras.losses.get(LOSS_PER_HEAD[k]) for k in LOSS_PER_HEAD} if (feature_version == "deepsets" and use_pcgrad) else None
     for epoch in range(1, epochs + 1):
         total_loss = 0.0
         seen = 0
-        for xb, yb in sparse_microbatch_generator(x["train"], targets, batch_size=batch_size):
-            model.reset_metrics()
-            result = model.train_on_batch(xb, yb, return_dict=True)
-            loss = float(result["loss"])
-            if not np.isfinite(loss):
-                raise ValueError("Training produced a non-finite loss")
-            total_loss += loss * len(xb)
-            seen += len(xb)
+        if feature_version == "deepsets":
+            from core.pcgrad import pcgrad_step
+            n_train = len(x["train"]["team_a"])
+            for start in range(0, n_train, batch_size):
+                xb = {
+                    "team_a": x["train"]["team_a"][start:start + batch_size],
+                    "team_b": x["train"]["team_b"][start:start + batch_size],
+                }
+                yb = {k: targets[k][start:start + batch_size] for k in targets if k in model.output_names}
+                if use_pcgrad:
+                    losses = pcgrad_step(model, model.optimizer, xb, yb, loss_fns, loss_weights=LOSS_WEIGHTS)
+                    batch_loss = sum(losses.values())
+                else:
+                    res = model.train_on_batch(xb, yb, return_dict=True)
+                    batch_loss = float(res["loss"])
+                total_loss += batch_loss * len(xb["team_a"])
+                seen += len(xb["team_a"])
+        else:
+            for xb, yb in sparse_microbatch_generator(x["train"], targets, batch_size=batch_size):
+                model.reset_metrics()
+                result = model.train_on_batch(xb, yb, return_dict=True)
+                loss = float(result["loss"])
+                if not np.isfinite(loss):
+                    raise ValueError("Training produced a non-finite loss")
+                total_loss += loss * len(xb)
+                seen += len(xb)
         validation = evaluate_winner(y["validation"],
             _winner_probabilities(model, x["validation"], batch_size), train_rate)
         val_loss = validation["model"]["log_loss"]
@@ -309,6 +356,22 @@ def train_model(
         "metrics": metrics, "history": history,
         "elapsed_seconds": time.monotonic() - started,
     }
+    symmetry_diagnostics = None
+    if feature_version == "deepsets":
+        test_swapped = {"team_a": x["test"]["team_b"], "team_b": x["test"]["team_a"]}
+        p_norm = raw["test"]
+        p_swap = _winner_probabilities(model, test_swapped, batch_size)
+        max_violation = float(np.max(np.abs(p_norm - (1.0 - p_swap))))
+        symmetry_diagnostics = {
+            "is_equivariant": True,
+            "max_symmetry_violation": max_violation,
+            "anti_symmetry_guarantee": max_violation < 1e-4,
+        }
+        logger.info("Equivariant anti-symmetry check: max_violation=%.6e guaranteed=%s",
+                    max_violation, max_violation < 1e-4)
+
+    report["symmetry_diagnostics"] = symmetry_diagnostics
+
     # The application never reads this distinct output unless explicitly promoted.
     if output.exists():
         raise FileExistsError(f"Checkpoint appeared during training: {output}")
@@ -356,8 +419,10 @@ def main(argv=None):
     parser.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
     parser.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft"], default="v1_hasher",
-                        help="Feature extraction version: v1_hasher (sparse hashing) or v2_draft (dense domain)")
+    parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets"], default="deepsets",
+                        help="Feature extraction version: v1_hasher, v2_draft, v3_enriched, or deepsets (equivariant DeepSets)")
+    parser.add_argument("--architecture", choices=["auto", "mlp", "deepsets"], default="auto")
+    parser.add_argument("--no-pcgrad", action="store_true", help="Disable PCGrad gradient deconfliction")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     if args.split_strategy is not None and args.split_manifest is not None:
@@ -378,16 +443,23 @@ def main(argv=None):
             train_model(records, epochs=args.epochs, batch_size=args.batch_size,
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
                         source_db=args.db, split_manifest=manifest, calibrate=args.calibrate,
-                        feature_version=args.feature_version)
+                        feature_version=args.feature_version, architecture=args.architecture,
+                        use_pcgrad=not args.no_pcgrad)
         else:
             strategy = args.split_strategy or "chronological"
-            records = fetch_training_records(limit=args.samples, db_path=args.db)
+            if args.feature_version in ("v3_enriched", "deepsets"):
+                from core.point_in_time_dataset import load_enriched_records
+                warmup = min(3000, max(500, args.samples // 3))
+                records = load_enriched_records(db_path=args.db, limit=args.samples, warmup_matches=warmup)
+            else:
+                records = fetch_training_records(limit=args.samples, db_path=args.db)
             logger.info("Using %d eligible matches from %s (split_strategy=%s)",
                         len(records), Path(args.db).resolve(), strategy)
             train_model(records, epochs=args.epochs, batch_size=args.batch_size,
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
                         source_db=args.db, split_strategy=strategy, calibrate=args.calibrate,
-                        feature_version=args.feature_version)
+                        feature_version=args.feature_version, architecture=args.architecture,
+                        use_pcgrad=not args.no_pcgrad)
     except (ValueError, FileExistsError, FileNotFoundError) as exc:
         parser.exit(2, f"Training aborted: {exc}\n")
 

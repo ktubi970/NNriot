@@ -6,6 +6,7 @@ under team swapping: T_diff(B, A) = -T_diff(A, B).
 """
 from __future__ import annotations
 
+from typing import Any
 import tensorflow as tf
 
 
@@ -45,6 +46,15 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         # rho: team-level representation transformer (shared for Team A and Team B)
         self.rho1 = tf.keras.layers.Dense(self.latent_dim, activation="relu", name="rho_dense1")
         self.rho2 = tf.keras.layers.Dense(self.latent_dim, activation=None, name="rho_dense2")
+
+    def build(self, input_shape: Any) -> None:
+        team_shape = input_shape[0] if isinstance(input_shape, (tuple, list)) else input_shape
+        feature_dim = team_shape[-1]
+        self.phi1.build((None, 5, feature_dim))
+        self.phi2.build((None, 5, self.embed_dim))
+        self.rho1.build((None, self.embed_dim))
+        self.rho2.build((None, self.latent_dim))
+        super().build(input_shape)
 
     def call(self, inputs: tuple[tf.Tensor, tf.Tensor] | list[tf.Tensor], training: bool | None = None) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
         if not isinstance(inputs, (tuple, list)) or len(inputs) != 2:

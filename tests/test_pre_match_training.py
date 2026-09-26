@@ -29,3 +29,58 @@ def test_to_pre_match_features_strips_leakage():
     assert cleaned["game_mode"] == "CLASSIC"
     assert cleaned["region"] == "EUW"
 
+
+def test_equivariant_deepsets_training_run(tmp_path):
+    from scripts.train_pre_match_model import train_model
+
+    # Build 25 synthetic matches for chronological split (min 20 required)
+    records = []
+    for i in range(25):
+        records.append({
+            "match_id": f"TEST_{i}",
+            "game_creation_time": 1000 + i * 100,
+            "winner_label": i % 2,
+            "feature_json": {
+                "team_a": [{"champion": "Ahri", "role": "MIDDLE"}] * 5,
+                "team_b": [{"champion": "Zed", "role": "MIDDLE"}] * 5,
+            },
+            "labels_json": {
+                "winner": i % 2,
+                "team_b_kill_lead": i % 2,
+                "kills_odd": 1,
+                "both_baron": 0,
+                "both_inhibitor": 0,
+                "both_dragon": 1,
+                "elder_dragon": 0,
+                "first_blood": 0,
+                "first_baron": 0,
+                "first_inhibitor": 0,
+                "first_tower": 1,
+                "kill_handicap": 2,
+                "total_kills": 30,
+                "team_a_kills": 16,
+                "team_b_kills": 14,
+                "total_barons": 1,
+                "total_dragons": 3,
+                "total_towers": 11,
+            },
+        })
+
+    ckpt_path = str(tmp_path / "model.keras")
+    model_report = train_model(
+        records,
+        epochs=1,
+        batch_size=8,
+        checkpoint_path=ckpt_path,
+        feature_version="deepsets",
+        use_pcgrad=True,
+    )
+
+    report = model_report.report
+    assert report["symmetry_diagnostics"] is not None
+    assert report["symmetry_diagnostics"]["is_equivariant"] is True
+    assert report["symmetry_diagnostics"]["anti_symmetry_guarantee"] is True
+    assert report["symmetry_diagnostics"]["max_symmetry_violation"] < 1e-4
+    assert os.path.exists(ckpt_path)
+
+

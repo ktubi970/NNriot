@@ -135,7 +135,8 @@ def pcgrad_step(
         with tf.GradientTape() as tape:
             preds = model(x_batch, training=True)
             y_pred = preds[head]
-            head_loss = loss_fn(y_true, y_pred) * weight
+            raw_loss = loss_fn(y_true, y_pred)
+            head_loss = tf.reduce_mean(raw_loss) * weight
 
         grads = tape.gradient(head_loss, variables)
         task_gradients.append(grads)
