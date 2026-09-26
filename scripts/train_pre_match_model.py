@@ -171,7 +171,7 @@ def train_model(
     split_manifest: dict | None = None,
     split_strategy: str = "chronological",
     calibrate: bool = False,
-    feature_version: str = "deepsets",
+    feature_version: str | None = None,
     architecture: str = "auto",
     use_pcgrad: bool = True,
 ) -> Any:
@@ -180,6 +180,12 @@ def train_model(
     Outputs are candidate artifacts. They are neither statistically calibrated
     nor installed as the application's active model.
     """
+    if feature_version is None:
+        if (dim is not None and dim != 8) or architecture == "mlp":
+            feature_version = "v1_hasher"
+        else:
+            feature_version = "deepsets"
+
     if feature_version not in ("v1_hasher", "v2_draft", "v3_enriched", "deepsets"):
         raise ValueError(f"feature_version must be 'v1_hasher', 'v2_draft', 'v3_enriched', or 'deepsets', got {feature_version!r}")
     if dim is None:
