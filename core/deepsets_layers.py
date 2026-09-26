@@ -17,11 +17,12 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         tuple (team_a, team_b) each of shape (batch, 5, feature_dim).
         
     Outputs:
-        (T_diff, T_sum):
+        (T_diff, T_sum, T_a, T_b):
             T_diff has shape (batch, latent_dim), strictly anti-symmetric:
                 T_diff(B, A) == -T_diff(A, B)
             T_sum has shape (batch, latent_dim), strictly symmetric:
                 T_sum(B, A) == T_sum(A, B)
+            T_a and T_b have shape (batch, latent_dim), team representations.
     """
 
     def __init__(
@@ -45,7 +46,7 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         self.rho1 = tf.keras.layers.Dense(self.latent_dim, activation="relu", name="rho_dense1")
         self.rho2 = tf.keras.layers.Dense(self.latent_dim, activation=None, name="rho_dense2")
 
-    def call(self, inputs: tuple[tf.Tensor, tf.Tensor] | list[tf.Tensor], training: bool | None = None) -> tuple[tf.Tensor, tf.Tensor]:
+    def call(self, inputs: tuple[tf.Tensor, tf.Tensor] | list[tf.Tensor], training: bool | None = None) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
         if not isinstance(inputs, (tuple, list)) or len(inputs) != 2:
             raise ValueError(f"SiameseTeamEncoder expects a 2-tuple of (team_a, team_b), got {inputs}")
 
@@ -74,7 +75,7 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         t_diff = tf.subtract(t_b, t_a, name="t_diff")
         t_sum = tf.add(t_a, t_b, name="t_sum")
 
-        return t_diff, t_sum
+        return t_diff, t_sum, t_a, t_b
 
     def get_config(self) -> dict:
         config = super().get_config()
@@ -84,3 +85,13 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
             "dropout_rate": self.dropout_rate,
         })
         return config
+
+
+@tf.keras.utils.register_keras_serializable(package="nnriot")
+class AntiSymmetricSoftmax(tf.keras.layers.Layer):
+    """Takes a scalar logit s and outputs 2-class softmax [-s, s], strictly anti-symmetric."""
+
+    def call(self, s: tf.Tensor) -> tf.Tensor:
+        neg_s = -s
+        logits = tf.concat([neg_s, s], axis=-1)
+        return tf.nn.softmax(logits, axis=-1)

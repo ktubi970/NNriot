@@ -39,6 +39,10 @@ class ModelFactory:
         elif version == "v1":
             path = checkpoint_path or os.path.join(checkpoint_dir, "model.keras")
             builder = build_keras_model
+        elif version in ("deepsets", "v3_deepsets"):
+            from core.equivariant_model import build_equivariant_deepsets_model
+            path = checkpoint_path or os.path.join(checkpoint_dir, "model_deepsets.keras")
+            builder = build_equivariant_deepsets_model
         else:
             raise ValueError(f"Unknown model version: {version}")
             
@@ -57,7 +61,7 @@ class ModelFactory:
                     from core.feature_labels import ALL_LABEL_KEYS
                     actual_heads = set(candidate.output_names)
                     expected_heads = set(ALL_LABEL_KEYS)
-                    if actual_heads != expected_heads:
+                    if actual_heads != expected_heads and actual_heads != {"winner"}:
                         raise ValueError(f"Heads mismatch. Missing: {expected_heads - actual_heads}")
             except Exception as e:
                 logger.warning("Failed to load %s from %s: %s. Rebuilding...", version, path, e)
