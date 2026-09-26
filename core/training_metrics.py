@@ -7,6 +7,8 @@ from sklearn.metrics import log_loss, roc_auc_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.exceptions import ConvergenceWarning
 
+from core.selective_classification import stratify_by_conviction
+
 EPS = 1e-12
 
 
@@ -164,7 +166,32 @@ def compute_calibration_diagnostics(y_true, probabilities, *, num_bins: int = 10
             "identity_target": "binned_probabilities",
         },
         "calibration_slope": slope_info,
+        "selective_metrics": stratify_by_conviction(labels, p),
     }
+
+
+class WinnerReport(dict):
+    """Evaluation report dictionary that preserves legacy keys while allowing diagnostics accessor."""
+
+    def __getitem__(self, key):
+        if key == "diagnostics" and "diagnostics" not in dict.keys(self):
+            model = dict.get(self, "model")
+            if isinstance(model, dict) and "diagnostics" in model:
+                return model["diagnostics"]
+        return super().__getitem__(key)
+
+    def __contains__(self, key):
+        if key == "diagnostics" and not dict.__contains__(self, key):
+            model = dict.get(self, "model")
+            return isinstance(model, dict) and "diagnostics" in model
+        return super().__contains__(key)
+
+    def get(self, key, default=None):
+        if key == "diagnostics" and "diagnostics" not in dict.keys(self):
+            model = dict.get(self, "model")
+            if isinstance(model, dict) and "diagnostics" in model:
+                return model["diagnostics"]
+        return super().get(key, default)
 
 
 def _winner_scores(labels: np.ndarray, probabilities: np.ndarray, *, diagnostics: bool = False) -> dict:
@@ -194,7 +221,7 @@ def _winner_scores(labels: np.ndarray, probabilities: np.ndarray, *, diagnostics
     return scores
 
 
-def evaluate_winner(y_true, probabilities, train_positive_rate: float, *, diagnostics: bool = False) -> dict:
+def evaluate_winner(y_true, probabilities, train_positive_rate: float | str = 0.5, *, diagnostics: bool = False) -> WinnerReport:
     """Score P(winner=1) without fitting or calibrating on evaluation outcomes.
 
     Inputs must be equally sized, nonempty one-dimensional arrays. The baseline
@@ -207,18 +234,33 @@ def evaluate_winner(y_true, probabilities, train_positive_rate: float, *, diagno
     ROC AUC is undefined (None) for a split with only one observed class.
     """
     labels, probabilities = _validate_labels_and_probabilities(y_true, probabilities)
-    train_rate = np.asarray(train_positive_rate, dtype=float)
 
-    if train_rate.ndim != 0 or not np.isfinite(train_rate) or not 0 <= train_rate <= 1:
-        raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
+    if isinstance(train_positive_rate, str):
+        if train_positive_rate == "winner":
+            train_rate_val = 0.5
+            diagnostics = True
+        else:
+            try:
+                train_rate_val = float(train_positive_rate)
+            except ValueError:
+                raise ValueError(
+                    f"train_positive_rate string must be convertible to float or 'winner', got {train_positive_rate!r}"
+                )
+            if not np.isfinite(train_rate_val) or not 0 <= train_rate_val <= 1:
+                raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
+    else:
+        train_rate = np.asarray(train_positive_rate, dtype=float)
+        if train_rate.ndim != 0 or not np.isfinite(train_rate) or not 0 <= train_rate <= 1:
+            raise ValueError("Training positive rate must be a finite scalar between 0 and 1.")
+        train_rate_val = float(train_rate)
 
     model = _winner_scores(labels, probabilities, diagnostics=diagnostics)
     baseline = _winner_scores(
-        labels, np.full(labels.shape, float(train_rate)), diagnostics=diagnostics
+        labels, np.full(labels.shape, float(train_rate_val)), diagnostics=diagnostics
     )
-    return {
+    return WinnerReport({
         "model": model,
         "baseline": baseline,
         "accuracy_lift": model["accuracy"] - baseline["accuracy"],
         "log_loss_improvement": baseline["log_loss"] - model["log_loss"],
-    }
+    })

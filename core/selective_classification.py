@@ -46,6 +46,8 @@ def compute_conviction(probabilities: np.ndarray | Sequence[float] | float) -> n
     prob_arr = np.asarray(probabilities, dtype=float)
     if np.any(np.isnan(prob_arr)):
         raise ValueError("Probabilities contain NaN values")
+    if np.any((prob_arr < -1e-5) | (prob_arr > 1.0 + 1e-5)):
+        raise ValueError("Probabilities must be within [0, 1]")
     prob_arr = np.clip(prob_arr, 0.0, 1.0)
     return np.abs(prob_arr - 0.5)
 

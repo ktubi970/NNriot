@@ -171,3 +171,44 @@ def test_calibration_slope_successful_estimation():
     assert np.isfinite(slope_info["slope"])
     assert np.isfinite(slope_info["intercept"])
     assert 0.5 <= slope_info["slope"] <= 2.0
+
+
+def test_selective_metrics_integrated_into_calibration_diagnostics():
+    y = np.array([1, 0, 1, 0, 1, 1, 0, 0, 1, 0])
+    p = np.array([0.7, 0.3, 0.6, 0.4, 0.8, 0.55, 0.45, 0.2, 0.65, 0.35])
+
+    d = compute_calibration_diagnostics(y, p)
+    assert "selective_metrics" in d
+    selective = d["selective_metrics"]
+
+    # Verify standard ladder tiers are present
+    expected_tiers = [
+        "conviction_ge_0pct",
+        "conviction_ge_2pct",
+        "conviction_ge_4pct",
+        "conviction_ge_6pct",
+        "conviction_ge_8pct",
+        "conviction_ge_10pct",
+        "conviction_ge_12pct",
+        "conviction_ge_15pct",
+    ]
+    for tier in expected_tiers:
+        assert tier in selective
+        entry = selective[tier]
+        assert "accuracy" in entry
+        assert "coverage" in entry
+        assert "count" in entry
+        assert "wilson_lower" in entry
+        assert "wilson_upper" in entry
+
+    # 0% tier must be unconditional baseline (coverage = 1.0)
+    assert selective["conviction_ge_0pct"]["coverage"] == 1.0
+    assert selective["conviction_ge_0pct"]["count"] == 10
+
+    # Also test via evaluate_winner with diagnostics=True
+    report = evaluate_winner(y, p, 0.5, diagnostics=True)
+    assert "selective_metrics" in report["diagnostics"]
+    assert "selective_metrics" in report["model"]["diagnostics"]
+    assert report["diagnostics"]["selective_metrics"] == selective
+    assert report["model"]["accuracy"] == pytest.approx(selective["conviction_ge_0pct"]["accuracy"])
+

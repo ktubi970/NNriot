@@ -130,6 +130,35 @@ def _get_feat(r: dict) -> dict:
     return to_pre_match_features(fj)
 
 
+def _log_selective_metrics_summary(metrics: dict, title_prefix: str = "") -> None:
+    for split_name in ("validation", "test"):
+        split_eval = metrics.get(split_name, {})
+        diag = split_eval.get("diagnostics") or split_eval.get("model", {}).get("diagnostics", {})
+        selective = diag.get("selective_metrics", {})
+        if not selective:
+            continue
+        uncond_acc = split_eval.get("model", {}).get("accuracy", 0.0)
+        prefix = f"{title_prefix} " if title_prefix else ""
+        logger.info(
+            "Selective Evaluation [%s%s] - Unconditional Accuracy: %.4f (100.0%% coverage)",
+            prefix, split_name.upper(), uncond_acc
+        )
+        if "conviction_ge_4pct" in selective:
+            t4 = selective["conviction_ge_4pct"]
+            logger.info(
+                "  * Conviction >= 4%% (Target Tier): accuracy=%.4f (95%% Wilson CI: [%.4f, %.4f]) | coverage=%.1f%% (n=%d)",
+                t4["accuracy"], t4["wilson_lower"], t4["wilson_upper"], t4["coverage"] * 100.0, t4["count"]
+            )
+        for tier_key, s in selective.items():
+            if tier_key in ("conviction_ge_0pct", "conviction_ge_4pct"):
+                continue
+            logger.info(
+                "    %s (tau=%.2f): accuracy=%.4f (CI: [%.4f, %.4f]) | coverage=%.1f%% (n=%d)",
+                tier_key, s["threshold"], s["accuracy"], s["wilson_lower"], s["wilson_upper"],
+                s["coverage"] * 100.0, s["count"]
+            )
+
+
 def train_model(
     records: list[dict],
     epochs: int = 5,
@@ -403,6 +432,9 @@ def train_model(
     logger.info("Candidate checkpoint: %s", output)
     logger.info("Held-out test: %s", json.dumps(metrics["test"]))
     logger.info("Evaluation report: %s", report_path)
+    _log_selective_metrics_summary(metrics)
+    if calibrated_metrics is not None:
+        _log_selective_metrics_summary(calibrated_metrics, title_prefix="Calibrated")
     return ModelWithReport(model, report)
 
 
@@ -421,6 +453,7 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets"], default="deepsets",
                         help="Feature extraction version: v1_hasher, v2_draft, v3_enriched, or deepsets (equivariant DeepSets)")
+    parser.add_argument("--warmup", type=int, default=None, help="Number of warmup matches for point-in-time player priors")
     parser.add_argument("--architecture", choices=["auto", "mlp", "deepsets"], default="auto")
     parser.add_argument("--no-pcgrad", action="store_true", help="Disable PCGrad gradient deconfliction")
     args = parser.parse_args(argv)
@@ -449,7 +482,7 @@ def main(argv=None):
             strategy = args.split_strategy or "chronological"
             if args.feature_version in ("v3_enriched", "deepsets"):
                 from core.point_in_time_dataset import load_enriched_records
-                warmup = min(3000, max(500, args.samples // 3))
+                warmup = args.warmup if args.warmup is not None else min(8000, max(500, args.samples // 5))
                 records = load_enriched_records(db_path=args.db, limit=args.samples, warmup_matches=warmup)
             else:
                 records = fetch_training_records(limit=args.samples, db_path=args.db)

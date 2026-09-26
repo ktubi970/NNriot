@@ -222,6 +222,17 @@ def test_compute_conviction_scalar_and_error():
     with pytest.raises(ValueError, match="NaN"):
         compute_conviction([0.5, np.nan, 0.6])
 
+    # Probabilities outside [0, 1] beyond float tolerance should raise ValueError
+    with pytest.raises(ValueError, match="Probabilities must be within"):
+        compute_conviction([-0.05, 0.5])
+
+    with pytest.raises(ValueError, match="Probabilities must be within"):
+        compute_conviction([1.05, 0.5])
+
+    # Slight float inaccuracies within 1e-5 are safely tolerated
+    assert np.isclose(compute_conviction(-1e-6), 0.5)
+    assert np.isclose(compute_conviction(1.0 + 1e-6), 0.5)
+
 
 def test_wilson_score_interval_validation():
     """Verify input validation on Wilson score calculation."""
