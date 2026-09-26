@@ -127,20 +127,21 @@ def pcgrad_step(
     losses_record: dict[str, float] = {}
     variables = model.trainable_variables
 
+    # Execute a single forward pass for all heads on a persistent tape
+    with tf.GradientTape(persistent=True) as tape:
+        preds = model(x_batch, training=True)
+        head_losses = {}
+        for head in active_heads:
+            loss_fn = loss_fns[head]
+            weight = float(loss_weights.get(head, 1.0))
+            raw_loss = loss_fn(target_dict[head], preds[head])
+            head_losses[head] = tf.reduce_mean(raw_loss) * weight
+
     for head in active_heads:
-        loss_fn = loss_fns[head]
-        weight = float(loss_weights.get(head, 1.0))
-        y_true = target_dict[head]
-
-        with tf.GradientTape() as tape:
-            preds = model(x_batch, training=True)
-            y_pred = preds[head]
-            raw_loss = loss_fn(y_true, y_pred)
-            head_loss = tf.reduce_mean(raw_loss) * weight
-
-        grads = tape.gradient(head_loss, variables)
+        grads = tape.gradient(head_losses[head], variables)
         task_gradients.append(grads)
-        losses_record[head] = float(head_loss.numpy())
+        losses_record[head] = float(head_losses[head].numpy())
+    del tape
 
     # Project conflicting gradients passing trainable variables
     deconflicted_grads = project_conflicting_gradients(task_gradients, variables=variables)

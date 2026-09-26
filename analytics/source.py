@@ -48,16 +48,18 @@ def decode_raw_json(value: str | bytes | None) -> dict:
 
 
 def iter_source_rows(
-    path: str, after_match_id: str | None = None
+    path: str, after_match_id: str | None = None, *, ordered: bool = True
 ) -> Iterator[tuple[str, str | bytes | None]]:
-    """Yield undecoded CLASSIC source rows in deterministic order."""
+    """Yield CLASSIC payloads in ID order, or scan sequentially for full builds."""
 
-    sql = "SELECT match_id,raw_json FROM matches WHERE game_mode='CLASSIC'"
+    scan = "matches" if ordered else "matches NOT INDEXED"
+    sql = f"SELECT match_id,raw_json FROM {scan} WHERE game_mode='CLASSIC'"
     params: tuple[str, ...] = ()
     if after_match_id is not None:
         sql += " AND match_id > ?"
         params = (after_match_id,)
-    sql += " ORDER BY match_id"
+    if ordered:
+        sql += " ORDER BY match_id"
     with connect_source(path) as conn:
         for row in conn.execute(sql, params):
             yield str(row["match_id"]), row["raw_json"]
@@ -81,7 +83,7 @@ def source_fingerprint(path: str, extractor_version: str) -> dict[str, str]:
             "SELECT MAX(version) FROM schema_version"
         ).fetchone()[0]
         rows = conn.execute(
-            "SELECT match_id,game_creation_time FROM matches "
+            "SELECT match_id,game_creation_time FROM matches NOT INDEXED "
             "WHERE game_mode='CLASSIC' ORDER BY match_id"
         )
         count = 0
@@ -106,10 +108,21 @@ def source_snapshot(path: str) -> dict[str, str]:
         schema = conn.execute(
             "SELECT MAX(version) FROM schema_version"
         ).fetchone()[0]
-        count, maximum = conn.execute(
-            "SELECT COUNT(*),COALESCE(MAX(game_creation_time),0) FROM matches "
-            "WHERE game_mode='CLASSIC'"
-        ).fetchone()
+        # All-CLASSIC stores can count and find MAX through covering indexes,
+        # avoiding payload-table reads. Keep both branches in one snapshot.
+        count, maximum = conn.execute("""
+            WITH counts AS (
+                SELECT
+                    (SELECT COUNT(*) FROM matches WHERE game_mode='CLASSIC') AS classic_count,
+                    (SELECT COUNT(*) FROM matches) AS total_count
+            )
+            SELECT classic_count,COALESCE(
+                CASE WHEN classic_count=total_count
+                    THEN (SELECT MAX(game_creation_time) FROM matches)
+                    ELSE (SELECT MAX(game_creation_time) FROM matches WHERE game_mode='CLASSIC')
+                END,0)
+            FROM counts
+        """).fetchone()
     return {
         "source_schema_version": str(schema),
         "source_match_count": str(count),

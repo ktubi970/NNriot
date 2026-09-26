@@ -8,12 +8,18 @@ Run after deploying the rename in the code. Backup the DB first.
 """
 
 import argparse
+import os
+import sys
+
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
 import json
 import gzip
 import base64
 import logging
 
-from core import database
+from core import config, database
 
 logger = logging.getLogger(__name__)
 
@@ -110,12 +116,22 @@ def migrate(db_path: str = database.DB_PATH, dry_run: bool = True, chunk_size: i
     return stats
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Rename winner_kills ÔåÆ team_b_kill_lead in labels_json.")
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Rename winner_kills to team_b_kill_lead in labels_json.")
     parser.add_argument("--apply", action="store_true",
                         help="Actually update rows. Without this flag, runs in dry-run mode.")
-    args = parser.parse_args()
-
+    parser.add_argument("--db", help="Existing source SQLite database")
+    args = parser.parse_args(argv)
+    try:
+        db_path = config.get_db_path(args.db, require_exists=True)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    result = migrate(dry_run=not args.apply)
+    print(f"Source database: {db_path}")
+    result = migrate(db_path=db_path, dry_run=not args.apply)
     print(f"Result: {result}")
+    return result
+
+
+if __name__ == "__main__":
+    main()

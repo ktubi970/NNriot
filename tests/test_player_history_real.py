@@ -47,7 +47,7 @@ def test_player_history_returns_real_db_data(client, tmp_path):
     }
     database.save_match("EUW1_9999999999", match_data, db_path=test_db)
 
-    with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db}):
+    with patch.dict(flask_app.config, {"NNRIOT_DB_PATH": test_db}):
         resp = client.get("/api/player/history?name=RealPlayer&tag=EUW&count=5")
         assert resp.status_code == 200
         data = resp.get_json()
@@ -67,7 +67,7 @@ def test_player_history_no_matches_returns_empty_not_fake(client, tmp_path):
     test_db = str(tmp_path / "test_empty.db")
     database.init_db(test_db)
 
-    with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db}):
+    with patch.dict(flask_app.config, {"NNRIOT_DB_PATH": test_db}):
         resp = client.get("/api/player/history?name=UnknownGuy&tag=NA1&count=5")
         assert resp.status_code == 200
         data = resp.get_json()
@@ -83,7 +83,7 @@ def test_player_history_sync_riot_auth_error(client, tmp_path):
     database.init_db(test_db)
     from core.riot_api import RiotAuthError
 
-    with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db, "RIOT_API_KEY": "RGAPI-invalid"}):
+    with patch.dict("os.environ", {"RIOT_API_KEY": "RGAPI-invalid"}), patch.dict(flask_app.config, {"NNRIOT_DB_PATH": test_db}):
         with patch("core.riot_api.RiotAPI.get_puuid", side_effect=RiotAuthError(401, "API key expired")):
             resp = client.get("/api/player/history?name=Faker&tag=KR1&sync_riot=1")
             assert resp.status_code == 503
@@ -154,7 +154,7 @@ def test_player_history_finds_matches_beyond_recency_scan(client, tmp_path):
     database.save_matches_batch(other_matches, db_path=test_db)
 
     # 3. Query player history with count=5
-    with patch.dict("os.environ", {"NNRIOT_DB_PATH": test_db}):
+    with patch.dict(flask_app.config, {"NNRIOT_DB_PATH": test_db}):
         resp = client.get("/api/player/history?name=DeepPlayer&tag=EUW&count=5")
         assert resp.status_code == 200
         data = resp.get_json()

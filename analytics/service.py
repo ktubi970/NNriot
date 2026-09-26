@@ -33,18 +33,19 @@ class ChatResponse:
 class AnalyticsService:
     def __init__(
         self,
-        analytics_path: str,
-        source_path: str = "training_data.db",
+        analytics_path: str | None = None,
+        source_path: str | None = None,
         narrative_adapter: NarrativeAdapter | None = None,
     ):
-        self.analytics_path = analytics_path
-        self.source_path = source_path
+        defaults = AnalyticsConfig()
+        self.analytics_path = analytics_path if analytics_path is not None else defaults.analytics_path
+        self.source_path = source_path if source_path is not None else defaults.source_path
         self.config = AnalyticsConfig(
-            analytics_path=analytics_path,
-            source_path=source_path,
+            analytics_path=self.analytics_path,
+            source_path=self.source_path,
         )
         self.planner = FrenchPlanner()
-        self.engine = AnalysisEngine(analytics_path)
+        self.engine = AnalysisEngine(self.analytics_path)
         self.narrative_adapter = narrative_adapter
         self._freshness_cache: dict | None = None
         self._freshness_signature: tuple | None = None

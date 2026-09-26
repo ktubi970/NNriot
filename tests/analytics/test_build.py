@@ -171,3 +171,50 @@ def test_cli_health_prints_machine_readable_metadata(source_db, tmp_path, capsys
     assert exit_code == 0
     assert '"dataset_version"' in output
     assert '"quality_gate_passed": "true"' in output
+
+
+def test_full_build_sequential_scan_preserves_scrambled_source_results(tmp_path, monkeypatch):
+    from tests.analytics.factories import classic_match
+
+    payloads = [classic_match(match_id=f"EUW1_{i}", created_ms=i) for i in (9, 1, 7)]
+    invalid = classic_match(match_id="EUW1_2", created_ms=2)
+    invalid["info"]["participants"][1]["puuid"] = invalid["info"]["participants"][0]["puuid"]
+    excluded = classic_match(match_id="EUW1_5", created_ms=5)
+    excluded["info"]["gameMode"] = "ARAM"
+    source = write_source_db(tmp_path / "source.db", [*payloads, invalid, excluded])
+    before = _sha(source)
+    original_scan = build_module.iter_source_rows
+
+    def ordered_reference(path, **kwargs):
+        return original_scan(path)
+
+    monkeypatch.setattr(build_module, "iter_source_rows", ordered_reference)
+    reference_path = tmp_path / "reference.db"
+    reference = build_analytics(str(source), str(reference_path))
+    scans = []
+
+    def record_scan(path, **kwargs):
+        scans.append(kwargs.get("ordered", True))
+        return original_scan(path, **kwargs)
+
+    monkeypatch.setattr(build_module, "iter_source_rows", record_scan)
+    target = tmp_path / "sequential.db"
+    actual = build_analytics(str(source), str(target))
+    assert scans == [False]
+    assert actual.to_dict() == reference.to_dict()
+    assert actual.eligible_matches == 4
+    assert actual.inserted_matches == 3
+    assert actual.issue_counts == {"DUPLICATE_PARTICIPANT": 1}
+    assert actual.quality_gate_passed
+    for table, order in (("match_facts", "match_id"), ("team_facts", "match_id,team_id"),
+                         ("player_facts", "match_id,puuid"),
+                         ("extraction_issues", "match_id,issue_code,field")):
+        with connect_analytics(str(reference_path), readonly=True) as left, connect_analytics(str(target), readonly=True) as right:
+            sql = f"SELECT * FROM {table} ORDER BY {order}"
+            assert [tuple(r) for r in left.execute(sql)] == [tuple(r) for r in right.execute(sql)]
+    scans.clear()
+    incremental = build_analytics(str(source), str(target), incremental=True)
+    assert scans == [True]
+    assert incremental.inserted_matches == 0
+    assert incremental.dataset_version == actual.dataset_version
+    assert _sha(source) == before

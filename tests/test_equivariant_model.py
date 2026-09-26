@@ -3,12 +3,24 @@ import numpy as np
 import tensorflow as tf
 from core.equivariant_model import build_equivariant_deepsets_model
 
+def _make_teams():
+    rng = np.random.default_rng(42)
+    t_a = np.zeros((2, 5, 8), dtype=np.float32)
+    t_b = np.zeros((2, 5, 8), dtype=np.float32)
+    for b in range(2):
+        for slot in range(5):
+            t_a[b, slot, 0] = float(rng.integers(1, 150))
+            t_a[b, slot, 1] = float(slot)
+            t_a[b, slot, 2:] = rng.uniform(0.2, 0.8, size=6)
+
+            t_b[b, slot, 0] = float(rng.integers(1, 150))
+            t_b[b, slot, 1] = float(slot)
+            t_b[b, slot, 2:] = rng.uniform(0.2, 0.8, size=6)
+    return tf.constant(t_a), tf.constant(t_b)
+
 def test_winner_probability_inversion_under_team_swap():
     model = build_equivariant_deepsets_model(player_feature_dim=8, embed_dim=16, latent_dim=32)
-    
-    # 2 matches, 5 players, 8 features per player
-    team_a = tf.constant(np.random.normal(size=(2, 5, 8)), dtype=tf.float32)
-    team_b = tf.constant(np.random.normal(size=(2, 5, 8)), dtype=tf.float32)
+    team_a, team_b = _make_teams()
     
     pred_ab = model({"team_a": team_a, "team_b": team_b})
     pred_ba = model({"team_a": team_b, "team_b": team_a})
@@ -22,9 +34,7 @@ def test_winner_probability_inversion_under_team_swap():
 
 def test_total_kills_invariance_under_team_swap():
     model = build_equivariant_deepsets_model(player_feature_dim=8, embed_dim=16, latent_dim=32)
-    
-    team_a = tf.constant(np.random.normal(size=(2, 5, 8)), dtype=tf.float32)
-    team_b = tf.constant(np.random.normal(size=(2, 5, 8)), dtype=tf.float32)
+    team_a, team_b = _make_teams()
     
     pred_ab = model({"team_a": team_a, "team_b": team_b})
     pred_ba = model({"team_a": team_b, "team_b": team_a})

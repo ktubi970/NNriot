@@ -1,38 +1,21 @@
 @echo off
-REM ============================================================================
-REM NNriot launcher - Web app or continuous trainer
-REM Reads .env for RIOT_API_KEY, HOST, PORT, etc. (see .env.example)
-REM ============================================================================
-
+REM NNriot launcher. .env settings are read by the Python CLI.
 setlocal
 cd /d "%~dp0"
 
-REM --- Pick a Python interpreter that has the project deps ----------------
-REM Prefer Anaconda (where flask + tensorflow are installed). Fall back to
-REM system python if Anaconda isn't found.
-set PYTHON=
-if exist "%~dp0.venv312\Scripts\python.exe" set PYTHON=%~dp0.venv312\Scripts\python.exe
-if not defined PYTHON if exist "%~dp0.venv\Scripts\python.exe" set PYTHON=%~dp0.venv\Scripts\python.exe
-if not defined PYTHON if exist "%USERPROFILE%\anaconda3\python.exe" set PYTHON=%USERPROFILE%\anaconda3\python.exe
-if not defined PYTHON if exist "%USERPROFILE%\miniconda3\python.exe" set PYTHON=%USERPROFILE%\miniconda3\python.exe
-if not defined PYTHON set PYTHON=python
-
-set PYTHONIOENCODING=utf-8
-
-REM --- Optional env vars (override below or set in shell before launching) ---
-REM   set NNRIOT_DB_PATH=D:\projet\NNriot\training_data.db
-REM   set NNRIOT_BATCH_SIZE=100
-REM   set NNRIOT_EPOCHS=1
-REM   set NNRIOT_FETCH_TIMELINES=1
-REM   set MOCK_OCR_ENABLED=1
-REM   set CORS_ORIGINS=http://localhost:5000,http://127.0.0.1:5000
-REM   set HOST=127.0.0.1
-REM   set PORT=5000
+set "PYTHON="
+if exist "%~dp0.venv312\Scripts\python.exe" set "PYTHON=%~dp0.venv312\Scripts\python.exe"
+if not defined PYTHON if exist "%~dp0.venv\Scripts\python.exe" set "PYTHON=%~dp0.venv\Scripts\python.exe"
+if not defined PYTHON if exist "%USERPROFILE%\anaconda3\python.exe" set "PYTHON=%USERPROFILE%\anaconda3\python.exe"
+if not defined PYTHON if exist "%USERPROFILE%\miniconda3\python.exe" set "PYTHON=%USERPROFILE%\miniconda3\python.exe"
+if not defined PYTHON set "PYTHON=python"
+set "PYTHONIOENCODING=utf-8"
 
 if "%~1"=="" goto :menu
-if /i "%~1"=="web" goto :run_web
-if /i "%~1"=="train" goto :run_train
-if /i "%~1"=="backfill" goto :run_backfill
+if /i "%~1"=="web" goto :run_cli
+if /i "%~1"=="train" goto :run_cli
+if /i "%~1"=="train-continuous" goto :run_cli
+if /i "%~1"=="backfill" goto :run_cli
 if /i "%~1"=="build" goto :run_build
 if /i "%~1"=="dev" goto :run_dev
 if /i "%~1"=="test" goto :run_test
@@ -42,75 +25,72 @@ goto :usage
 :menu
 echo.
 echo ============================================================
-echo   NNriot Cyber Launcher v2.0
-echo ============================================================
+echo   NNriot Launcher
 echo   Python: %PYTHON%
-echo.
-echo   [1] Web App (Production Cockpit - http://localhost:5000)
-echo   [2] Continuous Trainer (scripts/continuous_trainer.py)
-echo   [3] Backfill Labels (scripts/backfill_labels.py)
-echo   [4] Build React Frontend (npm run build)
-echo   [5] Frontend Hot-Reload Dev Server (http://localhost:5173)
-echo   [6] Run Full E2E Playwright Tests (npx playwright test)
+echo ============================================================
+echo   [1] Web App
+echo   [2] Train pre-match candidate checkpoint
+echo   [3] Continuous trainer
+echo   [4] Backfill labels
+echo   [5] Build React frontend
+echo   [6] Frontend dev server
+echo   [7] Run Playwright tests
 echo   [Q] Quit
 echo ============================================================
 set /p CHOICE="Choose an action [1]: "
-if "%CHOICE%"=="" set CHOICE=1
+if "%CHOICE%"=="" set "CHOICE=1"
 if /i "%CHOICE%"=="1" goto :run_web
 if /i "%CHOICE%"=="2" goto :run_train
-if /i "%CHOICE%"=="3" goto :run_backfill
-if /i "%CHOICE%"=="4" goto :run_build
-if /i "%CHOICE%"=="5" goto :run_dev
-if /i "%CHOICE%"=="6" goto :run_test
+if /i "%CHOICE%"=="3" goto :run_train_continuous
+if /i "%CHOICE%"=="4" goto :run_backfill
+if /i "%CHOICE%"=="5" goto :run_build
+if /i "%CHOICE%"=="6" goto :run_dev
+if /i "%CHOICE%"=="7" goto :run_test
 if /i "%CHOICE%"=="q" goto :end
 echo Invalid choice.
 goto :menu
 
+:run_cli
+REM %* preserves quoted arguments, including --db paths with spaces.
+"%PYTHON%" cli.py %*
+goto :after
+
 :run_web
-echo.
-echo Starting Flask web app...
 "%PYTHON%" cli.py web
 goto :after
 
 :run_train
-echo.
-echo Starting continuous trainer (Ctrl-C to stop)...
 "%PYTHON%" cli.py train
 goto :after
 
+:run_train_continuous
+"%PYTHON%" cli.py train-continuous
+goto :after
+
 :run_backfill
-echo.
-echo Running backfill_labels.py...
 "%PYTHON%" cli.py backfill
 goto :after
 
 :run_build
-echo.
-echo Building Cyber React Frontend...
 call npm.cmd run build
 goto :after
 
 :run_dev
-echo.
-echo Starting Vite Dev Server on http://localhost:5173...
 call npm.cmd run dev
 goto :after
 
 :run_test
-echo.
-echo Running Full E2E Playwright Test Suite...
 call npx.cmd playwright test e2e/cyber_cockpit.spec.ts --project=chromium
 goto :after
 
 :usage
 echo.
-echo Usage: start.bat [web^|train^|backfill^|build^|dev^|test]
+echo Usage: start.bat [web^|train^|train-continuous^|backfill^|build^|dev^|test] [options]
 echo   No arg = interactive menu
-echo.
 exit /b 1
 
 :after
-set EXITCODE=%ERRORLEVEL%
+set "EXITCODE=%ERRORLEVEL%"
 if %EXITCODE% neq 0 (
     echo.
     echo Process exited with code %EXITCODE%.

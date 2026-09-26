@@ -52,6 +52,8 @@ build_maturin_utf8.log
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
+/runs/db_merge_*/*.archive.jsonl.gz
 *.backup*
 analytics_artifacts/
 *.data-00000-of-00001

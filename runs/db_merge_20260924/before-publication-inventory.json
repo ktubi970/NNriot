@@ -1,0 +1,56 @@
+{
+  "recorded_at": "2026-09-24T16:33:38.613646+00:00",
+  "original_files": [
+    {
+      "path": "D:\\projet\\NNriot\\training_data.db",
+      "bytes": 2632994816,
+      "mtime_ns": 1789726127849138800
+    },
+    {
+      "path": "D:\\projet\\NNriot\\training_data.db-wal",
+      "bytes": 0,
+      "mtime_ns": 1790096304119618100
+    },
+    {
+      "path": "D:\\projet\\NNriot\\training_data.db-shm",
+      "bytes": 32768,
+      "mtime_ns": 1790266891971796300
+    },
+    {
+      "path": "D:\\projet\\NNriot\\analytics.db",
+      "bytes": 462147584,
+      "mtime_ns": 1789729387453107100
+    },
+    {
+      "path": "D:\\projet\\NNriot\\analytics.db-wal",
+      "bytes": 0,
+      "mtime_ns": 1790261234878871700
+    },
+    {
+      "path": "D:\\projet\\NNriot\\analytics.db-shm",
+      "bytes": 32768,
+      "mtime_ns": 1790261234878871700
+    },
+    {
+      "path": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+      "bytes": 1812459520,
+      "mtime_ns": 1790261778497317700
+    },
+    {
+      "path": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db-wal",
+      "bytes": 0,
+      "mtime_ns": 1790261814623436300
+    },
+    {
+      "path": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db-shm",
+      "bytes": 32768,
+      "mtime_ns": 1790266891974309900
+    },
+    {
+      "path": "D:\\projet\\NNriot\\scratch\\training-checks-db625b640bdf418ab32410ade7e45659\\source.db",
+      "bytes": 126976,
+      "mtime_ns": 1790189957654568800
+    }
+  ],
+  "original_total_bytes": 4907827200
+}

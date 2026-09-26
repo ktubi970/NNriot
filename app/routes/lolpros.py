@@ -3,7 +3,7 @@ import json
 import logging
 import threading
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 
 from core import database
 from scripts import data_collector
@@ -106,10 +106,12 @@ def api_lolpros_import():
             return jsonify({"error": "Canonical account has no PUUID"}), 400
 
         # 2. Upsert all players
+        db_path = current_app.config["NNRIOT_DB_PATH"]
         database.save_player(
             canonical_puuid,
             canonical.get("gamename", canonical.get("summoner_name", "?")),
             canonical.get("tagline", canonical.get("server", "?")),
+            db_path=db_path,
         )
         for acc in aliases:
             puuid = acc.get("encrypted_puuid", "")
@@ -118,6 +120,7 @@ def api_lolpros_import():
                     puuid,
                     acc.get("gamename", acc.get("summoner_name", "?")),
                     acc.get("tagline", acc.get("server", "?")),
+                    db_path=db_path,
                 )
 
         # 3. Link aliases
@@ -125,7 +128,7 @@ def api_lolpros_import():
         for acc in aliases:
             puuid = acc.get("encrypted_puuid", "")
             if puuid and puuid != canonical_puuid:
-                database.link_accounts(canonical_puuid, puuid)
+                database.link_accounts(canonical_puuid, puuid, db_path=db_path)
                 linked.append(puuid)
 
         # 4. Trigger background history collection for all accounts via PUUID
@@ -159,7 +162,7 @@ def api_lolpros_import():
                             }
                         )
                     result = data_collector.collect_by_puuid(
-                        accs_payload, matches_per_player=20
+                        accs_payload, matches_per_player=20, db_path=db_path
                     )
                     logger.info(f"lolpros collection done: {result}")
                     with core.collection_lock:

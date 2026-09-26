@@ -16,7 +16,7 @@ Idempotent. Safe to re-run.
 import argparse
 import logging
 
-from core import database
+from core import config, database
 
 logger = logging.getLogger(__name__)
 
@@ -56,12 +56,22 @@ def cleanup_malformed(db_path: str = database.DB_PATH, dry_run: bool = True) -> 
     return {"deleted": deleted}
 
 
-if __name__ == "__main__":
+def main(argv=None):
     parser = argparse.ArgumentParser(description="Delete training_dataset rows with NULL labels_json.")
     parser.add_argument("--apply", action="store_true",
                         help="Actually delete. Without this flag, runs in dry-run mode.")
-    args = parser.parse_args()
-
+    parser.add_argument("--db", help="Existing source SQLite database")
+    args = parser.parse_args(argv)
+    try:
+        db_path = config.get_db_path(args.db, require_exists=True)
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
-    result = cleanup_malformed(dry_run=not args.apply)
+    print(f"Source database: {db_path}")
+    result = cleanup_malformed(db_path=db_path, dry_run=not args.apply)
     print(f"Result: {result}")
+    return result
+
+
+if __name__ == "__main__":
+    main()

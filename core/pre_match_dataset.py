@@ -158,9 +158,9 @@ def load_records(db_path: str, limit: int = 5000) -> list[dict]:
             """
             SELECT t.id, t.match_id, m.game_creation_time, t.feature_json,
                    t.labels_json, t.winner_label
-            FROM training_dataset AS t
-            JOIN matches AS m ON m.match_id = t.match_id
-            WHERE m.game_mode = 'CLASSIC' AND m.game_creation_time > 0
+            FROM matches AS m
+            JOIN training_dataset AS t ON t.match_id = m.match_id
+            WHERE +m.game_mode = 'CLASSIC' AND m.game_creation_time > 0
                   AND typeof(m.game_creation_time) = 'integer'
             ORDER BY m.game_creation_time DESC, t.match_id DESC
             LIMIT ?

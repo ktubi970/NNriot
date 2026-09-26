@@ -95,6 +95,29 @@ def test_cli_train_forwards_split_strategy_and_manifest(tmp_path, monkeypatch):
     ])
     assert "--calibrate" in received[-1]
 
+    cli.main([
+        "train", "--db", str(source), "--feature-version", "v2_draft",
+    ])
+    assert ["--feature-version", "v2_draft"] == received[-1][-4:-2]
+
+
+def test_cli_benchmark_signal_forwards_options(tmp_path, monkeypatch):
+    import cli
+
+    source = tmp_path / "source.db"
+    source.touch()
+    received = []
+    bench = ModuleType("scripts.benchmark_draft_signal")
+    bench.main = lambda argv=None: received.append(argv)
+    monkeypatch.setitem(sys.modules, "scripts.benchmark_draft_signal", bench)
+
+    cli.main([
+        "benchmark-signal", "--db", str(source), "--samples", "500", "--output", str(tmp_path / "report.json")
+    ])
+    assert received == [[
+        "--db", str(source), "--samples", "500", "--output", str(tmp_path / "report.json")
+    ]]
+
 
 def test_cli_train_rejects_mutually_exclusive_strategy_and_manifest(tmp_path):
     import cli

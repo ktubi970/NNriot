@@ -126,6 +126,7 @@ def _populate(
     extractor_version: str,
     existing: set[str] | None = None,
     commit_every: int | None = None,
+    ordered_source: bool = True,
 ) -> tuple[int, Counter[str], int]:
     inserted = 0
     issue_counts: Counter[str] = Counter()
@@ -133,7 +134,7 @@ def _populate(
     processed = 0
     pending: list[ExtractionResult] = []
     existing = existing or set()
-    for match_id, raw_json in iter_source_rows(source_path):
+    for match_id, raw_json in iter_source_rows(source_path, ordered=ordered_source):
         if match_id in existing:
             continue
         processed += 1
@@ -208,7 +209,7 @@ def _full_build(
             drop_secondary_indexes(conn)
             logger.info("Starting bulk extraction from %s", source_path)
             inserted, issues, unexplained = _populate(
-                source_path, conn, config.extractor_version
+                source_path, conn, config.extractor_version, ordered_source=False
             )
             logger.info("Bulk extraction complete; validating source snapshot")
             if source_snapshot(source_path) != _snapshot_from(fingerprint):

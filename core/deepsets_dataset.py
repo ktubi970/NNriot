@@ -20,49 +20,65 @@ def _extract_single_team(
     team_participants: Any,
     tracker: PlayerPriorsTracker | None = None,
 ) -> np.ndarray:
-    """Extract a (5, 8) float32 tensor for a single team."""
+    """Extract a (5, 8) float32 tensor for a single team ordered canonically by role."""
     tensor = np.zeros((5, PLAYER_TENSOR_DIM), dtype=np.float32)
     default_priors = PlayerPriorsTracker.get_default_priors()
 
+    # Pre-fill defaults
+    for i in range(5):
+        tensor[i, 0] = UNK_CHAMPION_ID
+        tensor[i, 1] = float(i)
+        tensor[i, 2:] = default_priors
+
     if not isinstance(team_participants, (list, tuple)):
-        # Fill default values
-        for i in range(5):
-            tensor[i, 0] = UNK_CHAMPION_ID
-            tensor[i, 1] = i
-            tensor[i, 2:] = default_priors
         return tensor
 
-    for i in range(5):
-        if i < len(team_participants) and isinstance(team_participants[i], dict):
-            p = team_participants[i]
-            champ = p.get("champion") or p.get("championName") or p.get("champion_name")
-            cid = float(champion_to_id(champ))
+    assigned_slots: set[int] = set()
+    unassigned_entries: list[tuple[float, float, list[float]]] = []
 
-            raw_role = (p.get("role") or p.get("teamPosition") or p.get("individualPosition") or "").strip().upper()
-            role = _ROLE_ALIASES.get(raw_role, raw_role)
-            rid = float(ROLE_INDEX.get(role, i))
+    for p in team_participants:
+        if not isinstance(p, dict):
+            continue
+        champ = p.get("champion") or p.get("championName") or p.get("champion_name")
+        cid = float(champion_to_id(champ))
 
-            if "smooth_wr" in p:
-                priors = [
-                    float(p.get("smooth_wr", 0.50)),
-                    float(p.get("smooth_cwr", 0.50)),
-                    float(p.get("champ_exp", 0.0)),
-                    float(p.get("rec_wr", 0.50)),
-                    float(p.get("role_fam", 0.20)),
-                    float(p.get("tot_exp", 0.0)),
-                ]
-            elif tracker is not None:
-                priors = tracker.get_player_priors(p.get("puuid"), champ, role)
-            else:
-                priors = default_priors
+        raw_role = (p.get("role") or p.get("teamPosition") or p.get("individualPosition") or "").strip().upper()
+        role = _ROLE_ALIASES.get(raw_role, raw_role)
 
-            tensor[i, 0] = cid
-            tensor[i, 1] = rid
-            tensor[i, 2:] = priors
+        if "priors" in p and isinstance(p["priors"], (list, tuple)) and len(p["priors"]) >= 6:
+            priors = [float(x) for x in p["priors"][:6]]
+        elif "smooth_wr" in p:
+            priors = [
+                float(p.get("smooth_wr", 0.50)),
+                float(p.get("smooth_cwr", 0.50)),
+                float(p.get("champ_exp", 0.0)),
+                float(p.get("rec_wr", 0.50)),
+                float(p.get("role_fam", 0.20)),
+                float(p.get("tot_exp", 0.0)),
+            ]
+        elif tracker is not None:
+            priors = tracker.get_player_priors(p.get("puuid"), champ, role)
         else:
-            tensor[i, 0] = UNK_CHAMPION_ID
-            tensor[i, 1] = i
-            tensor[i, 2:] = default_priors
+            priors = default_priors
+
+        if role in ROLE_INDEX and ROLE_INDEX[role] not in assigned_slots:
+            slot = ROLE_INDEX[role]
+            assigned_slots.add(slot)
+            tensor[slot, 0] = cid
+            tensor[slot, 1] = float(slot)
+            tensor[slot, 2:] = priors
+        else:
+            unassigned_entries.append((cid, float(ROLE_INDEX.get(role, 0)), priors))
+
+    # Place unassigned entries in free slots
+    unassigned_idx = 0
+    for slot in range(5):
+        if slot not in assigned_slots and unassigned_idx < len(unassigned_entries):
+            cid, _, priors = unassigned_entries[unassigned_idx]
+            tensor[slot, 0] = cid
+            tensor[slot, 1] = float(slot)
+            tensor[slot, 2:] = priors
+            unassigned_idx += 1
 
     return tensor
 

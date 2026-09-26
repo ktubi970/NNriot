@@ -50,6 +50,9 @@ def client(monkeypatch):
     """Flask test client with the trainer mocked out (no TF predict cost)."""
     fake_trainer = MagicMock()
     fake_trainer.predict.return_value = _fake_preds()
+    fake_trainer.model.is_calibrated = True
+    fake_trainer.model.calibration_temperature = 1.0
+    fake_trainer.is_calibrated = True
     # JSON-serializable return for /api/train/manual.
     fake_trainer.run_training_step.return_value = 0
 

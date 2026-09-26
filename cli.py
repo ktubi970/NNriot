@@ -39,8 +39,9 @@ def run_train(args, db_path):
         "--samples", str(args.samples),
         "--epochs", str(args.epochs),
         "--batch-size", str(args.batch_size),
-        "--dim", str(args.dim),
     ]
+    if args.dim is not None:
+        training_args.extend(("--dim", str(args.dim)))
     if args.output is not None:
         training_args.extend(("--output", args.output))
     if getattr(args, "split_strategy", None) is not None:
@@ -49,8 +50,22 @@ def run_train(args, db_path):
         training_args.extend(("--split-manifest", args.split_manifest))
     if getattr(args, "calibrate", False):
         training_args.append("--calibrate")
+    if getattr(args, "feature_version", None) is not None:
+        training_args.extend(("--feature-version", args.feature_version))
     training_args.extend(("--seed", str(args.seed)))
     return train_main(training_args)
+
+
+def run_benchmark_signal(args, db_path):
+    """Run statistical draft signal benchmark."""
+    print(f"Benchmarking draft signal on source database: {db_path}")
+    from scripts.benchmark_draft_signal import main as bench_main
+    bench_args = ["--db", db_path, "--samples", str(args.samples)]
+    if args.output is not None:
+        bench_args.extend(("--output", args.output))
+    if getattr(args, "feature_version", None) is not None:
+        bench_args.extend(("--feature-version", args.feature_version))
+    return bench_main(bench_args)
 
 
 def run_train_continuous(db_path):
@@ -83,13 +98,30 @@ def main(argv=None):
     train.add_argument("--samples", type=int, default=5000)
     train.add_argument("--epochs", type=int, default=5)
     train.add_argument("--batch-size", type=int, default=64)
-    train.add_argument("--dim", type=int, default=VECTOR_DIM)
+    train.add_argument("--dim", type=int, default=None)
     train.add_argument("--output", help="New candidate .keras checkpoint path")
     train.add_argument("--split-strategy", choices=["chronological", "patch"], default=None,
                        help="Holdout split strategy: chronological or patch")
     train.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
     train.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
     train.add_argument("--seed", type=int, default=42)
+    train.add_argument(
+        "--feature-version",
+        choices=["v1_hasher", "v2_draft", "v3_enriched"],
+        default=None,
+        help="Feature extraction version (v3_enriched: draft + player priors, v2_draft: canonical dense draft, v1_hasher: legacy string hashing)",
+    )
+
+    bench = commands.add_parser("benchmark-signal", help="Benchmark whether features hold statistical signal")
+    bench.add_argument("--db", help="Source SQLite database (read-only)")
+    bench.add_argument("--samples", type=int, default=10000)
+    bench.add_argument("--output", help="Report output path (defaults to runs/draft_signal_report.json)")
+    bench.add_argument(
+        "--feature-version",
+        choices=["v2_draft", "v3_enriched"],
+        default=None,
+        help="Feature version to benchmark (v3_enriched: draft + player priors, v2_draft: draft only)",
+    )
 
     continuous = commands.add_parser("train-continuous", help="Run the continuous training loop")
     continuous.add_argument("--db", help="Source SQLite database")
@@ -103,6 +135,8 @@ def main(argv=None):
         return run_web(db_path)
     if args.command == "train":
         return run_train(args, db_path)
+    if args.command == "benchmark-signal":
+        return run_benchmark_signal(args, db_path)
     if args.command == "train-continuous":
         return run_train_continuous(db_path)
     return run_backfill(db_path)

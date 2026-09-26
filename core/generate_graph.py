@@ -244,6 +244,78 @@ def build_draft_dense_model(input_dim: int | None = None, dropout_rate: float = 
     return model
 
 
+def build_enriched_model(
+    input_dim: int | None = None,
+    dropout_rate: float = 0.2,
+    l2_reg: float = 1e-4,
+) -> tf.keras.Model:
+    """Compact regularized model for enriched features (draft + point-in-time player priors)."""
+    if input_dim is None:
+        from core.enriched_features import ENRICHED_DENSE_DIM
+        input_dim = ENRICHED_DENSE_DIM
+
+    inputs = tf.keras.Input(shape=(input_dim,), name="Input")
+    x = tf.keras.layers.Dense(
+        128, activation="relu",
+        kernel_regularizer=tf.keras.regularizers.l2(l2_reg),
+        name="Enriched_Dense1",
+    )(inputs)
+    x = tf.keras.layers.Dropout(dropout_rate, name="Enriched_Drop1")(x)
+    x = tf.keras.layers.Dense(
+        64, activation="relu",
+        kernel_regularizer=tf.keras.regularizers.l2(l2_reg),
+        name="Enriched_Dense2",
+    )(x)
+    x = tf.keras.layers.Dropout(dropout_rate, name="Enriched_Drop2")(x)
+    embedding = tf.keras.layers.Dense(32, activation="relu", name="embedding")(x)
+
+    outputs = {"winner": tf.keras.layers.Dense(2, activation="softmax", name="winner")(embedding)}
+
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_Enriched")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss={"winner": "categorical_crossentropy"},
+        metrics={"winner": ["accuracy"]},
+    )
+    return model
+
+
+
+def build_draft_multi_output_model(input_dim: int | None = None, dropout_rate: float = 0.2) -> tf.keras.Model:
+    """Compact multi-output model for dense draft features (~350k params vs 25M)."""
+    if input_dim is None:
+        from core.draft_features import DENSE_FEATURE_DIM
+        input_dim = DENSE_FEATURE_DIM
+
+    inputs = tf.keras.Input(shape=(input_dim,), name="Input")
+    x = tf.keras.layers.Dense(256, activation="relu", name="Draft_Shared1")(inputs)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    x = tf.keras.layers.Dense(128, activation="relu", name="Draft_Shared2")(x)
+    x = tf.keras.layers.Dropout(dropout_rate)(x)
+    embedding = tf.keras.layers.Dense(64, activation="relu", name="embedding")(x)
+
+    outputs = {}
+    for name in ("winner", "team_b_kill_lead"):
+        outputs[name] = _head(name=name, units=2, activation="softmax", source=embedding, hidden_size=32)
+    for name in ("first_blood", "first_baron", "first_inhibitor", "first_tower",
+                 "first_to_5_kills", "first_to_10_kills", "first_to_15_kills", "first_to_20_kills"):
+        outputs[name] = _head(name=name, units=3, activation="softmax", source=embedding, hidden_size=32)
+    for name in ("kills_odd", "both_baron", "both_inhibitor", "both_dragon", "elder_dragon"):
+        outputs[name] = _head(name=name, units=1, activation="sigmoid", source=embedding, hidden_size=32)
+    for name in ("kill_handicap", "total_kills", "team_a_kills", "team_b_kills",
+                 "total_barons", "total_dragons", "total_towers"):
+        outputs[name] = _head(name=name, units=1, activation="linear", source=embedding, hidden_size=32)
+
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_DraftMultiOutput")
+    model.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=0.001),
+        loss=LOSS_PER_HEAD,
+        loss_weights=LOSS_WEIGHTS,
+        metrics=METRICS_PER_HEAD,
+    )
+    return model
+
+
 if __name__ == "__main__":
     # Sanity build of the current multi-output model — does NOT save a checkpoint
     # (training is handled by continuous_trainer.py). The old code saved a legacy

@@ -1,0 +1,55 @@
+{
+  "protocol": "Fresh model, seed 42; 10000 candidates, 15 epochs, batch size 64; checkpoint selected only by validation winner log-loss.",
+  "pilot_split_overlap": {
+    "train": {
+      "train": 0,
+      "validation": 0,
+      "test": 0
+    },
+    "validation": {
+      "train": 0,
+      "validation": 0,
+      "test": 0
+    },
+    "test": {
+      "train": 700,
+      "validation": 150,
+      "test": 150
+    }
+  },
+  "interpretation": "Exploratory temporal evaluation. Test matches were previously used in the pilot experiment; no pilot weights are reused. This is not an independent confirmatory test.",
+  "dataset_audit": {
+    "train": {
+      "count": 7000,
+      "winner_0": 3483,
+      "winner_1": 3517,
+      "NA": 6544,
+      "EUW": 456,
+      "patch_16_18": 7000,
+      "patch_16_19": 0
+    },
+    "validation": {
+      "count": 1500,
+      "winner_0": 751,
+      "winner_1": 749,
+      "NA": 1439,
+      "EUW": 61,
+      "patch_16_18": 1500,
+      "patch_16_19": 0
+    },
+    "test": {
+      "count": 1500,
+      "winner_0": 711,
+      "winner_1": 789,
+      "NA": 1499,
+      "EUW": 1,
+      "patch_16_18": 1323,
+      "patch_16_19": 177
+    }
+  },
+  "limitations": [
+    "Almost exclusively NA test; not evidence for other regions.",
+    "177 test matches are on patch 16.19, absent from training and validation.",
+    "Only winner metrics are evaluated; other output heads are not validated."
+  ]
+}

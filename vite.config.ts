@@ -6,6 +6,9 @@ import path from 'path';
 export default defineConfig({
   root: 'frontend',
   plugins: [react()],
+  css: {
+    postcss: path.resolve(__dirname),
+  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './frontend/src'),

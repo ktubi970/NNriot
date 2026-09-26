@@ -1,24 +1,17 @@
-"""Configuration and statistical thresholds for analytics."""
-
 from dataclasses import dataclass, field
 import os
+
+from core import config as core_config
 
 
 @dataclass(frozen=True)
 class AnalyticsConfig:
-    """Environment-backed configuration with explicit evidence thresholds."""
+    """Configuration and evidence thresholds for analytics."""
 
-    source_path: str = field(
-        default_factory=lambda: os.getenv("NNRIOT_DB_PATH", "training_data.db")
-    )
-    analytics_path: str = field(
-        default_factory=lambda: os.getenv("NNRIOT_ANALYTICS_DB_PATH")
-        or os.getenv("ANALYTICS_DB_PATH", "analytics.db")
-    )
+    source_path: str = field(default_factory=core_config.get_db_path)
+    analytics_path: str = field(default_factory=core_config.get_analytics_db_path)
     seed: int = field(
-        default_factory=lambda: int(
-            os.getenv("NNRIOT_ANALYTICS_SEED", "20260716")
-        )
+        default_factory=lambda: int(os.getenv("NNRIOT_ANALYTICS_SEED", "20260716"))
     )
     bootstrap_resamples: int = 2000
     min_matches: int = 500

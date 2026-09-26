@@ -22,6 +22,7 @@ from core import config, database
 from core.repository import TrainingRepository
 from core import json_utils
 from core.feature_labels import LABEL_KEYS, ALL_LABEL_KEYS, VECTOR_DIM
+from core.pre_match_dataset import to_pre_match_features
 from core.training_utils import REGRESSION_STATS, _build_targets, sparse_microbatch_generator
 from core.generate_graph import build_multi_output_model
 from core.calibration import (
@@ -124,7 +125,8 @@ class ContinuousTrainer:
                 return 0
 
         # Prepare inputs natively via feature hasher which uses iterators & small memory overhead
-        json_features = [r["feature_json"] for r in records]
+        # Sanitize to pre-match features to prevent any post-match leakage (kda, gold)
+        json_features = [to_pre_match_features(r["feature_json"]) for r in records]
         x_data_sparse = json_utils.json_to_vector(json_features, dim=VECTOR_DIM)
 
         # Build dict of {head_name: ndarray} targets for all 22 heads

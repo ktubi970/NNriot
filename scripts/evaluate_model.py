@@ -34,7 +34,7 @@ import tensorflow as tf
 
 from core import database
 from core import json_utils
-from scripts.continuous_trainer import REGRESSION_STATS
+from core.training_utils import REGRESSION_STATS
 from core.feature_labels import ALL_LABEL_KEYS, VECTOR_DIM
 
 CHECKPOINT_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "model_v2.keras")

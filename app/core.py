@@ -50,15 +50,29 @@ def init_trainer_async(db_path=None):
 def _format_multi_output_response(preds: dict) -> dict:
     from core.training_utils import REGRESSION_STATS
 
-    def _scalar(name): return float(preds[name][0][0])
+    def _scalar(name, default=0.5):
+        if name in preds:
+            return float(preds[name][0][0])
+        return default
+
     def _denorm(name):
         mean, std = REGRESSION_STATS[name]
-        return _scalar(name) * std + mean
-    def _two_class(name): return float(preds[name][0][0]), float(preds[name][0][1])
-    def _three_class(name): return float(preds[name][0][0]), float(preds[name][0][1]), float(preds[name][0][2])
+        if name in preds:
+            return float(preds[name][0][0]) * std + mean
+        return mean
+
+    def _two_class(name, default=(0.5, 0.5)):
+        if name in preds:
+            return float(preds[name][0][0]), float(preds[name][0][1])
+        return default
+
+    def _three_class(name, default=(0.45, 0.45, 0.10)):
+        if name in preds:
+            return float(preds[name][0][0]), float(preds[name][0][1]), float(preds[name][0][2])
+        return default
 
     p_a, p_b = _two_class("winner")
-    pk_a, pk_b = _two_class("team_b_kill_lead")
+    pk_a, pk_b = _two_class("team_b_kill_lead", default=(p_a, p_b))
 
     response = {
         "success": True,
@@ -91,10 +105,10 @@ def _format_multi_output_response(preds: dict) -> dict:
             "towers": round(_denorm("total_towers"), 1),
         },
         "both_teams": {
-            "baron": round(_scalar("both_baron"), 3), "inhibitor": round(_scalar("both_inhibitor"), 3),
-            "dragon": round(_scalar("both_dragon"), 3),
+            "baron": round(_scalar("both_baron", 0.0), 3), "inhibitor": round(_scalar("both_inhibitor", 0.0), 3),
+            "dragon": round(_scalar("both_dragon", 0.0), 3),
         },
-        "elder_dragon": round(_scalar("elder_dragon"), 3),
+        "elder_dragon": round(_scalar("elder_dragon", 0.0), 3),
     }
     return response
 
@@ -119,8 +133,23 @@ def final_predict_match_outcome(match_data: dict) -> dict:
 
     try:
         feature_dict = to_pre_match_features(match_data)
-        sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
-        dense_vec = sparse_vec.toarray()
+        raw_shape = getattr(trainer_model, "input_shape", None)
+        if isinstance(raw_shape, (tuple, list)) and len(raw_shape) > 0 and isinstance(raw_shape[-1], int):
+            expected_dim = raw_shape[-1]
+        else:
+            expected_dim = VECTOR_DIM
+
+        from core.draft_features import DENSE_FEATURE_DIM, extract_dense_draft_features
+        from core.enriched_features import ENRICHED_DENSE_DIM, extract_enriched_features
+
+        if expected_dim == ENRICHED_DENSE_DIM:
+            dense_vec = extract_enriched_features(feature_dict, mode="dense").reshape(1, -1)
+        elif expected_dim == DENSE_FEATURE_DIM:
+            dense_vec = extract_dense_draft_features(feature_dict).reshape(1, -1)
+        else:
+            sparse_vec = json_utils.json_to_vector([feature_dict], dim=expected_dim)
+            dense_vec = sparse_vec.toarray()
+
         with predict_lock:
             preds = global_trainer.predict(dense_vec)
         return _format_multi_output_response(preds)

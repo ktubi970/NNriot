@@ -125,20 +125,6 @@ def test_tensorflow():
         return False
 
 
-def test_plotly():
-    """Test plotly import."""
-    try:
-        import plotly.graph_objects as go
-        print("[OK] Plotly import successful")
-        return True
-    except ImportError as e:
-        print(f"[SKIP] Plotly skipped: {e}")
-        return "SKIP"
-    except Exception as e:
-        print(f"[FAIL] Plotly import failed: {e}")
-        return False
-
-
 def test_numpy():
     """Test numpy functionality."""
     try:
@@ -193,7 +179,6 @@ def main():
         ("JSON Utilities", test_json_utils),
         ("Database", test_database),
         ("TensorFlow", test_tensorflow),
-        ("Plotly", test_plotly),
         ("NumPy", test_numpy),
         ("Riot API", test_riot_api),
         ("nnriot (Rust Extension)", test_nnriot_import),

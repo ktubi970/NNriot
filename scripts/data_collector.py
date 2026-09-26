@@ -4,12 +4,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import logging
 import os
 from core import riot_api
-from core import database
+from core import database, config
 from core.repository import MatchRepository, PlayerRepository, TrainingRepository
 
-_match_repo = MatchRepository()
-_player_repo = PlayerRepository()
-_train_repo = TrainingRepository()
 import time
 from core import json_utils
 import threading
@@ -117,13 +114,20 @@ def _build_training_record(
         return None
 
 
-def collect_training_data(seed_players, matches_per_player=5, days_back=None):
+def _repositories(db_path):
+    """Bind one collection invocation to a resolved database, including initialization."""
+    path = config.get_db_path(db_path, require_exists=True)
+    database.init_db(db_path=path)
+    return MatchRepository(path), PlayerRepository(path), TrainingRepository(path)
+
+
+def collect_training_data(seed_players, matches_per_player=5, days_back=None, *, db_path=None):
     """
     Collects match data for training.
     If days_back is provided, it fetches matches from the last X days.
     seed_players should be a list of (name, tag) tuples, where tag includes region (e.g., "KR1", "NA1")
     """
-    database.init_db()
+    _match_repo, _player_repo, _train_repo = _repositories(db_path)
 
     # Calculate start time if days_back is specified
     start_time = None
@@ -182,12 +186,13 @@ def collect_training_data(seed_players, matches_per_player=5, days_back=None):
 
 
 def collect_top_leagues_data(
-    regions=["KR"], total_players_per_region=100, matches_per_player=10, days_back=30
+    regions=["KR"], total_players_per_region=100, matches_per_player=10, days_back=30,
+    *, db_path=None
 ):
     """
     Fetches official top league players (Challenger/GM/Master) from multiple regions and collects their matches.
     """
-    database.init_db()
+    _match_repo, _player_repo, _train_repo = _repositories(db_path)
 
     # Calculate start time
     start_time = int(time.time()) - (days_back * 24 * 60 * 60)
@@ -293,7 +298,7 @@ def collect_top_leagues_data(
             print(f"    No new matches for {summoner_name}")
 
 
-def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict:
+def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20, *, db_path=None) -> dict:
     """
     Collect match history for a list of accounts where the PUUID is already known
     (e.g. imported from lolpros.gg). Skips the name->PUUID lookup step.
@@ -312,7 +317,7 @@ def collect_by_puuid(accounts: list[dict], matches_per_player: int = 20) -> dict
     -------
     dict with keys 'processed', 'saved', 'skipped', 'errors'
     """
-    database.init_db()
+    _match_repo, _player_repo, _train_repo = _repositories(db_path)
     stats = {"processed": 0, "saved": 0, "skipped": 0, "errors": 0}
 
     for acc in accounts:
@@ -416,14 +421,13 @@ def add_batch_log(msg):
         batch_status["logs"].append(msg)
         print(f"[BATCH] {msg}")
 
-def collect_batch_with_smurfs(player_list, sources, count=50):
+def collect_batch_with_smurfs(player_list, sources, count=50, *, db_path=None):
+    _match_repo, _player_repo, _train_repo = _repositories(db_path)
     with batch_lock:
         batch_status["status"] = "running"
         batch_status["total"] = len(player_list)
         batch_status["current"] = 0
         batch_status["logs"] = []
-    
-    database.init_db()
     
     for name, tag in player_list:
         with batch_lock:
@@ -494,7 +498,7 @@ def collect_batch_with_smurfs(player_list, sources, count=50):
 
     with batch_lock:
         batch_status["status"] = "completed"
-        add_batch_log("Batch collection finished.")
+    add_batch_log("Batch collection finished.")
 
 
 if __name__ == "__main__":

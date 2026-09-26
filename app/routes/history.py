@@ -10,7 +10,9 @@ from core import database
 from core.task_runner import global_task_runner
 from ..services.system_service import SystemService
 
-_system_service = SystemService()
+def _system_service():
+    from core.repository import SystemRepository
+    return SystemService(SystemRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
 
 from .. import core
 
@@ -49,10 +51,12 @@ def api_history_collect():
                 }
             )
 
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+
         def run_collection():
             try:
                 seeds = [(game_name, tag_line)]
-                data_collector.collect_training_data(seeds, matches_per_player=count)
+                data_collector.collect_training_data(seeds, matches_per_player=count, db_path=db_path)
 
                 with core.collection_lock:
                     core.collection_status["status"] = "completed"
@@ -100,6 +104,8 @@ def api_history_collect_batch():
                 }
             )
 
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+
         def run_collection():
             try:
                 seeds = [
@@ -107,7 +113,7 @@ def api_history_collect_batch():
                     for p in players
                     if p.get("game_name") and p.get("tag_line")
                 ]
-                data_collector.collect_training_data(seeds, matches_per_player=10)
+                data_collector.collect_training_data(seeds, matches_per_player=10, db_path=db_path)
 
                 with core.collection_lock:
                     core.collection_status["status"] = "completed"
@@ -177,6 +183,7 @@ def api_batch_collect():
             player_list,
             sources,
             count,
+            db_path=current_app.config["NNRIOT_DB_PATH"],
         )
 
         return jsonify(
@@ -208,12 +215,8 @@ def api_batch_status():
 def api_db_stats():
     """Returns database telemetry and match ingestion counts."""
     try:
-        db_path = (
-            current_app.config.get("NNRIOT_DB_PATH")
-            or os.getenv("NNRIOT_DB_PATH")
-            or database.DB_PATH
-        )
-        telemetry = _system_service.get_full_telemetry(db_path=db_path)
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+        telemetry = _system_service().get_full_telemetry(db_path=db_path)
         riot_key = os.getenv("RIOT_API_KEY")
 
         response = dict(telemetry)
@@ -241,11 +244,7 @@ def api_player_history():
     count = request.args.get("count", 10, type=int)
     sync_riot = request.args.get("sync_riot", "0") == "1"
 
-    db_path = (
-        os.getenv("NNRIOT_DB_PATH")
-        or current_app.config.get("NNRIOT_DB_PATH")
-        or database.DB_PATH
-    )
+    db_path = current_app.config["NNRIOT_DB_PATH"]
     riot_key = os.getenv("RIOT_API_KEY")
 
     # 1. Live Riot API Fetch if requested and key is present

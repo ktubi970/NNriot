@@ -25,15 +25,22 @@ logger = logging.getLogger("benchmark_draft_signal")
 def run_draft_signal_benchmark(
     records: list[dict[str, Any]],
     min_samples: int = 100,
+    feature_version: str = "v3_enriched",
 ) -> dict[str, Any]:
-    """Evaluate whether draft features achieve statistically significant lift over random chance."""
+    """Evaluate whether features achieve statistically significant lift over random chance."""
     if len(records) < min_samples:
         raise ValueError(f"Need at least {min_samples} records, got {len(records)}")
 
     splits, _ = split_records(records, strategy="chronological")
-    x_train = batch_extract_draft_features([r["feature_json"] for r in splits["train"]], mode="tabular")
-    x_val = batch_extract_draft_features([r["feature_json"] for r in splits["validation"]], mode="tabular")
-    x_test = batch_extract_draft_features([r["feature_json"] for r in splits["test"]], mode="tabular")
+    if feature_version == "v3_enriched":
+        from core.enriched_features import batch_extract_enriched_features
+        x_train = batch_extract_enriched_features([r["feature_json"] for r in splits["train"]], mode="tabular")
+        x_val = batch_extract_enriched_features([r["feature_json"] for r in splits["validation"]], mode="tabular")
+        x_test = batch_extract_enriched_features([r["feature_json"] for r in splits["test"]], mode="tabular")
+    else:
+        x_train = batch_extract_draft_features([r["feature_json"] for r in splits["train"]], mode="tabular")
+        x_val = batch_extract_draft_features([r["feature_json"] for r in splits["validation"]], mode="tabular")
+        x_test = batch_extract_draft_features([r["feature_json"] for r in splits["test"]], mode="tabular")
 
     y_train = np.asarray([r["labels_json"]["winner"] for r in splits["train"]], dtype=int)
     y_val = np.asarray([r["labels_json"]["winner"] for r in splits["validation"]], dtype=int)
@@ -107,14 +114,26 @@ def run_draft_signal_benchmark(
 
 
 def main(argv: list[str] | None = None):
-    parser = argparse.ArgumentParser(description="Benchmark draft signal on pre-match matches.")
+    parser = argparse.ArgumentParser(description="Benchmark signal on pre-match matches.")
     parser.add_argument("--db", type=str, required=True, help="Path to SQLite database.")
     parser.add_argument("--samples", type=int, default=10000, help="Number of samples to evaluate.")
     parser.add_argument("--output", type=str, default="runs/draft_signal_report.json", help="Report output path.")
+    parser.add_argument(
+        "--feature-version",
+        choices=["v2_draft", "v3_enriched"],
+        default="v2_draft",
+        help="Feature extraction version to benchmark",
+    )
     args = parser.parse_args(argv)
 
-    records = load_records(args.db, limit=args.samples)
-    report = run_draft_signal_benchmark(records)
+    if args.feature_version == "v3_enriched":
+        from core.point_in_time_dataset import load_enriched_records
+        warmup = min(3000, max(500, args.samples // 3))
+        records = load_enriched_records(args.db, limit=args.samples, warmup_matches=warmup)
+    else:
+        records = load_records(args.db, limit=args.samples)
+
+    report = run_draft_signal_benchmark(records, feature_version=args.feature_version)
     out_path = Path(args.output)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     with out_path.open("w", encoding="utf-8") as f:
