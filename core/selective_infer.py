@@ -254,6 +254,11 @@ def _extract_probability_from_model(
     model = model_or_checkpoint
     if isinstance(model, (str, Path)):
         import tensorflow as tf
+        try:
+            import core.deepsets_layers  # noqa: F401
+            import core.equivariant_model  # noqa: F401
+        except ImportError:
+            pass
         model = tf.keras.models.load_model(str(model), compile=False)
 
     # 2. Check if model is a custom callable / mock
