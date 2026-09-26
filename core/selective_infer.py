@@ -261,6 +261,14 @@ def _extract_probability_from_model(
             pass
         model = tf.keras.models.load_model(str(model), compile=False)
 
+    def _extract_probs(winner_out: Any) -> list[float]:
+        arr = np.asarray(winner_out)
+        if arr.ndim >= 2 and arr.shape[1] > 1:
+            probs = arr[:, 1]
+        else:
+            probs = arr.ravel()
+        return [float(p) for p in probs]
+
     # 2. Check if model is a custom callable / mock
     if callable(model) and not hasattr(model, "layers") and not hasattr(model, "predict_on_batch"):
         results = []
@@ -268,10 +276,10 @@ def _extract_probability_from_model(
             out = model(m)
             if isinstance(out, dict) and "winner" in out:
                 w = np.asarray(out["winner"])
-                prob = float(w[0, 1] if w.ndim >= 2 else w[1] if len(w) > 1 else w[0])
+                prob = float(w[0, 1] if (w.ndim >= 2 and w.shape[1] > 1) else w[1] if len(w) > 1 else w.ravel()[0])
             elif isinstance(out, (list, tuple, np.ndarray)):
                 arr = np.asarray(out)
-                prob = float(arr[0, 1] if arr.ndim >= 2 else arr[1] if len(arr) > 1 else arr[0])
+                prob = float(arr[0, 1] if (arr.ndim >= 2 and arr.shape[1] > 1) else arr[1] if len(arr) > 1 else arr.ravel()[0])
             else:
                 prob = float(out)
             results.append(prob)
@@ -296,8 +304,7 @@ def _extract_probability_from_model(
             preds = model(batch_tensors, training=False)
 
         winner_out = preds["winner"] if isinstance(preds, dict) else preds
-        winner_arr = np.asarray(winner_out)
-        return [float(p) for p in winner_arr[:, 1]]
+        return _extract_probs(winner_out)
 
     # 4. Fallback for dense or other input shapes
     if hasattr(model, "predict"):
@@ -311,8 +318,7 @@ def _extract_probability_from_model(
         x_dense = np.stack(features_list)
         preds = model.predict(x_dense, verbose=0)
         winner_out = preds["winner"] if isinstance(preds, dict) else preds
-        winner_arr = np.asarray(winner_out)
-        return [float(p) for p in winner_arr[:, 1]]
+        return _extract_probs(winner_out)
 
     raise TypeError(f"Unsupported model type: {type(model)}")
 
