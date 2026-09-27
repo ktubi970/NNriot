@@ -18,6 +18,19 @@ from core.champion_registry import NUM_CHAMPIONS
 from core.periodic_embeddings import PeriodicNumericalEmbedding
 
 
+def _get_last_dim(input_shape: Any, default_dim: int) -> int:
+    """Safely extract the last feature dimension from tensor or tuple shapes."""
+    if input_shape is None:
+        return default_dim
+    if isinstance(input_shape, (tuple, list)) and len(input_shape) > 0 and isinstance(input_shape[0], (tuple, list, tf.TensorShape)):
+        shape = input_shape[0]
+    else:
+        shape = input_shape
+    if hasattr(shape, "__getitem__") and len(shape) > 0 and shape[-1] is not None:
+        return int(shape[-1])
+    return default_dim
+
+
 @tf.keras.utils.register_keras_serializable(package="nnriot")
 class SetTransformerPMA(tf.keras.layers.Layer):
     """Pooling by Multihead Attention (PMA) with Set Attention Block (SAB).
@@ -77,6 +90,7 @@ class SetTransformerPMA(tf.keras.layers.Layer):
     def build(self, input_shape: Any = None) -> None:
         if self.built:
             return
+        in_dim = _get_last_dim(input_shape, self.embed_dim)
         self.seed_vectors = self.add_weight(
             name="seed_vectors",
             shape=(1, self.num_seeds, self.embed_dim),
@@ -84,9 +98,9 @@ class SetTransformerPMA(tf.keras.layers.Layer):
             trainable=self.trainable,
         )
         if self.use_sab:
-            self.sab_mha.build((None, 5, self.embed_dim), (None, 5, self.embed_dim))
-            self.sab_norm1.build((None, 5, self.embed_dim))
-            self.sab_ffn.build((None, 5, self.embed_dim))
+            self.sab_mha.build((None, 5, in_dim), (None, 5, in_dim))
+            self.sab_norm1.build((None, 5, in_dim))
+            self.sab_ffn.build((None, 5, in_dim))
             self.sab_norm2.build((None, 5, self.embed_dim))
 
         self.pma_mha.build((None, self.num_seeds, self.embed_dim), (None, 5, self.embed_dim))
@@ -177,10 +191,11 @@ class SinkhornCrossAttention(tf.keras.layers.Layer):
     def build(self, input_shape: Any = None) -> None:
         if self.built:
             return
+        in_dim = _get_last_dim(input_shape, self.embed_dim)
         if not self.proj_qk.built:
-            self.proj_qk.build((None, 5, self.embed_dim))
+            self.proj_qk.build((None, 5, in_dim))
         if not self.proj_v.built:
-            self.proj_v.build((None, 5, self.embed_dim))
+            self.proj_v.build((None, 5, in_dim))
         super().build(input_shape)
 
     def _sinkhorn_iterations(self, log_cost: tf.Tensor) -> tf.Tensor:
@@ -194,7 +209,8 @@ class SinkhornCrossAttention(tf.keras.layers.Layer):
     def compute_transport_plan(self, x1: tf.Tensor, x2: tf.Tensor) -> tf.Tensor:
         """Compute the doubly stochastic transport plan matrix of shape (batch, 5, 5)."""
         if not self.built:
-            self.build([(None, 5, self.embed_dim), (None, 5, self.embed_dim)])
+            in_dim = int(x1.shape[-1]) if x1.shape[-1] is not None else self.embed_dim
+            self.build([(None, 5, in_dim), (None, 5, in_dim)])
 
         q1 = tf.math.l2_normalize(self.proj_qk(x1), axis=-1)
         k2 = tf.math.l2_normalize(self.proj_qk(x2), axis=-1)
@@ -248,6 +264,13 @@ class SinkhornCrossAttention(tf.keras.layers.Layer):
 class SiameseTeamEncoder(tf.keras.layers.Layer):
     """Encodes two 5-player teams into permutation-invariant, anti-symmetric representations.
     
+    Architecture:
+    - Intra-team SetTransformerPMA (SAB self-attention + PMA with k=2 seeds) replaces/enriches sum pooling.
+    - Inter-team SinkhornCrossAttention (doubly stochastic optimal transport) supersedes legacy
+      unconstrained MultiHeadAttention (`use_cross_attention`), strictly preserving anti-symmetry
+      and mass conservation under team swap.
+    - Continuous features are embedded via Fourier PeriodicNumericalEmbedding.
+    
     Inputs:
         tuple (team_a, team_b) each of shape (batch, 5, 8) or (batch, 5, 14).
         Layout per player: [champion_id, role_id, smooth_wr, smooth_cwr, ...]
@@ -259,6 +282,12 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
             T_sum has shape (batch, total_sum_dim), strictly symmetric:
                 T_sum(B, A) == T_sum(A, B)
             T_a and T_b have shape (batch, team_dim), individual team representations.
+            
+    Note on Cross Attention:
+        `use_sinkhorn_attention` is the modern default (True), enforcing doubly stochastic optimal
+        transport with exact transpose-equivariance. The legacy unconstrained `use_cross_attention`
+        flag is preserved strictly for backward compatibility and is superseded when `use_sinkhorn_attention`
+        is enabled.
     """
 
     def __init__(

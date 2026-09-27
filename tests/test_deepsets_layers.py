@@ -121,6 +121,9 @@ def test_layers_serialization():
     assert pma_restored.embed_dim == 16
     assert pma_restored.num_heads == 2
     assert pma_restored.num_seeds == 2
+    # Forward pass on restored PMA
+    pma_out = pma_restored(tf.random.normal((2, 5, 16)))
+    assert pma_out.shape == (2, 2 * 16)
 
     # 2. SinkhornCrossAttention serialization
     sinkhorn = SinkhornCrossAttention(embed_dim=16, temperature=1.0, num_iterations=10)
@@ -129,6 +132,10 @@ def test_layers_serialization():
     assert sinkhorn_restored.embed_dim == 16
     assert sinkhorn_restored.temperature == 1.0
     assert sinkhorn_restored.num_iterations == 10
+    # Forward pass on restored Sinkhorn
+    out_a, out_b = sinkhorn_restored((tf.random.normal((2, 5, 16)), tf.random.normal((2, 5, 16))))
+    assert out_a.shape == (2, 5, 16)
+    assert out_b.shape == (2, 5, 16)
 
     # 3. SiameseTeamEncoder serialization
     encoder = SiameseTeamEncoder(
@@ -143,4 +150,10 @@ def test_layers_serialization():
     assert encoder_restored.use_set_transformer is True
     assert encoder_restored.use_sinkhorn_attention is True
     assert encoder_restored.use_periodic_embeddings is True
+    # Forward pass on restored SiameseTeamEncoder
+    t_diff, t_sum, ta, tb = encoder_restored((tf.random.normal((2, 5, 14)), tf.random.normal((2, 5, 14))))
+    assert t_diff.shape[0] == 2
+    assert t_sum.shape[0] == 2
+    assert ta.shape[0] == 2
+    assert tb.shape[0] == 2
 
