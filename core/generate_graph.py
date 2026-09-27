@@ -91,18 +91,26 @@ class HomoscedasticLossLayer(tf.keras.layers.Layer):
 
     def call(self, task_losses: dict[str, tf.Tensor] | list[tf.Tensor] | tuple[tf.Tensor, ...]) -> tf.Tensor:
         total = tf.constant(0.0, dtype=tf.float32)
+        clamped_log_vars = tf.clip_by_value(self.log_vars, -5.0, 10.0)
         if isinstance(task_losses, dict):
             for idx, name in enumerate(self.task_names):
+                if name not in task_losses:
+                    raise KeyError(f"Missing required task loss for '{name}' in HomoscedasticLossLayer.")
                 loss_t = tf.cast(task_losses[name], tf.float32)
                 loss_t = tf.reduce_mean(loss_t)
-                s_t = self.log_vars[idx]
+                s_t = clamped_log_vars[idx]
                 precision = tf.exp(-s_t)
                 total = total + precision * loss_t + 0.5 * s_t
         else:
+            if len(task_losses) != len(self.task_names):
+                raise ValueError(
+                    f"Expected {len(self.task_names)} losses for tasks {self.task_names}, "
+                    f"but received sequence of length {len(task_losses)}."
+                )
             for idx, loss_t in enumerate(task_losses):
                 loss_t = tf.cast(loss_t, tf.float32)
                 loss_t = tf.reduce_mean(loss_t)
-                s_t = self.log_vars[idx]
+                s_t = clamped_log_vars[idx]
                 precision = tf.exp(-s_t)
                 total = total + precision * loss_t + 0.5 * s_t
         return total
@@ -110,8 +118,11 @@ class HomoscedasticLossLayer(tf.keras.layers.Layer):
     @property
     def loss_weights(self) -> dict[str, float]:
         """Return mapping of task name -> current precision weight exp(-s_t)."""
+        if not tf.executing_eagerly():
+            raise RuntimeError("loss_weights property is only available in eager execution.")
         if hasattr(self, "log_vars") and self.log_vars is not None:
-            weights = tf.exp(-self.log_vars).numpy()
+            clamped = tf.clip_by_value(self.log_vars, -5.0, 10.0)
+            weights = tf.exp(-clamped).numpy()
             return dict(zip(self.task_names, (float(w) for w in weights)))
         return {name: 1.0 for name in self.task_names}
 
@@ -119,6 +130,7 @@ class HomoscedasticLossLayer(tf.keras.layers.Layer):
         config = super().get_config()
         config["task_names"] = list(self.task_names)
         return config
+
 
 
 # Output head name -> loss function (Keras strings).

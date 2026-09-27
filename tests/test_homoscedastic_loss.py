@@ -109,3 +109,69 @@ def test_homoscedastic_loss_serialization():
     restored_layer = HomoscedasticLossLayer.from_config(config)
     restored_loss = restored_layer(dummy_losses)
     np.testing.assert_allclose(restored_loss.numpy(), layer(dummy_losses).numpy(), atol=1e-5)
+
+
+def test_homoscedastic_loss_defensive_guards():
+    task_names = list(PRUNED_LABEL_KEYS)
+    layer = HomoscedasticLossLayer(task_names=task_names)
+
+    # 1. Valid sequence input passes
+    valid_seq = [tf.constant(1.0, dtype=tf.float32)] * len(task_names)
+    out = layer(valid_seq)
+    assert not tf.math.is_nan(out)
+
+    # 2. Invalid sequence length raises ValueError
+    invalid_seq = [tf.constant(1.0, dtype=tf.float32)] * (len(task_names) - 1)
+    with pytest.raises(ValueError, match="Expected 7 losses"):
+        layer(invalid_seq)
+
+    # 3. Missing key in dict raises KeyError
+    incomplete_dict = {k: tf.constant(1.0, dtype=tf.float32) for k in task_names[:-1]}
+    with pytest.raises(KeyError, match="Missing required task loss"):
+        layer(incomplete_dict)
+
+    # 4. Eager execution guard on loss_weights
+    weights = layer.loss_weights
+    assert len(weights) == 7
+    assert all(isinstance(v, float) for v in weights.values())
+
+    @tf.function
+    def run_graph_mode():
+        return layer.loss_weights
+
+    with pytest.raises(RuntimeError, match="only available in eager execution"):
+        run_graph_mode()
+
+
+def test_homoscedastic_loss_clamping_prevents_overflow():
+    task_names = list(PRUNED_LABEL_KEYS)
+    layer = HomoscedasticLossLayer(task_names=task_names)
+
+    # Extreme log_vars that would otherwise overflow exp(-s_t)
+    extreme_vars = [-100.0, 100.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+    layer.log_vars.assign(tf.constant(extreme_vars, dtype=tf.float32))
+
+    dummy_losses = {k: tf.constant(1.0, dtype=tf.float32) for k in task_names}
+    total_loss = layer(dummy_losses)
+
+    # Must be finite and not NaN
+    assert tf.math.is_finite(total_loss)
+    assert not tf.math.is_nan(total_loss)
+
+    # Task 0 (log_var -100 clamped to -5): precision = exp(5), loss_0 = exp(5)*1.0 + 0.5*(-5)
+    expected_s0 = -5.0
+    expected_loss_0 = np.exp(-expected_s0) * 1.0 + 0.5 * expected_s0
+
+    # Task 1 (log_var +100 clamped to 10): precision = exp(-10), loss_1 = exp(-10)*1.0 + 0.5*(10)
+    expected_s1 = 10.0
+    expected_loss_1 = np.exp(-expected_s1) * 1.0 + 0.5 * expected_s1
+
+    # Remaining 5 tasks at 0.0: exp(0)*1.0 + 0 = 1.0 each -> 5.0
+    expected_total = expected_loss_0 + expected_loss_1 + 5.0
+    np.testing.assert_allclose(total_loss.numpy(), expected_total, rtol=1e-4)
+
+    # Check loss_weights property clamping
+    weights = layer.loss_weights
+    assert pytest.approx(weights["winner"], rel=1e-4) == float(np.exp(5.0))
+    assert pytest.approx(weights["team_b_kill_lead"], rel=1e-4) == float(np.exp(-10.0))
+
