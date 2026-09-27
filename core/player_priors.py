@@ -194,9 +194,10 @@ def extract_player_priors_vector(
         - [UTILITY: cwr_diff, exp_diff, rec_diff]
     """
     def _get_player_vector(p: dict[str, Any]) -> list[float]:
-        # If precomputed priors dict is already attached to participant, use it
-        if "priors" in p and isinstance(p["priors"], (list, tuple)) and len(p["priors"]) == PLAYER_PRIOR_FEATURE_COUNT:
-            return [float(x) for x in p["priors"]]
+        # Extended point-in-time priors retain the same six-field prefix.
+        # Preserve that snapshot instead of falling back to current/neutral data.
+        if "priors" in p and isinstance(p["priors"], (list, tuple)) and len(p["priors"]) >= PLAYER_PRIOR_FEATURE_COUNT:
+            return [float(x) for x in p["priors"][:PLAYER_PRIOR_FEATURE_COUNT]]
         if tracker is not None:
             puuid = p.get("puuid")
             champ = p.get("champion") or p.get("championName") or p.get("champion_name")

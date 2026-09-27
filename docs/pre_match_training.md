@@ -154,3 +154,59 @@ L'exécution de la boucle d'entraînement continu (`cli.py train-continuous` ou 
 - L'attribut mémoire `is_calibrated` est basculé à `False`.
 - Le service de prédiction reste indisponible jusqu'à ce qu'un nouveau bundle évalué et calibré soit explicitement déployé.
 - La calibration de température ne s'applique qu'à la tête `winner` ; elle ne valide ni ne calibre les têtes auxiliaires de régression ou d'événements.
+
+## Matchups chronologiques pour les entraînements candidats
+
+Les quatre consommateurs `train_deepsets_v2.py`, `train_deepsets_v3.py`,
+`train_pre_match_model.py` (branche 14 dimensions) et `evaluate_ensemble.py`
+utilisent l'extracteur partagé `core.features.ordered_matchup`. Un résultat du
+train n'entre dans le tracker que si sa fin explicite est strictement antérieure
+à la création de la cible. L'original et son swap sont extraits au même état ;
+les résultats validation/test n'alimentent jamais ce tracker.
+
+Fournir `--result-end-times` avec un fichier versionné de fins associé à la même
+cohorte et aux mêmes priors, ou une base contenant les timestamps explicites.
+Le défaut `--missing-result-end error` arrête avant l'entraînement si une fin du
+train manque. `--missing-result-end exclude` exclut uniquement ces événements et
+inscrit les compteurs dans les artefacts ; l'absence totale de fins valides reste
+une erreur. Aucune fin n'est estimée à partir de la durée.
+
+Exemples (choisir chaque fois un dossier neuf) :
+
+```powershell
+& '.venv312/Scripts/python.exe' scripts/train_deepsets_v2.py --splits-cache runs/candidate_selective_prod/splits_cache_45000.pkl --db-path runs/db_merge_20260924/consolidated.db --output-dir runs/ordered_v2_new
+& '.venv312/Scripts/python.exe' scripts/train_deepsets_v3.py --splits-cache runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl --manifest-path runs/candidate_selective_prod/model.split.json --db-path runs/db_merge_20260924/consolidated.db --output-dir runs/ordered_v3_new
+& '.venv312/Scripts/python.exe' scripts/evaluate_ensemble.py --model runs/ordered_v2_new/model.keras --db runs/db_merge_20260924/consolidated.db --splits-cache runs/candidate_selective_prod/splits_cache_45000.pkl --output-dir runs/ordered_ensemble_new
+& '.venv312/Scripts/python.exe' scripts/benchmark_ordered_matchups.py --splits-cache runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl --manifest runs/candidate_selective_prod/model.split.json --database runs/db_merge_20260924/consolidated.db --output runs/ordered_matchup_integration_validation
+```
+
+Le script général accepte `--splits-cache` avec `--split-manifest` pour rejouer
+les records enrichis exacts. Les caches historiques restent en lecture seule.
+Un cache incompatible avec le manifeste ou une provenance incompatible avec les
+priors attachés sont refusés ; un manifeste seul ne reconstitue pas ces priors.
+Les nouveaux runs enrichis ajoutent `model.features.json` et
+`model.result_end_times.json`. Le contrat conserve la politique
+`ordered_matchup_v1`, les dimensions, les poids (5 pour v2/v3, 15 pour la branche
+générale et les arbres), les empreintes et les exclusions. La calibration est
+liée à son empreinte. Les entrées 8 dimensions conservent leur extracteur
+historique. L'évaluation d'un ancien modèle 14 dimensions sans contrat demande
+un réentraînement.
+
+Cette intégration ne renforce pas la garantie temporelle des priors joueurs déjà
+attachés aux caches. La fin de match reste un proxy optimiste de disponibilité,
+car l'heure d'ingestion API n'est pas enregistrée. Ces bundles enrichis ont pour
+périmètre l'entraînement et l'évaluation. Leur activation dans PredictionService
+exigerait un contrat d'inférence et un état historique compatibles ; elle ne fait
+pas partie de ce changement. Le benchmark de mai est un rejeu de non-régression,
+sans réglage ni preuve d'amélioration d'un réseau en production.
+
+Pour le rejeu enrichi du script général avec calibration :
+
+```powershell
+& '.venv312/Scripts/python.exe' scripts/train_pre_match_model.py --db runs/db_merge_20260924/consolidated.db --feature-version deepsets_v2 --split-manifest runs/candidate_selective_prod/model.split.json --splits-cache runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl --output runs/ordered_general_new/model.keras --calibrate
+```
+
+La calibration du script général reste optionnelle. L'évaluation d'ensemble
+indique explicitement si elle a été appliquée ; un fichier de calibration présent
+mais lié à un autre contrat est refusé. Une absence de calibration ne transforme
+pas les probabilités brutes en probabilités calibrées.

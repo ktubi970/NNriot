@@ -1,0 +1,115 @@
+{
+  "artifact_scope": "training_evaluation",
+  "model_path": "D:\\projet\\NNriot\\runs\\ordered_matchup_integration_evidence_20260927\\smoke_v2_1415\\v2\\model.keras",
+  "model_sha256": "431f949f526374bcd6905f7ce3bb1be6537983e9c815661cecef2a9cf0d9c4d7",
+  "manifest_sha256": "89e975a5df041ad0f94bb958cce23e2922704560b352180cf8abed09f1faeab1",
+  "calibration_sha256": "ddd5504dee04725273a3fd598de8e960c6abfa4d993b6233fd845ed298e3ca41",
+  "calibration_applied": true,
+  "feature_contract_sha256": "b5d9296106e13d7d8dd1a17c950906be5b58a952c5a196299e0feb1ac5892af4",
+  "source_cache_sha256": "adef89abac699163b69848706ac9385d909533eae3c93c5dbbf5b366bddf82a2",
+  "result_end_times_sha256": "d4d5d9a49319615c05e0c799d0557c12a2565af8c92cfed69e58737aca2c8f52",
+  "enriched_dataset_sha256": "45de8adffc5fb8563d95f16a2a542f3336311cdbc2a0152f252d68da23db75b2",
+  "result_end_provenance": {
+    "schema_version": 1,
+    "timestamp_unit": "ms",
+    "split_sha256": "e41469d5c6dca54372e7687deb07360b263615e6c87f775d9ec3848922b6c6d3",
+    "enriched_dataset_sha256": "45de8adffc5fb8563d95f16a2a542f3336311cdbc2a0152f252d68da23db75b2",
+    "availability_assumption": "explicit_result_end_proxy",
+    "missing_policy": "error",
+    "diagnostics": {
+      "excluded": 0,
+      "found": 98,
+      "invalid": 0,
+      "missing": 0,
+      "requested": 98,
+      "valid": 98
+    }
+  },
+  "neural_matchup_diagnostics": {
+    "train_results_total": 98,
+    "train_results_eligible": 98,
+    "train_results_missing_end": 0,
+    "train_results_invalid_end": 0,
+    "train_results_applied": 98,
+    "queries_total": 140,
+    "queries_without_history": 1,
+    "availability_assumption": "recorded_game_end_strictly_before_creation; ingestion_latency_unobserved",
+    "scope": "matchup_tracker_only; attached_player_priors_not_reconstructed",
+    "representation": "tensors",
+    "matchup_weight": 5.0
+  },
+  "tree_matchup_diagnostics": {
+    "train_results_total": 98,
+    "train_results_eligible": 98,
+    "train_results_missing_end": 0,
+    "train_results_invalid_end": 0,
+    "train_results_applied": 98,
+    "queries_total": 140,
+    "queries_without_history": 1,
+    "availability_assumption": "recorded_game_end_strictly_before_creation; ingestion_latency_unobserved",
+    "scope": "matchup_tracker_only; attached_player_priors_not_reconstructed",
+    "representation": "tabular",
+    "matchup_weight": 15.0
+  },
+  "neural_matchup_weight": 5.0,
+  "tree_matchup_weight": 15.0,
+  "split_counts": {
+    "train": 98,
+    "validation": 21,
+    "test": 21
+  },
+  "best_weights": {
+    "nn": 1.0,
+    "lgb": 0.0,
+    "gbdt": 0.0
+  },
+  "deepsets_metrics": {
+    "accuracy": 0.47619047619047616,
+    "accuracy_lift": -0.04761904761904767,
+    "roc_auc": 0.4636363636363636,
+    "log_loss": 0.6965478954297937,
+    "brier": 0.25169885970990724
+  },
+  "lightgbm_metrics": {
+    "accuracy": 0.47619047619047616,
+    "accuracy_lift": -0.04761904761904767,
+    "roc_auc": 0.5,
+    "log_loss": 5.0671762051877,
+    "brier": 0.5237436113371647
+  },
+  "gbdt_metrics": {
+    "accuracy": 0.47619047619047616,
+    "accuracy_lift": -0.04761904761904767,
+    "roc_auc": 0.5,
+    "log_loss": 5.631569210702587,
+    "brier": 0.523787083653897
+  },
+  "deepsets_plus_lightgbm": {
+    "accuracy": 0.47619047619047616,
+    "accuracy_lift": -0.04761904761904767,
+    "roc_auc": 0.4636363636363636,
+    "log_loss": 0.7906143582515658,
+    "brier": 0.295336019951199
+  },
+  "tri_blend_ensemble_metrics": {
+    "accuracy": 0.47619047619047616,
+    "accuracy_lift": -0.04761904761904767,
+    "roc_auc": 0.4636363636363636,
+    "log_loss": 0.6965478954297937,
+    "brier": 0.25169885970990724,
+    "calibration_error": 0.047596738787378634
+  },
+  "confidence_stratification": {
+    "conviction_ge_0pct": {
+      "coverage_pct": 100.0,
+      "count": 21,
+      "accuracy": 0.4762
+    },
+    "conviction_ge_2pct": {
+      "coverage_pct": 100.0,
+      "count": 21,
+      "accuracy": 0.4762
+    }
+  },
+  "baseline_accuracy": 0.5238095238095238
+}

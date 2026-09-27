@@ -1,0 +1,77 @@
+{
+  "created_at": "2026-09-27T14:38:34.445163+00:00",
+  "cache_sha256": "3cb32f1c4a354001a08e392363d8443d50242c81fcd12f037f1a7b94df444b20",
+  "split_sha256": "ba9a87f0171f667988c692c9ec1f84c1717b4ccbb67691793e6ba6037f37c158",
+  "end_times_sha256": "7063edf796263e62e1bb111fe7b6a99f83f370e15ab3bb397b2c8c5bb83c34d7",
+  "enriched_dataset_sha256": "8d358df47c8caca9ab0ac6ff876f927dcd78e02a27b8a83cb5962a75ea7ecb5d",
+  "reference_dir": "D:\\projet\\NNriot\\runs\\accuracy_matchup_20260927",
+  "same_library_versions_as_A3": true,
+  "database_path": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+  "end_time_diagnostics": {
+    "requested": 31500,
+    "found": 31500,
+    "invalid": 0,
+    "valid": 31500,
+    "missing": 0,
+    "excluded": 0
+  },
+  "sklearn_version": "1.9.0",
+  "numpy_version": "2.5.2",
+  "parameters": {
+    "categorical_features": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "max_iter": 200,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 30,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 42
+  },
+  "matchup_weight": 15.0,
+  "threads": 4,
+  "selection_policy": "Predefined three variants, fixed parameters/seed, no tuning, threshold 0.5, coverage 100%.",
+  "feature_policy": "Same 232 columns; variants change ONLY five lane target statistics.",
+  "availability_policy": "Only training results with explicit gameEndTimestamp < query game_creation_time.",
+  "limitations": [
+    "End timestamp is an optimistic proxy for result availability; ingestion times are unrecorded.",
+    "Player priors are unchanged cache snapshots with their existing temporal assumptions.",
+    "Previously inspected March-May 2026 cohort; no prospective or current-patch accuracy claim.",
+    "No neural retraining or serving checkpoint replacement.",
+    "Paired iid diagnostics do not account for repeated players, temporal dependence or prior test inspection."
+  ],
+  "source_sha256": {
+    "scripts\\benchmark_ordered_matchups.py": "c0ffdb3a7d6a43e38072a7f2847dd36871d93598e5d15c988facf003559f5457",
+    "core\\player_priors.py": "6e70a05bc7292909b29c9547eb6965007ba10c99977a1be859ade39b37020ed1",
+    "core\\features\\pipeline.py": "5cc481ca7033964efbeedd08e7243ac688200f2c1ee89a36865505b95e9d8d03",
+    "core\\features\\matchup_matrix.py": "0f9a06025931c80812a21ad277faed9b9c403f330b7905880b06d89c505386cb",
+    "core\\features\\ordered_matchup.py": "b98b2c0c7091790626872536f2d232de6b760302ac912aecfad5ab90fb9a2968",
+    "core\\point_in_time_dataset.py": "c8c0babbfb75b1308c36e349d48bcfa4ab3b2d34ef80e9e47de4084c8e1a11f9",
+    "core\\experiment.py": "40b48d8321278cf83b1f666ef3c5caf4998beae6150b498a90762e6c00f5a1da"
+  },
+  "time_ranges": {
+    "train": [
+      1774677478411,
+      1778267903757
+    ],
+    "validation": [
+      1778268028027,
+      1778476307175
+    ],
+    "test": [
+      1778476331517,
+      1778605723869
+    ]
+  },
+  "variants": {}
+}

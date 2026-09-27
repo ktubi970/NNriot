@@ -16,8 +16,9 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core.features.matchup_matrix import LaneMatchupTracker
-from core.features.pipeline import DraftFeaturePipeline, ENRICHED_PLAYER_TENSOR_DIM
+from core.features.pipeline import ENRICHED_PLAYER_TENSOR_DIM
+from core.ordered_training import prepare_ordered_training
+from core.experiment import build_manifest
 from core.equivariant_model import build_equivariant_deepsets_model
 from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD
 from core.training_utils import _build_targets
@@ -36,12 +37,17 @@ def train_deepsets_v2(
     batch_size: int = 64,
     seed: int = 42,
     learning_rate: float = 0.0008,
+    *,
+    db_path: str | None = None,
+    result_end_times: str | None = None,
+    missing_result_end: str = "error",
 ) -> dict:
     tf.keras.utils.set_random_seed(seed)
     np.random.seed(seed)
 
     out_path = Path(output_dir).resolve()
-    out_path.mkdir(parents=True, exist_ok=True)
+    if out_path.exists():
+        raise FileExistsError(f"Refusing occupied output directory: {out_path}")
     checkpoint_path = out_path / "model.keras"
 
     logger.info("Loading cached splits from %s...", splits_cache)
@@ -50,24 +56,23 @@ def train_deepsets_v2(
 
     logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
 
-    # 1. Build Bayesian smoothed LaneMatchupTracker strictly on train split
-    logger.info("Fitting Bayesian LaneMatchupTracker on train split (%d games)...", len(splits["train"]))
-    matchup_tracker = LaneMatchupTracker(matchup_weight=5.0)
-    for r in splits["train"]:
-        fj = r["feature_json"]
-        w = r["labels_json"]["winner"]
-        matchup_tracker.update_match(fj.get("team_a") or [], fj.get("team_b") or [], winner=w)
-
-    pipeline = DraftFeaturePipeline(matchup_tracker=matchup_tracker)
-
-    # 2. Extract 14-dim player tensors
-    logger.info("Extracting 14-dim player tensors for all splits...")
-    x = {}
-    for name, rows in splits.items():
-        start_t = time.monotonic()
-        tensors_dict = pipeline.batch_extract_tensors([r["feature_json"] for r in rows])
-        x[name] = tensors_dict
-        logger.info("  Extracted %s tensors (%d games) in %.2fs", name, len(rows), time.monotonic() - start_t)
+    # Validate provenance before reserving any outputs or fitting a model.
+    from core.experiment import resolve_result_end_times
+    resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
+                                        missing=missing_result_end)
+    out_path.mkdir(parents=True, exist_ok=False)
+    manifest = build_manifest(splits, source_db=db_path, split_metadata={
+        "requested_strategy": "cached", "effective_strategy": "cached",
+        "fallback_reason": None,
+    })
+    with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, allow_nan=False)
+    x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
+        splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
+        missing_result_end=missing_result_end, representation="tensors",
+        matchup_weight=5.0, source_cache=splits_cache,
+        resolved=resolved,
+    )
 
     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
          for name, rows in splits.items()}
@@ -155,6 +160,7 @@ def train_deepsets_v2(
 
     # 6. Fit Temperature Scaling on Validation Split
     val_preds = best_model.predict(x["validation"], batch_size=128, verbose=0)
+    raw_val_probs = np.asarray(val_preds["winner"])[:, 1]
     fit_res = fit_temperature(raw_val_probs, y["validation"])
     fitted_temp = float(fit_res["temperature"]) if isinstance(fit_res, dict) else float(fit_res)
     logger.info("Fitted temperature scaling: T = %.4f", fitted_temp)
@@ -164,6 +170,7 @@ def train_deepsets_v2(
         "fitted_on": "validation",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "diagnostics": fit_res if isinstance(fit_res, dict) else {},
+        "feature_contract_sha256": feature_contract_sha,
     }
     with open(out_path / "model.calibration.json", "w", encoding="utf-8") as f:
         json.dump(calib_artifact, f, indent=2)
@@ -187,19 +194,6 @@ def train_deepsets_v2(
                 "count": int(mask.sum()),
                 "accuracy": round(acc, 4),
             }
-
-    # Save manifest referencing match IDs
-    manifest = {
-        "schema_version": 1,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "splits": {
-            name: [{"match_id": r["match_id"], "game_creation_time": r["game_creation_time"]}
-                   for r in splits[name]]
-            for name in ("train", "validation", "test")
-        }
-    }
-    with open(out_path / "model.split.json", "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
 
     metrics_report = {
         "schema_version": 2,
@@ -229,6 +223,8 @@ def train_deepsets_v2(
         "confidence_stratification": stratification,
         "baseline_accuracy": test_eval_raw["baseline"]["accuracy"],
         "history": history,
+        "matchup_diagnostics": matchup_diagnostics,
+        "feature_contract_sha256": feature_contract_sha,
     }
 
     with open(out_path / "model.metrics.json", "w", encoding="utf-8") as f:
@@ -245,6 +241,9 @@ if __name__ == "__main__":
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--db-path")
+    parser.add_argument("--result-end-times")
+    parser.add_argument("--missing-result-end", choices=("error", "exclude"), default="error")
     args = parser.parse_args()
 
     train_deepsets_v2(
@@ -253,4 +252,7 @@ if __name__ == "__main__":
         epochs=args.epochs,
         batch_size=args.batch_size,
         seed=args.seed,
+        db_path=args.db_path,
+        result_end_times=args.result_end_times,
+        missing_result_end=args.missing_result_end,
     )

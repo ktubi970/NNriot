@@ -6,15 +6,62 @@ leak-free Bayesian player priors before updating state with match outcomes.
 from __future__ import annotations
 
 from contextlib import closing
+import base64
+import gzip
+import json
 import logging
 from pathlib import Path
 import sqlite3
+import zlib
 from typing import Any
 
 from core.player_priors import PlayerPriorsTracker
 from core.pre_match_dataset import _decode, _valid_timestamp, _valid_labels
 
 logger = logging.getLogger("point_in_time_dataset")
+
+
+def load_result_end_times(
+    db_path: str | Path,
+    rows: list[dict[str, Any]],
+) -> tuple[dict[str, int], dict[str, int]]:
+    """Read explicit Riot result ends in a separate, read-only SQLite connection.
+
+    Missing or unusable metadata is excluded. A database/cache creation mismatch
+    and database access or schema errors are raised to the caller.
+    """
+    expected = {row['match_id']: row['game_creation_time'] for row in rows}
+    ids = list(expected)
+    ends: dict[str, int] = {}
+    counts = {'requested': len(rows), 'found': 0, 'invalid': 0}
+    db_file = Path(db_path).resolve()
+    if not db_file.is_file():
+        raise FileNotFoundError(f"Database not found: {db_file}")
+    uri = db_file.as_uri() + '?mode=ro'
+    with closing(sqlite3.connect(uri, uri=True)) as conn:
+        conn.execute('PRAGMA query_only=ON')
+        for offset in range(0, len(ids), 400):
+            chunk = ids[offset:offset + 400]
+            sql = ('SELECT match_id, game_creation_time, raw_json FROM matches '
+                   'WHERE match_id IN (' + ','.join('?' for _ in chunk) + ')')
+            for mid, creation, raw in conn.execute(sql, chunk):
+                counts['found'] += 1
+                if creation != expected[mid]:
+                    raise ValueError(f'Database/cache creation timestamp mismatch: {mid}')
+                try:
+                    payload = raw if raw.startswith('{') else gzip.decompress(base64.b64decode(raw))
+                    info = json.loads(payload)['info']
+                    start, end = info.get('gameStartTimestamp'), info.get('gameEndTimestamp')
+                    valid = (type(start) is int and type(end) is int and
+                             creation <= start < end and end - creation <= 24 * 3600 * 1000)
+                except (TypeError, ValueError, KeyError, OSError, EOFError, AttributeError, zlib.error):
+                    valid = False
+                if valid:
+                    ends[mid] = end
+                else:
+                    counts['invalid'] += 1
+    counts.update(valid=len(ends), missing=len(ids) - counts['found'])
+    return ends, counts
 
 
 def load_enriched_records(

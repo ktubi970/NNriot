@@ -16,8 +16,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from core.features.matchup_matrix import LaneMatchupTracker
-from core.features.pipeline import DraftFeaturePipeline, ENRICHED_PLAYER_TENSOR_DIM
+from core.features.pipeline import ENRICHED_PLAYER_TENSOR_DIM
 from core.features.draft_composition import MACRO_CLASH_FEATURE_DIM
 from core.equivariant_model import build_equivariant_deepsets_model, ThreeClassEquivariantSoftmax
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
@@ -26,7 +25,9 @@ from core.training_utils import _build_targets
 from core.pcgrad import pcgrad_step
 from core.training_metrics import evaluate_winner
 from core.calibration import fit_temperature, apply_temperature_to_probabilities, save_calibration_artifact
-from core.experiment import read_manifest, restore_splits
+from core.experiment import (build_manifest, read_manifest, restore_splits,
+                             resolve_result_end_times, validate_replay_feature_provenance)
+from core.ordered_training import prepare_ordered_training
 from core.point_in_time_dataset import load_enriched_records
 from core.selective_classification import evaluate_selective_coverage, DEFAULT_CONVICTION_THRESHOLDS
 
@@ -45,71 +46,74 @@ def train_deepsets_v3(
     batch_size: int = 64,
     seed: int = 42,
     learning_rate: float = 0.0008,
+    *,
+    result_end_times: str | None = None,
+    missing_result_end: str = "error",
 ) -> dict:
     tf.keras.utils.set_random_seed(seed)
     np.random.seed(seed)
 
     out_path = Path(output_dir).resolve()
-    out_path.mkdir(parents=True, exist_ok=True)
+    if out_path.exists():
+        raise FileExistsError(f"Refusing occupied output directory: {out_path}")
     checkpoint_path = out_path / "model.keras"
 
     # 1. Load or build splits
     splits = None
+    cache_was_loaded = False
     if splits_cache:
         cache_file = Path(splits_cache).resolve()
-        if cache_file.exists():
-            logger.info("Loading cached splits from %s...", cache_file)
-            with open(cache_file, "rb") as f:
-                splits = pickle.load(f)
-            logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
+        if not cache_file.is_file():
+            raise FileNotFoundError(f"Splits cache not found: {cache_file}")
+        logger.info("Loading cached splits from %s...", cache_file)
+        with open(cache_file, "rb") as f:
+            splits = pickle.load(f)
+        cache_was_loaded = True
+        logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
+
+    if cache_was_loaded and manifest_path:
+        manifest = read_manifest(manifest_path)
+        rows = [r for name in ("train", "validation", "test") for r in splits[name]]
+        splits = restore_splits(rows, manifest)
+        validate_replay_feature_provenance(manifest_path, splits)
 
     if splits is None:
         logger.info("Streaming %d enriched records (warmup=%d) from %s...", samples, warmup, db_path)
         records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
         
-        if manifest_path and Path(manifest_path).exists():
+        if manifest_path:
             logger.info("Restoring exact splits from manifest %s...", manifest_path)
             manifest = read_manifest(Path(manifest_path))
             splits = restore_splits(records, manifest)
+            validate_replay_feature_provenance(manifest_path, splits)
         else:
             logger.info("No manifest provided, creating chronological 70/15/15 splits...")
             from core.pre_match_dataset import split_records
-            splits = split_records(records, train_ratio=0.70, val_ratio=0.15, test_ratio=0.15)
+            splits, split_meta = split_records(records, strategy="chronological")
 
-        if splits_cache:
-            cache_file = Path(splits_cache).resolve()
-            cache_file.parent.mkdir(parents=True, exist_ok=True)
-            logger.info("Caching splits to %s...", cache_file)
-            with open(cache_file, "wb") as f:
-                pickle.dump(splits, f, protocol=pickle.HIGHEST_PROTOCOL)
+        # Input caches are never created or rewritten by an ordered run.
 
     logger.info("Using splits: %s", {k: len(v) for k, v in splits.items()})
 
-    # 2. Build Bayesian smoothed LaneMatchupTracker strictly on train split
-    logger.info("Fitting Bayesian LaneMatchupTracker on train split (%d games)...", len(splits["train"]))
-    matchup_tracker = LaneMatchupTracker(matchup_weight=5.0)
-    for r in splits["train"]:
-        fj = r["feature_json"]
-        w = r["labels_json"]["winner"]
-        matchup_tracker.update_match(fj.get("team_a") or [], fj.get("team_b") or [], winner=w)
-
-    pipeline = DraftFeaturePipeline(matchup_tracker=matchup_tracker)
-
-    # 3. Extract 14-dim player tensors and 15-dim macro clash vectors using batch_extract_v3
-    logger.info("Extracting v3 features (14-dim player tensors + 15-dim macro clash) for all splits...")
-    x = {}
-    for name, rows in splits.items():
-        start_t = time.monotonic()
-        feat_dicts = [r["feature_json"] for r in rows]
-        x[name] = pipeline.batch_extract_v3(feat_dicts)
-        logger.info(
-            "  Extracted %s: team_a %s, macro_clash %s (%d games) in %.2fs",
-            name,
-            x[name]["team_a"].shape,
-            x[name]["macro_clash"].shape,
-            len(rows),
-            time.monotonic() - start_t,
-        )
+    resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
+                                        missing=missing_result_end)
+    out_path.mkdir(parents=True, exist_ok=False)
+    if manifest_path:
+        split_meta = read_manifest(manifest_path)["split_metadata"]
+    elif cache_was_loaded:
+        split_meta = {
+            "requested_strategy": "cached", "effective_strategy": "cached",
+            "fallback_reason": None,
+        }
+    manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
+    with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, allow_nan=False)
+    x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
+        splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
+        missing_result_end=missing_result_end, representation="v3",
+        matchup_weight=5.0, source_cache=splits_cache if cache_was_loaded else None,
+        resolved=resolved,
+    )
 
     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
          for name, rows in splits.items()}
@@ -212,6 +216,7 @@ def train_deepsets_v3(
         "fitted_on": "validation",
         "created_at": datetime.now(timezone.utc).isoformat(),
         "diagnostics": fit_res if isinstance(fit_res, dict) else {},
+        "feature_contract_sha256": feature_contract_sha,
     }
     with open(out_path / "model.calibration.json", "w", encoding="utf-8") as f:
         json.dump(calib_artifact, f, indent=2)
@@ -236,19 +241,6 @@ def train_deepsets_v3(
             "wilson_ci_95": [round(sc_res["wilson_lower"], 4), round(sc_res["wilson_upper"], 4)],
         }
 
-    # Save manifest referencing match IDs
-    manifest = {
-        "schema_version": 1,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-        "splits": {
-            name: [{"match_id": r["match_id"], "game_creation_time": r["game_creation_time"]}
-                   for r in splits[name]]
-            for name in ("train", "validation", "test")
-        }
-    }
-    with open(out_path / "model.split.json", "w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2)
-
     # Save comprehensive metrics
     metrics = {
         "model_name": "EquivariantDeepSets_v3",
@@ -263,6 +255,8 @@ def train_deepsets_v3(
         "test_calibrated": test_eval_cal,
         "selective_classification": stratification,
         "history": history,
+        "matchup_diagnostics": matchup_diagnostics,
+        "feature_contract_sha256": feature_contract_sha,
     }
     with open(out_path / "model.metrics.json", "w", encoding="utf-8") as f:
         json.dump(metrics, f, indent=2)
@@ -290,6 +284,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=0.0008)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--result-end-times")
+    parser.add_argument("--missing-result-end", choices=("error", "exclude"), default="error")
     args = parser.parse_args()
 
     train_deepsets_v3(
@@ -303,4 +299,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         learning_rate=args.learning_rate,
         seed=args.seed,
+        result_end_times=args.result_end_times,
+        missing_result_end=args.missing_result_end,
     )

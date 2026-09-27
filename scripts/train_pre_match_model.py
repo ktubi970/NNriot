@@ -38,10 +38,13 @@ from core.calibration import (
 )
 from core.experiment import (
     build_manifest,
+    compute_enriched_dataset_sha256,
     load_frozen_splits,
     read_manifest,
     restore_splits,
+    validate_replay_feature_provenance,
 )
+from core.ordered_training import prepare_ordered_training
 from core.training_metrics import evaluate_winner
 
 logger = logging.getLogger("train_pre_match_model")
@@ -174,6 +177,9 @@ def train_model(
     feature_version: str | None = None,
     architecture: str = "auto",
     use_pcgrad: bool = True,
+    result_end_times: str | None = None,
+    missing_result_end: str = "error",
+    source_cache: str | None = None,
 ) -> Any:
     """Select on validation winner log-loss, then evaluate test exactly once.
 
@@ -181,7 +187,9 @@ def train_model(
     nor installed as the application's active model.
     """
     if feature_version is None:
-        if (dim is not None and dim != 8) or architecture == "mlp":
+        if dim == 14:
+            feature_version = "deepsets_v2"
+        elif (dim is not None and dim != 8) or architecture == "mlp":
             feature_version = "v1_hasher"
         else:
             feature_version = "deepsets"
@@ -206,6 +214,8 @@ def train_model(
     for name, value in (("epochs", epochs), ("batch_size", batch_size), ("dim", dim)):
         if not isinstance(value, int) or isinstance(value, bool) or value < 1:
             raise ValueError(f"{name} must be a positive integer")
+    if feature_version == "deepsets_v2" and dim != 14:
+        raise ValueError("deepsets_v2 requires dim=14")
     if checkpoint_path is None:
         stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S_%fZ")
         checkpoint_path = str(REPO_ROOT / "runs" / f"pre_match_{stamp}" / "model.keras")
@@ -222,7 +232,13 @@ def train_model(
     report_path = output.with_suffix(".metrics.json")
     calibration_path = output.with_suffix(".calibration.json")
     candidate = output.with_name(output.stem + ".candidate.keras")
-    for artifact in (output, manifest_path, report_path, candidate, calibration_path):
+    ordered = feature_version in ("deepsets", "deepsets_v2") and dim == 14
+    if ordered and output.parent.exists():
+        raise FileExistsError(f"Refusing occupied output directory: {output.parent}")
+    feature_contract_path = output.with_suffix(".features.json")
+    result_end_path = output.with_suffix(".result_end_times.json")
+    for artifact in (output, manifest_path, report_path, candidate, calibration_path,
+                     feature_contract_path, result_end_path):
         if artifact.exists():
             raise FileExistsError(f"Refusing to overwrite existing artifact: {artifact}")
 
@@ -236,6 +252,14 @@ def train_model(
         )
     else:
         splits, split_meta = split_records(records, strategy=split_strategy)
+
+    if ordered:
+        splits = {name: [{**r, "feature_json": _get_feat(r)} for r in rows]
+                  for name, rows in splits.items()}
+        # Source facts must be valid before creating the first output artifact.
+        from core.experiment import resolve_result_end_times
+        resolved = resolve_result_end_times(splits, db_path=source_db,
+                                            artifact_path=result_end_times, missing=missing_result_end)
 
     if calibrate:
         val_rows = splits["validation"]
@@ -256,18 +280,13 @@ def train_model(
     _write_json(manifest_path, manifest)
 
     if feature_version in ("deepsets", "deepsets_v2"):
-        if feature_version == "deepsets_v2" or dim == 14:
-            from core.features.matchup_matrix import LaneMatchupTracker
-            from core.features.pipeline import DraftFeaturePipeline
-            logger.info("Fitting point-in-time LaneMatchupTracker on train split (%d games)...", len(splits["train"]))
-            matchup_tracker = LaneMatchupTracker()
-            for r in splits["train"]:
-                fj = _get_feat(r)
-                w = r["labels_json"]["winner"]
-                matchup_tracker.update_match(fj.get("team_a") or [], fj.get("team_b") or [], winner=w)
-            pipeline = DraftFeaturePipeline(matchup_tracker=matchup_tracker)
-            x = {name: pipeline.batch_extract_tensors([_get_feat(r) for r in rows])
-                 for name, rows in splits.items()}
+        if ordered:
+            x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
+                splits, output, db_path=source_db, result_end_times=result_end_times,
+                missing_result_end=missing_result_end, representation="tensors",
+                matchup_weight=15.0, source_cache=source_cache,
+                resolved=resolved,
+            )
         else:
             from core.deepsets_dataset import batch_extract_team_tensors
             x = {name: batch_extract_team_tensors([_get_feat(r) for r in rows])
@@ -408,6 +427,10 @@ def train_model(
         "metrics": metrics, "history": history,
         "elapsed_seconds": time.monotonic() - started,
     }
+    if ordered:
+        report["matchup_diagnostics"] = matchup_diagnostics
+        report["feature_contract_sha256"] = feature_contract_sha
+        report["enriched_dataset_sha256"] = compute_enriched_dataset_sha256(splits)
     symmetry_diagnostics = None
     if feature_version == "deepsets":
         test_swapped = {"team_a": x["test"]["team_b"], "team_b": x["test"]["team_a"]}
@@ -437,6 +460,13 @@ def train_model(
         verified = load_calibration_artifact(output, input_dim=dim)
         if verified is None:
             raise ValueError("written calibration artifact failed verification")
+        if ordered:
+            with Path(calibration_artifact_path).open("r", encoding="utf-8") as f:
+                calibration_data = json.load(f)
+            calibration_data["feature_contract_sha256"] = feature_contract_sha
+            with Path(calibration_artifact_path).open("w", encoding="utf-8") as f:
+                json.dump(calibration_data, f, indent=2, allow_nan=False)
+                f.write("\n")
         model.is_calibrated = True
         model.calibration_temperature = verified["temperature"]
         model.calibration_metadata = verified
@@ -472,6 +502,9 @@ def main(argv=None):
     parser.add_argument("--split-strategy", choices=["chronological", "patch"], default=None,
                         help="Holdout split strategy: chronological or patch")
     parser.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
+    parser.add_argument("--splits-cache", help="Enriched pickle to replay with --split-manifest")
+    parser.add_argument("--result-end-times")
+    parser.add_argument("--missing-result-end", choices=("error", "exclude"), default="error")
     parser.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets", "deepsets_v2"], default="deepsets",
@@ -482,6 +515,8 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     if args.split_strategy is not None and args.split_manifest is not None:
         parser.exit(2, "Training aborted: Cannot specify both --split-strategy and --split-manifest\n")
+    if args.splits_cache is not None and args.split_manifest is None:
+        parser.exit(2, "Training aborted: --splits-cache requires --split-manifest\n")
     try:
         args.db = config.get_db_path(args.db, require_exists=True)
         if args.split_manifest is not None:
@@ -491,7 +526,19 @@ def main(argv=None):
             manifest = read_manifest(manifest_file)
             if args.samples != 5000:
                 logger.info("--samples argument is ignored when replaying a frozen manifest.")
-            splits = load_frozen_splits(args.db, manifest)
+            if args.splits_cache:
+                import pickle
+                cache_path = Path(args.splits_cache)
+                with cache_path.open("rb") as f:
+                    cached_splits = pickle.load(f)
+                cached_rows = [r for name in ("train", "validation", "test")
+                               for r in cached_splits[name]]
+                splits = restore_splits(cached_rows, manifest)
+            else:
+                if args.feature_version in ("deepsets_v2",) or args.dim == 14:
+                    raise ValueError("Enriched manifest replay requires --splits-cache to preserve priors")
+                splits = load_frozen_splits(args.db, manifest)
+            validate_replay_feature_provenance(manifest_file, splits)
             records = [r for name in ("train", "validation", "test") for r in splits[name]]
             logger.info("Replaying %d frozen matches from %s using manifest %s",
                         len(records), Path(args.db).resolve(), manifest_file)
@@ -499,7 +546,8 @@ def main(argv=None):
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
                         source_db=args.db, split_manifest=manifest, calibrate=args.calibrate,
                         feature_version=args.feature_version, architecture=args.architecture,
-                        use_pcgrad=not args.no_pcgrad)
+                        use_pcgrad=not args.no_pcgrad, result_end_times=args.result_end_times,
+                        missing_result_end=args.missing_result_end, source_cache=args.splits_cache)
         else:
             strategy = args.split_strategy or "chronological"
             if args.feature_version in ("v3_enriched", "deepsets", "deepsets_v2"):
@@ -514,7 +562,8 @@ def main(argv=None):
                         checkpoint_path=args.output, dim=args.dim, seed=args.seed,
                         source_db=args.db, split_strategy=strategy, calibrate=args.calibrate,
                         feature_version=args.feature_version, architecture=args.architecture,
-                        use_pcgrad=not args.no_pcgrad)
+                        use_pcgrad=not args.no_pcgrad, result_end_times=args.result_end_times,
+                        missing_result_end=args.missing_result_end)
     except (ValueError, FileExistsError, FileNotFoundError) as exc:
         parser.exit(2, f"Training aborted: {exc}\n")
 
