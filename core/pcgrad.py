@@ -150,3 +150,15 @@ def pcgrad_step(
     optimizer.apply_gradients(zip(deconflicted_grads, variables))
 
     return losses_record
+
+
+# Re-export CAGrad optimizer functions for clean backwards compatibility
+from core.cagrad import cagrad_step, project_conflict_averse_gradients
+
+__all__ = [
+    "project_conflicting_gradients",
+    "pcgrad_step",
+    "cagrad_step",
+    "project_conflict_averse_gradients",
+]
+
