@@ -128,3 +128,43 @@ def test_periodic_embedding_invalid_shape():
 
     with pytest.raises(ValueError, match="num_features"):
         layer(bad_inputs)
+
+
+def test_periodic_embedding_float16_mixed_precision():
+    """Verify layer works seamlessly with float16 inputs without dtype mismatch."""
+    # 1. Standard Keras mixed precision layer configuration
+    layer = PeriodicNumericalEmbedding(num_features=12, num_frequencies=8, dtype="float16")
+    inputs_fp16 = tf.random.normal((4, 5, 12), dtype=tf.float16)
+    out_fp16 = layer(inputs_fp16)
+
+    assert out_fp16.dtype == tf.float16
+    assert out_fp16.shape == (4, 5, 192)
+    assert not tf.math.reduce_any(tf.math.is_nan(out_fp16))
+
+    # 2. Direct call on layer with float32 weights using float16 inputs (verifying internal casting)
+    layer_f32 = PeriodicNumericalEmbedding(num_features=12, num_frequencies=8)
+    layer_f32.build(input_shape=(None, 5, 12))
+    out_direct = layer_f32.call(inputs_fp16)
+    assert out_direct.dtype == tf.float16
+    assert out_direct.shape == (4, 5, 192)
+
+
+def test_periodic_embedding_dynamic_shape_assertion():
+    """Verify dynamic shape assertion when input has unknown static last dim."""
+    layer = PeriodicNumericalEmbedding(num_features=4, num_frequencies=2)
+
+    @tf.function(input_signature=[tf.TensorSpec(shape=(None, None), dtype=tf.float32)])
+    def call_dynamic(x):
+        return layer(x)
+
+    # Valid dynamic shape: (3, 4)
+    x_valid = tf.ones((3, 4), dtype=tf.float32)
+    out = call_dynamic(x_valid)
+    assert out.shape[0] == 3
+    assert out.shape[1] == 4 * 2 * 2
+
+    # Invalid dynamic shape: (3, 5) -> should raise InvalidArgumentError
+    x_invalid = tf.ones((3, 5), dtype=tf.float32)
+    with pytest.raises(tf.errors.InvalidArgumentError):
+        call_dynamic(x_invalid)
+

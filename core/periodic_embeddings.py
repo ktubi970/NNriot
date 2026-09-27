@@ -61,17 +61,32 @@ class PeriodicNumericalEmbedding(tf.keras.layers.Layer):
         super().build(input_shape)
 
     def call(self, inputs: tf.Tensor) -> tf.Tensor:
-        inputs = tf.convert_to_tensor(inputs, dtype=self.compute_dtype or tf.float32)
-        if inputs.shape[-1] is not None and inputs.shape[-1] != self.num_features:
-            raise ValueError(
-                f"Input last dimension ({inputs.shape[-1]}) does not match "
-                f"expected num_features ({self.num_features})."
+        inputs = tf.convert_to_tensor(inputs)
+        if not inputs.dtype.is_floating:
+            inputs = tf.cast(inputs, self.compute_dtype or tf.float32)
+        if inputs.shape[-1] is not None:
+            if inputs.shape[-1] != self.num_features:
+                raise ValueError(
+                    f"Input last dimension ({inputs.shape[-1]}) does not match "
+                    f"expected num_features ({self.num_features})."
+                )
+        else:
+            assert_op = tf.debugging.assert_equal(
+                tf.shape(inputs)[-1],
+                self.num_features,
+                message=f"Input last dimension must equal num_features ({self.num_features})",
             )
+            with tf.control_dependencies([assert_op]):
+                inputs = tf.identity(inputs)
+
+        # Cast coefficients to inputs.dtype for mixed precision safety
+        coeffs = tf.cast(self.coefficients, inputs.dtype)
+        two_pi = tf.cast(2.0 * math.pi, dtype=inputs.dtype)
 
         # Expand last dimension for broadcasting across frequencies:
         # shape: (..., num_features, 1) * (num_features, num_frequencies) -> (..., num_features, num_frequencies)
         x_expanded = tf.expand_dims(inputs, axis=-1)
-        angles = 2.0 * math.pi * x_expanded * self.coefficients
+        angles = two_pi * x_expanded * coeffs
         sin_part = tf.sin(angles)
         cos_part = tf.cos(angles)
 
