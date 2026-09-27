@@ -73,6 +73,37 @@ def test_cagrad_multi_variables_and_none_vars():
     assert res_inferred[0].shape == (2, 2)
     assert res_inferred[1].shape == (2,)
 
+def test_cagrad_scale_invariance():
+    # Scale invariance test: ||g|| = 10^-5 vs ||g|| = 1.0 vs ||g|| = 10^3
+    v = tf.Variable([0.0, 0.0])
+    g1 = [tf.constant([1.0, 0.0], dtype=tf.float32)]
+    g2 = [tf.constant([-1.0, 0.5], dtype=tf.float32)]
+    
+    res_base = project_conflict_averse_gradients([g1, g2], [v], c=0.5)[0].numpy()
+    
+    # Scale very small: 1e-5 (near convergence)
+    g1_small = [tf.constant([1e-5, 0.0], dtype=tf.float32)]
+    g2_small = [tf.constant([-1e-5, 0.5e-5], dtype=tf.float32)]
+    res_small = project_conflict_averse_gradients([g1_small, g2_small], [v], c=0.5)[0].numpy()
+    np.testing.assert_allclose(res_small / 1e-5, res_base, rtol=1e-4, atol=1e-5)
+    
+    # Scale very large: 1e3
+    g1_large = [tf.constant([1e3, 0.0], dtype=tf.float32)]
+    g2_large = [tf.constant([-1e3, 0.5e3], dtype=tf.float32)]
+    res_large = project_conflict_averse_gradients([g1_large, g2_large], [v], c=0.5)[0].numpy()
+    np.testing.assert_allclose(res_large / 1e3, res_base, rtol=1e-4, atol=1e-5)
+
+def test_cagrad_task_permutation_invariance():
+    # Permuting tasks [task1, task2] vs [task2, task1] must produce identical combined gradient
+    v = tf.Variable([0.0, 0.0])
+    g1 = [tf.constant([1.0, 0.0], dtype=tf.float32)]
+    g2 = [tf.constant([-1.0, 0.5], dtype=tf.float32)]
+    
+    res_12 = project_conflict_averse_gradients([g1, g2], [v], c=0.5)[0].numpy()
+    res_21 = project_conflict_averse_gradients([g2, g1], [v], c=0.5)[0].numpy()
+    
+    np.testing.assert_allclose(res_12, res_21, rtol=1e-5, atol=1e-5)
+
 def test_cagrad_step_execution():
     # Create simple 2-head model
     inp = tf.keras.Input(shape=(4,))

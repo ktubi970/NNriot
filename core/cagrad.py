@@ -55,16 +55,20 @@ def project_conflict_averse_gradients(
                 shapes.append((1,))
                 sizes.append(1)
 
-    # Flatten each task's gradients, replacing None with zeros
+    # Flatten each task's gradients on device, executing only T transfers total
     flat_grads: list[np.ndarray] = []
     for g_list in task_gradients:
-        parts: list[np.ndarray] = []
+        parts: list[tf.Tensor] = []
         for var_idx, g in enumerate(g_list):
             if g is None:
-                parts.append(np.zeros(sizes[var_idx], dtype=np.float32))
+                parts.append(tf.zeros([sizes[var_idx]], dtype=tf.float32))
             else:
-                parts.append(tf.reshape(tf.cast(g, tf.float32), [-1]).numpy())
-        flat_grads.append(np.concatenate(parts, axis=0) if parts else np.zeros(0, dtype=np.float32))
+                parts.append(tf.reshape(tf.cast(g, tf.float32), [-1]))
+        if parts:
+            task_flat = tf.concat(parts, axis=0).numpy()
+        else:
+            task_flat = np.zeros(0, dtype=np.float32)
+        flat_grads.append(task_flat)
 
     num_tasks = len(flat_grads)
     total_params = flat_grads[0].shape[0]
@@ -78,20 +82,23 @@ def project_conflict_averse_gradients(
         g0 = np.mean(G, axis=0)  # Average gradient
         norm_g0 = float(np.linalg.norm(g0))
 
-        if norm_g0 < 1e-8 or c <= 0.0:
+        if norm_g0 < 1e-12 or c <= 0.0:
             final_flat = g0
         else:
-            # Dual problem: min_{w in simplex} w^T (G g0) + c * ||g0|| * ||G^T w||
-            GG = G @ G.T  # (num_tasks, num_tasks)
-            v = G @ g0    # (num_tasks,)
+            # Scale-invariant normalization: G_tilde = G / norm_g0
+            # Ensures O(1) conditioning and tolerance-invariance regardless of gradient scale
+            G_tilde = G / norm_g0
+            g0_tilde = g0 / norm_g0
+            GG_tilde = G_tilde @ G_tilde.T  # (num_tasks, num_tasks), O(1)
+            v_tilde = G_tilde @ g0_tilde    # (num_tasks,), O(1)
 
             def obj(w: np.ndarray) -> float:
-                gw_norm = np.sqrt(max(1e-12, float(w @ GG @ w)))
-                return float(w @ v + c * norm_g0 * gw_norm)
+                gw_norm = np.sqrt(max(1e-12, float(w @ GG_tilde @ w)))
+                return float(w @ v_tilde + c * gw_norm)
 
             def grad(w: np.ndarray) -> np.ndarray:
-                gw_norm = np.sqrt(max(1e-12, float(w @ GG @ w)))
-                return v + (c * norm_g0 / gw_norm) * (GG @ w)
+                gw_norm = np.sqrt(max(1e-12, float(w @ GG_tilde @ w)))
+                return v_tilde + (c / gw_norm) * (GG_tilde @ w)
 
             w0 = np.ones(num_tasks, dtype=np.float64) / float(num_tasks)
             bounds = [(0.0, 1.0) for _ in range(num_tasks)]
@@ -116,11 +123,11 @@ def project_conflict_averse_gradients(
             else:
                 w_opt = w0
 
-            g_opt = G.T @ w_opt
-            norm_g_opt = float(np.linalg.norm(g_opt))
+            g_opt_tilde = G_tilde.T @ w_opt
+            norm_g_opt = float(np.linalg.norm(g_opt_tilde))
 
             if norm_g_opt > 1e-8:
-                g_cagrad = g0 + (c * norm_g0 / norm_g_opt) * g_opt
+                g_cagrad = norm_g0 * (g0_tilde + (c / norm_g_opt) * g_opt_tilde)
             else:
                 g_cagrad = g0
 
