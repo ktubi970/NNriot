@@ -25,6 +25,7 @@ from core.selective_infer import (
 from core.calibration import apply_temperature_to_probabilities
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
 from core.equivariant_model import ThreeClassEquivariantSoftmax
+from core.shapley_credit import compute_counterfactual_shapley
 
 logger = logging.getLogger("prediction_service")
 
@@ -121,6 +122,10 @@ class PredictionService:
         Returns:
             Structured prediction dictionary including probabilities, conviction,
             tier, actionability, and draft composition metadata.
+            shapley_credits are raw neural leave-one-player-out effects (negative
+            means helpful to that player's team), not additive Shapley values.
+            epistemic_uncertainty is the raw Dirichlet head, or None for legacy
+            models without that head; neither diagnostic uses temperature scaling.
         """
         if not self.is_ready():
             return {
@@ -137,13 +142,24 @@ class PredictionService:
             "team_a": np.expand_dims(t_a, axis=0),
             "team_b": np.expand_dims(t_b, axis=0),
         }
-        if "macro_clash" in getattr(self._model, "input_names", []):
+        input_names = set(getattr(self._model, "input_names", None) or [])
+        input_names.update(t.name.split(":")[0] for t in getattr(self._model, "inputs", []) or [])
+        if "macro_clash" in input_names:
             macro_clash = self.feature_pipeline.extract_macro_clash(match_dict)
             x_nn["macro_clash"] = np.expand_dims(macro_clash, axis=0)
 
         # 2. Neural model prediction
         with self._lock:
             preds = self._model.predict(x_nn, verbose=0)
+            shapley_credits = compute_counterfactual_shapley(
+                self._model, x_nn["team_a"], x_nn["team_b"],
+            )
+
+        raw_uncertainty = preds.get("winner_uncertainty")
+        epistemic_uncertainty = (
+            float(np.asarray(raw_uncertainty).reshape(-1)[0])
+            if raw_uncertainty is not None else None
+        )
 
         raw_winner = preds.get("winner")
         if raw_winner is not None and len(raw_winner.shape) >= 2:
@@ -194,6 +210,8 @@ class PredictionService:
                     else "Abstain - coinflip match (low conviction)"
                 ),
             },
+            "shapley_credits": shapley_credits,
+            "epistemic_uncertainty": epistemic_uncertainty,
             "draft_composition": {
                 "team_a": comp_a,
                 "team_b": comp_b,

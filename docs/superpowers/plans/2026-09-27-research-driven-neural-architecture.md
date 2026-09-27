@@ -594,3 +594,34 @@ Expected: PASS
 
 Mettre à jour `core/prediction_service.py` pour inclure `shapley_credits` et l'incertitude épistémique `epistemic_uncertainty` dans la réponse d'inférence.
 Commit: `git add core/shapley_credit.py core/prediction_service.py tests/test_shapley_credit.py && git commit -m "feat(service): integrate counterfactual shapley credit and evidential uncertainty into prediction service"`
+
+
+#### Task 6 — implementation contract (2026-09-27)
+
+The implemented public API is `compute_counterfactual_shapley(model, team_a, team_b)`
+returning `draft_delta`, `team_a_credits`, and `team_b_credits`, as specified in the
+steps and the handoff. The earlier Interfaces paragraph uses obsolete names.
+
+- The algorithm is leave-one-player-out ablation, not exact Shapley coalition
+  averaging. Credits need not sum to the margin and do not isolate player mastery.
+  `draft_delta = P_raw(Team B) - 0.5` includes all player features, not only draft.
+- Signs follow the plan: A = base minus masked A; B = masked B minus base.
+  Negative credits favor that player's team. Swapping teams negates the delta
+  and exchanges the lists without negation.
+- The neutral baseline zeroes champion/continuous features but retains role ID,
+  preserving lane alignment and permutation equivariance. Credits follow input
+  row order (canonical role order for service inputs).
+- Inputs must describe one match, with matching `(1, 5, features)` shapes.
+  Eleven scenarios are evaluated in one deterministic inference batch, without
+  rounding. Macro-clash features are recomputed for every masked composition.
+- `PredictionService` returns `shapley_credits` and `epistemic_uncertainty` as raw
+  neural diagnostics alongside its calibrated winner/conviction response.
+  Legacy non-evidential models report uncertainty as JSON `null`.
+
+Validation: initial missing-module failure observed before implementation;
+service failures observed before integration. Task 6 plus equivariant/deepsets
+regressions: 29 passed. Full `.venv312/Scripts/python.exe -m pytest -q --tb=short`:
+694 passed, 1664 dependency/deprecation/optimizer warnings in 310.71s.
+Independent Task 6 review found no blocking issue. Deferred nonblocking coverage:
+an independent oracle for masked macro-clash values (the implementation itself
+recomputes them; current tests cover symmetry and base consistency).
