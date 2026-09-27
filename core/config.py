@@ -58,6 +58,19 @@ def get_analytics_db_path(value=None, *, require_exists=False):
     )
 
 
+def get_checkpoint_path(value=None, *, require_exists=False):
+    """Return the active model checkpoint path, anchored to the project directory."""
+    candidate_v3 = PROJECT_ROOT / "runs" / "candidate_deepsets_v3" / "model.keras"
+    default = "runs/candidate_deepsets_v3/model.keras" if candidate_v3.exists() else "runs/candidate_selective_prod/model.keras"
+    return _absolute_db_path(
+        value,
+        ("NNRIOT_CHECKPOINT_PATH", "MODEL_CHECKPOINT_PATH"),
+        default,
+        require_exists,
+    )
+
+
+
 # App Configuration
 FLASK_DEBUG = os.getenv("FLASK_DEBUG", "0") == "1"
 HOST = os.getenv("HOST", "127.0.0.1")

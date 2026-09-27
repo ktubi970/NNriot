@@ -25,6 +25,8 @@ LANE_DIFF_COUNT: int = 15            # 5 lanes * 3 diffs (champ_wr, champ_exp, r
 TOTAL_PLAYER_PRIOR_DIM: int = TEAM_AGGREGATE_COUNT + LANE_DIFF_COUNT  # 33 features
 
 
+EXTENDED_PLAYER_PRIOR_FEATURE_COUNT: int = 10  # 6 legacy + kda, cspm, gpm, aggression
+
 class PlayerPriorsTracker:
     """In-memory chronological tracker maintaining point-in-time player statistics."""
 
@@ -42,8 +44,14 @@ class PlayerPriorsTracker:
         self.overall_mean = float(overall_mean)
         self.recent_window = int(recent_window)
 
-        # puuid -> {"games": int, "wins": int}
-        self.player_totals: dict[str, dict[str, int]] = defaultdict(lambda: {"games": 0, "wins": 0})
+        # puuid -> dict of performance and combat aggregates
+        self.player_totals: dict[str, dict[str, Any]] = defaultdict(
+            lambda: {
+                "games": 0, "wins": 0,
+                "kills": 0, "deaths": 0, "assists": 0,
+                "cs": 0, "gold": 0, "minutes": 0.0,
+            }
+        )
         # puuid -> champ_name -> {"games": int, "wins": int}
         self.player_champs: dict[str, dict[str, dict[str, int]]] = defaultdict(
             lambda: defaultdict(lambda: {"games": 0, "wins": 0})
@@ -53,20 +61,26 @@ class PlayerPriorsTracker:
         # puuid -> deque of recent match outcomes (0 or 1)
         self.player_recent: dict[str, deque[int]] = defaultdict(lambda: deque(maxlen=self.recent_window))
 
-    def get_player_priors(self, puuid: str | None, champion: str | None, role: str | None) -> list[float]:
+    def get_player_priors(
+        self,
+        puuid: str | None,
+        champion: str | None,
+        role: str | None,
+        extended: bool = False,
+    ) -> list[float]:
         """Compute point-in-time Bayesian smoothed features for a player.
 
         If puuid is None, empty, or has no prior games, returns neutral priors.
         """
         if not puuid or puuid not in self.player_totals:
-            return self.get_default_priors()
+            return self.get_default_priors(extended=extended)
 
         tot = self.player_totals[puuid]
         tot_g = tot["games"]
         tot_w = tot["wins"]
 
         if tot_g == 0:
-            return self.get_default_priors()
+            return self.get_default_priors(extended=extended)
 
         clean_champ = str(champion or "").strip()
         champ_stat = self.player_champs[puuid].get(clean_champ, {"games": 0, "wins": 0})
@@ -84,15 +98,57 @@ class PlayerPriorsTracker:
         role_fam = (r_g + 1.0) / (tot_g + 5.0)
         tot_exp = math.log1p(tot_g)
 
-        return [float(smooth_wr), float(smooth_cwr), float(champ_exp), float(rec_wr), float(role_fam), float(tot_exp)]
+        base_priors = [float(smooth_wr), float(smooth_cwr), float(champ_exp), float(rec_wr), float(role_fam), float(tot_exp)]
+
+        if extended:
+            kills = tot.get("kills", 0)
+            deaths = tot.get("deaths", 0)
+            assists = tot.get("assists", 0)
+            cs = tot.get("cs", 0)
+            gold = tot.get("gold", 0)
+            minutes = max(1.0, tot.get("minutes", 0.0))
+
+            # Bayesian smoothed KDA (prior: 5 assists/kills for 2 deaths -> 2.50 KDA)
+            smooth_kda = (kills + assists + 5.0) / (deaths + 2.0)
+            norm_kda = min(2.0, smooth_kda / 5.0)
+
+            # CS per min smoothed (prior: 60 cs in 10 min -> 6.0 CS/min)
+            smooth_cspm = (cs + 60.0) / (minutes + 10.0)
+            norm_cspm = min(1.5, smooth_cspm / 10.0)
+
+            # Gold per min smoothed (prior: 3500 gold in 10 min -> 350 Gold/min)
+            smooth_gpm = (gold + 3500.0) / (minutes + 10.0)
+            norm_gpm = min(1.5, smooth_gpm / 500.0)
+
+            # Action intensity / aggression (kills + deaths per minute)
+            aggression = (kills + deaths + 1.0) / (minutes + 2.0)
+            norm_aggression = min(1.5, aggression)
+
+            return base_priors + [float(norm_kda), float(norm_cspm), float(norm_gpm), float(norm_aggression)]
+
+        return base_priors
 
     @staticmethod
-    def get_default_priors() -> list[float]:
+    def get_default_priors(extended: bool = False) -> list[float]:
         """Return neutral Bayesian priors for unknown players or cold starts."""
-        # [smooth_wr=0.5, smooth_cwr=0.5, champ_exp=0.0, rec_wr=0.5, role_fam=0.2, tot_exp=0.0]
-        return [0.50, 0.50, 0.0, 0.50, 0.20, 0.0]
+        base = [0.50, 0.50, 0.0, 0.50, 0.20, 0.0]
+        if extended:
+            return base + [0.50, 0.60, 0.70, 0.35]
+        return base
 
-    def update(self, puuid: str | None, champion: str | None, role: str | None, win: int) -> None:
+    def update(
+        self,
+        puuid: str | None,
+        champion: str | None,
+        role: str | None,
+        win: int,
+        kills: int = 0,
+        deaths: int = 0,
+        assists: int = 0,
+        total_cs: int = 0,
+        gold_earned: int = 0,
+        game_duration: int = 0,
+    ) -> None:
         """Update tracker state after a match concludes."""
         if not puuid:
             return
@@ -100,6 +156,13 @@ class PlayerPriorsTracker:
         tot = self.player_totals[puuid]
         tot["games"] += 1
         tot["wins"] += w
+        tot["kills"] += int(kills)
+        tot["deaths"] += int(deaths)
+        tot["assists"] += int(assists)
+        tot["cs"] += int(total_cs)
+        tot["gold"] += int(gold_earned)
+        duration_min = max(5.0, min(60.0, float(game_duration) / 60.0)) if game_duration > 0 else 25.0
+        tot["minutes"] += duration_min
 
         clean_champ = str(champion or "").strip()
         if clean_champ:

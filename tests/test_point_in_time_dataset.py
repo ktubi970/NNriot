@@ -77,7 +77,7 @@ def test_load_enriched_records_streaming_and_leak_free(tmp_path):
     assert len(feat["team_a"]) == 5
     p0 = feat["team_a"][0]
     assert "priors" in p0
-    assert len(p0["priors"]) == 6
+    assert len(p0["priors"]) >= 6
     # In match 3, player_a_0 already won match 1 and match 2
     # So their smoothed winrate should be strictly > 0.50
     assert p0["priors"][0] > 0.50

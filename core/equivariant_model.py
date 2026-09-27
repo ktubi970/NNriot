@@ -25,18 +25,22 @@ class ThreeClassEquivariantSoftmax(tf.keras.layers.Layer):
 
 
 def build_equivariant_deepsets_model(
-    player_feature_dim: int = 8,
+    player_feature_dim: int = 14,
+    macro_feature_dim: int = 15,
     embed_dim: int = 32,
     latent_dim: int = 64,
     dropout_rate: float = 0.15,
     l2_reg: float = 1e-4,
     learning_rate: float = 0.0008,
+    use_cross_attention: bool = False,
+    include_macro_clash: bool = False,
 ) -> tf.keras.Model:
     """Build the equivariant Siamese DeepSets multi-task model.
     
     Inputs:
         {"team_a": Input(shape=(5, player_feature_dim)),
          "team_b": Input(shape=(5, player_feature_dim))}
+        and optionally "macro_clash": Input(shape=(macro_feature_dim,))
          
     Outputs:
         Dictionary of 22 named head tensors matching ALL_LABEL_KEYS.
@@ -44,14 +48,23 @@ def build_equivariant_deepsets_model(
     input_a = tf.keras.Input(shape=(5, player_feature_dim), name="team_a")
     input_b = tf.keras.Input(shape=(5, player_feature_dim), name="team_b")
 
+    if include_macro_clash and macro_feature_dim > 0:
+        input_macro = tf.keras.Input(shape=(macro_feature_dim,), name="macro_clash")
+        inputs = {"team_a": input_a, "team_b": input_b, "macro_clash": input_macro}
+        encoder_inputs = (input_a, input_b, input_macro)
+    else:
+        inputs = {"team_a": input_a, "team_b": input_b}
+        encoder_inputs = (input_a, input_b)
+
     encoder = SiameseTeamEncoder(
         embed_dim=embed_dim,
         latent_dim=latent_dim,
         dropout_rate=dropout_rate,
         l2_reg=l2_reg,
+        use_cross_attention=use_cross_attention,
         name="siamese_team_encoder",
     )
-    t_diff, t_sum, t_a, t_b = encoder((input_a, input_b))
+    t_diff, t_sum, t_a, t_b = encoder(encoder_inputs)
 
     reg = tf.keras.regularizers.l2(l2_reg) if l2_reg > 0 else None
     drop = tf.keras.layers.Dropout(dropout_rate, name="head_dropout") if dropout_rate > 0 else None
@@ -102,7 +115,7 @@ def build_equivariant_deepsets_model(
 
         outputs[name] = ThreeClassEquivariantSoftmax(name=name)([l_a, l_b, l_neither])
 
-    model = tf.keras.Model(inputs={"team_a": input_a, "team_b": input_b}, outputs=outputs, name="NNriot_EquivariantDeepSets")
+    model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_EquivariantDeepSets")
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),

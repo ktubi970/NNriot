@@ -43,6 +43,7 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         dropout_rate: float = 0.0,
         l2_reg: float = 1e-4,
         num_champions: int = NUM_CHAMPIONS,
+        use_cross_attention: bool = False,
         **kwargs,
     ) -> None:
         super().__init__(**kwargs)
@@ -54,6 +55,7 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         self.dropout_rate = float(dropout_rate)
         self.l2_reg = float(l2_reg)
         self.num_champions = int(num_champions)
+        self.use_cross_attention = bool(use_cross_attention)
 
         reg = tf.keras.regularizers.l2(self.l2_reg) if self.l2_reg > 0 else None
 
@@ -89,10 +91,26 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
             self.lane_proj_dim, use_bias=True, activation="relu", kernel_regularizer=reg, name="lane_sum_proj"
         )
 
+        # 6. Anti-symmetric Cross-Lane Attention
+        if self.use_cross_attention:
+            self.cross_attn = tf.keras.layers.MultiHeadAttention(
+                num_heads=2, key_dim=max(8, self.embed_dim // 2), name="cross_lane_attn"
+            )
+
     def build(self, input_shape: Any) -> None:
         self.champ_embed.build((None, 5))
         self.role_embed.build((None, 5))
-        in_dim = self.champ_embed_dim + self.role_embed_dim + 6
+
+        # Dynamic continuous features dimension (total features - champ_id - role_id)
+        cont_dim = 12
+        if input_shape and isinstance(input_shape, (tuple, list)) and len(input_shape) >= 1:
+            first = input_shape[0]
+            if hasattr(first, "shape"):
+                first = first.shape
+            if isinstance(first, (tuple, list)) and len(first) >= 3 and first[-1] is not None:
+                cont_dim = int(first[-1]) - 2
+
+        in_dim = self.champ_embed_dim + self.role_embed_dim + cont_dim
         self.phi1.build((None, 5, in_dim))
         self.phi2.build((None, 5, self.embed_dim))
         self.rho1.build((None, self.embed_dim))
@@ -100,33 +118,39 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         self.synergy_proj.build((None, self.champ_embed_dim))
         self.lane_diff_proj.build((None, 5, self.embed_dim))
         self.lane_sum_proj.build((None, 5, self.embed_dim))
+        if self.use_cross_attention:
+            self.cross_attn.build((None, 5, self.embed_dim), (None, 5, self.embed_dim))
         super().build(input_shape)
 
     def call(
         self,
-        inputs: tuple[tf.Tensor, tf.Tensor] | list[tf.Tensor],
+        inputs: tuple[tf.Tensor, ...] | list[tf.Tensor] | dict[str, tf.Tensor],
         training: bool | None = None,
     ) -> tuple[tf.Tensor, tf.Tensor, tf.Tensor, tf.Tensor]:
-        if not isinstance(inputs, (tuple, list)) or len(inputs) != 2:
-            raise ValueError(f"SiameseTeamEncoder expects a 2-tuple of (team_a, team_b), got {inputs}")
-
-        team_a, team_b = inputs[0], inputs[1]
+        if isinstance(inputs, dict):
+            team_a = inputs["team_a"]
+            team_b = inputs["team_b"]
+            macro_clash = inputs.get("macro_clash", None)
+        elif isinstance(inputs, (tuple, list)) and len(inputs) in (2, 3):
+            team_a = inputs[0]
+            team_b = inputs[1]
+            macro_clash = inputs[2] if len(inputs) == 3 else None
+        else:
+            raise ValueError(f"SiameseTeamEncoder expects (team_a, team_b) or (team_a, team_b, macro_clash), got {inputs}")
 
         def _process_team(team: tf.Tensor):
-            # Sort players into canonical role order [0..4] (TOP, JNG, MID, BOT, SUP)
-            # so lane matchups are role-aligned and within-team permutations are strictly invariant
             role_indices = tf.clip_by_value(tf.cast(tf.round(team[:, :, 1]), tf.int32), 0, 4)
             order = tf.argsort(role_indices, axis=1)
             ordered_team = tf.gather(team, order, batch_dims=1)
 
             c_ids = tf.clip_by_value(tf.cast(tf.round(ordered_team[:, :, 0]), tf.int32), 0, self.num_champions - 1)
             r_ids = tf.clip_by_value(tf.cast(tf.round(ordered_team[:, :, 1]), tf.int32), 0, 4)
-            priors = ordered_team[:, :, 2:]
+            continuous_features = ordered_team[:, :, 2:]
 
             e_champ = self.champ_embed(c_ids)  # (batch, 5, champ_embed_dim)
             e_role = self.role_embed(r_ids)    # (batch, 5, role_embed_dim)
 
-            entity_in = tf.concat([e_champ, e_role, priors], axis=-1)
+            entity_in = tf.concat([e_champ, e_role, continuous_features], axis=-1)
             h = self.phi2(self.phi1(entity_in))  # (batch, 5, embed_dim)
 
             if self.dropout is not None:
@@ -148,7 +172,6 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         h_b, t_b_pool, syn_b = _process_team(team_b)
 
         # 1. Lane matchup differences (Team B - Team A for each lane 0..4)
-        # Using a shared linear projection with NO BIAS to preserve strict anti-symmetry
         lane_diff = h_b - h_a  # (batch, 5, embed_dim)
         lane_diff_proj = self.lane_diff_proj(lane_diff)  # (batch, 5, lane_proj_dim)
         lane_diff_flat = tf.reshape(lane_diff_proj, [-1, 5 * self.lane_proj_dim])
@@ -164,13 +187,28 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
         pool_sum = t_a_pool + t_b_pool
         syn_sum = syn_a + syn_b
 
-        # 3. Strictly anti-symmetric combined difference: T_diff(B, A) == -T_diff(A, B)
-        t_diff = tf.concat([pool_diff, syn_diff, lane_diff_flat], axis=-1, name="t_diff")
+        # 3. Assemble Anti-Symmetric differences and Symmetric sums
+        diff_components = [pool_diff, syn_diff, lane_diff_flat]
+        sum_components = [pool_sum, syn_sum, lane_sum_flat]
 
-        # 4. Strictly symmetric combined sum: T_sum(B, A) == T_sum(A, B)
-        t_sum = tf.concat([pool_sum, syn_sum, lane_sum_flat], axis=-1, name="t_sum")
+        if macro_clash is not None:
+            # Macro clash is strictly anti-symmetric: clash(B, A) == -clash(A, B)
+            diff_components.append(macro_clash)
 
-        # 5. Team representations
+        if self.use_cross_attention:
+            attn_b_to_a = self.cross_attn(h_b, h_a)
+            attn_a_to_b = self.cross_attn(h_a, h_b)
+            attn_diff = attn_b_to_a - attn_a_to_b
+            attn_sum = attn_b_to_a + attn_a_to_b
+            attn_diff_flat = tf.reshape(attn_diff, [-1, 5 * self.embed_dim])
+            attn_sum_flat = tf.reshape(attn_sum, [-1, 5 * self.embed_dim])
+            diff_components.append(attn_diff_flat)
+            sum_components.append(attn_sum_flat)
+
+        t_diff = tf.concat(diff_components, axis=-1, name="t_diff")
+        t_sum = tf.concat(sum_components, axis=-1, name="t_sum")
+
+        # 4. Team representations
         t_a = tf.concat([t_a_pool, syn_a], axis=-1, name="t_a")
         t_b = tf.concat([t_b_pool, syn_b], axis=-1, name="t_b")
 
@@ -178,6 +216,9 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
 
     def get_config(self) -> dict:
         config = super().get_config()
+        config.update({
+            "use_cross_attention": self.use_cross_attention,
+        })
         config.update({
             "embed_dim": self.embed_dim,
             "latent_dim": self.latent_dim,

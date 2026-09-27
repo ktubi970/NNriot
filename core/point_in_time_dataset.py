@@ -74,8 +74,13 @@ def load_enriched_records(
         logger.info("Found %d candidate matches for enriched streaming (target=%d, warmup=%d)",
                     len(candidates), limit, warmup_matches)
 
+        # Check available columns in match_participants
+        part_cols = [c[1] for c in conn.execute("PRAGMA table_info(match_participants)").fetchall()]
+        has_combat = "kills" in part_cols
+        cols_str = "rowid, match_id, puuid, champion_name, team_position, win, kills, deaths, assists, total_cs, gold_earned, game_duration" if has_combat else "rowid, match_id, puuid, champion_name, team_position, win"
+
         # 2. Batch pre-fetch participants in chunks to optimize SQLite throughput
-        logger.info("Batch pre-fetching participants for %d matches...", len(candidates))
+        logger.info("Batch pre-fetching participants for %d matches (has_combat=%s)...", len(candidates), has_combat)
         parts_by_match: dict[str, list[Any]] = {}
         chunk_size = 2000
         candidate_mids = [row["match_id"] for row in candidates]
@@ -84,7 +89,7 @@ def load_enriched_records(
             ph = ",".join("?" for _ in chunk)
             p_cursor = conn.execute(
                 f"""
-                SELECT rowid, match_id, puuid, champion_name, team_position, win
+                SELECT {cols_str}
                 FROM match_participants
                 WHERE match_id IN ({ph})
                 ORDER BY rowid ASC
@@ -119,7 +124,7 @@ def load_enriched_records(
                 puuid = p["puuid"]
                 champ = p["champion_name"]
                 pos = p["team_position"]
-                priors = tracker.get_player_priors(puuid, champ, pos)
+                priors = tracker.get_player_priors(puuid, champ, pos, extended=True)
                 team_a_clean.append({
                     "puuid": puuid,
                     "champion": champ,
@@ -132,7 +137,7 @@ def load_enriched_records(
                 puuid = p["puuid"]
                 champ = p["champion_name"]
                 pos = p["team_position"]
-                priors = tracker.get_player_priors(puuid, champ, pos)
+                priors = tracker.get_player_priors(puuid, champ, pos, extended=True)
                 team_b_clean.append({
                     "puuid": puuid,
                     "champion": champ,
@@ -142,7 +147,18 @@ def load_enriched_records(
 
             # 2. Update tracker state AFTER feature extraction
             for p in parts:
-                tracker.update(p["puuid"], p["champion_name"], p["team_position"], p["win"])
+                tracker.update(
+                    puuid=p["puuid"],
+                    champion=p["champion_name"],
+                    role=p["team_position"],
+                    win=p["win"],
+                    kills=(p["kills"] or 0) if has_combat else 0,
+                    deaths=(p["deaths"] or 0) if has_combat else 0,
+                    assists=(p["assists"] or 0) if has_combat else 0,
+                    total_cs=(p["total_cs"] or 0) if has_combat else 0,
+                    gold_earned=(p["gold_earned"] or 0) if has_combat else 0,
+                    game_duration=(p["game_duration"] or 0) if has_combat else 0,
+                )
 
             match_count += 1
             if match_count <= warmup_matches:

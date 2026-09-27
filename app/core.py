@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 import threading
 import logging
 
@@ -113,6 +114,20 @@ def _format_multi_output_response(preds: dict) -> dict:
     return response
 
 def final_predict_match_outcome(match_data: dict) -> dict:
+    # 1. Check if a modern candidate/active model is available via PredictionService Facade
+    try:
+        from core import config
+        from core.prediction_service import get_prediction_service
+        chk_path = config.get_checkpoint_path(require_exists=False)
+        if chk_path and Path(chk_path).exists():
+            service = get_prediction_service(checkpoint_path=chk_path)
+            if service.is_ready():
+                feature_dict = to_pre_match_features(match_data)
+                return service.predict_match(feature_dict)
+    except Exception as e:
+        logger.warning("PredictionService attempt encountered error, falling back to legacy trainer: %s", e)
+
+    # 2. Legacy trainer fallback
     if global_trainer is None:
         if trainer_loading:
             return {"error": "TensorFlow model is still loading... Please wait a minute and try again."}

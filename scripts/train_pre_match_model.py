@@ -186,10 +186,13 @@ def train_model(
         else:
             feature_version = "deepsets"
 
-    if feature_version not in ("v1_hasher", "v2_draft", "v3_enriched", "deepsets"):
-        raise ValueError(f"feature_version must be 'v1_hasher', 'v2_draft', 'v3_enriched', or 'deepsets', got {feature_version!r}")
+    if feature_version not in ("v1_hasher", "v2_draft", "v3_enriched", "deepsets", "deepsets_v2"):
+        raise ValueError(f"feature_version must be 'v1_hasher', 'v2_draft', 'v3_enriched', 'deepsets', or 'deepsets_v2', got {feature_version!r}")
     if dim is None:
-        if feature_version == "deepsets":
+        if feature_version == "deepsets_v2":
+            from core.features.pipeline import ENRICHED_PLAYER_TENSOR_DIM
+            dim = ENRICHED_PLAYER_TENSOR_DIM
+        elif feature_version == "deepsets":
             from core.deepsets_dataset import PLAYER_TENSOR_DIM
             dim = PLAYER_TENSOR_DIM
         elif feature_version == "v3_enriched":
@@ -252,10 +255,23 @@ def train_model(
     output.parent.mkdir(parents=True, exist_ok=True)
     _write_json(manifest_path, manifest)
 
-    if feature_version == "deepsets":
-        from core.deepsets_dataset import batch_extract_team_tensors
-        x = {name: batch_extract_team_tensors([_get_feat(r) for r in rows])
-             for name, rows in splits.items()}
+    if feature_version in ("deepsets", "deepsets_v2"):
+        if feature_version == "deepsets_v2" or dim == 14:
+            from core.features.matchup_matrix import LaneMatchupTracker
+            from core.features.pipeline import DraftFeaturePipeline
+            logger.info("Fitting point-in-time LaneMatchupTracker on train split (%d games)...", len(splits["train"]))
+            matchup_tracker = LaneMatchupTracker()
+            for r in splits["train"]:
+                fj = _get_feat(r)
+                w = r["labels_json"]["winner"]
+                matchup_tracker.update_match(fj.get("team_a") or [], fj.get("team_b") or [], winner=w)
+            pipeline = DraftFeaturePipeline(matchup_tracker=matchup_tracker)
+            x = {name: pipeline.batch_extract_tensors([_get_feat(r) for r in rows])
+                 for name, rows in splits.items()}
+        else:
+            from core.deepsets_dataset import batch_extract_team_tensors
+            x = {name: batch_extract_team_tensors([_get_feat(r) for r in rows])
+                 for name, rows in splits.items()}
     elif feature_version == "v3_enriched":
         from core.enriched_features import batch_extract_enriched_features
         x = {name: batch_extract_enriched_features([_get_feat(r) for r in rows], mode="dense")
@@ -278,9 +294,10 @@ def train_model(
     from core.training_utils import _build_targets, sparse_microbatch_generator
 
     tf.keras.utils.set_random_seed(seed)
-    if feature_version == "deepsets" or architecture == "deepsets":
+    if feature_version in ("deepsets", "deepsets_v2") or architecture in ("deepsets", "deepsets_v2"):
         from core.equivariant_model import build_equivariant_deepsets_model
-        model = build_equivariant_deepsets_model(player_feature_dim=dim)
+        use_attn = True if (feature_version == "deepsets_v2" or dim == 14) else False
+        model = build_equivariant_deepsets_model(player_feature_dim=dim, use_cross_attention=use_attn)
     elif feature_version == "v3_enriched":
         model = build_enriched_model(input_dim=dim)
     elif feature_version == "v2_draft":
@@ -294,11 +311,11 @@ def train_model(
     selected_epoch = None
     history = []
     started = time.monotonic()
-    loss_fns = {k: tf.keras.losses.get(LOSS_PER_HEAD[k]) for k in LOSS_PER_HEAD} if (feature_version == "deepsets" and use_pcgrad) else None
+    loss_fns = {k: tf.keras.losses.get(LOSS_PER_HEAD[k]) for k in LOSS_PER_HEAD} if (feature_version in ("deepsets", "deepsets_v2") and use_pcgrad) else None
     for epoch in range(1, epochs + 1):
         total_loss = 0.0
         seen = 0
-        if feature_version == "deepsets":
+        if feature_version in ("deepsets", "deepsets_v2"):
             from core.pcgrad import pcgrad_step
             n_train = len(x["train"]["team_a"])
             for start in range(0, n_train, batch_size):
@@ -457,8 +474,8 @@ def main(argv=None):
     parser.add_argument("--split-manifest", help="Path to frozen split manifest JSON to replay")
     parser.add_argument("--calibrate", action="store_true", help="Fit temperature scaling calibration for winner head")
     parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets"], default="deepsets",
-                        help="Feature extraction version: v1_hasher, v2_draft, v3_enriched, or deepsets (equivariant DeepSets)")
+    parser.add_argument("--feature-version", choices=["v1_hasher", "v2_draft", "v3_enriched", "deepsets", "deepsets_v2"], default="deepsets",
+                        help="Feature extraction version: v1_hasher, v2_draft, v3_enriched, deepsets, or deepsets_v2 (14-dim + cross-attention)")
     parser.add_argument("--architecture", choices=["auto", "mlp", "deepsets"], default="auto")
     parser.add_argument("--no-pcgrad", action="store_true", help="Disable PCGrad gradient deconfliction")
     args = parser.parse_args(argv)
@@ -485,7 +502,7 @@ def main(argv=None):
                         use_pcgrad=not args.no_pcgrad)
         else:
             strategy = args.split_strategy or "chronological"
-            if args.feature_version in ("v3_enriched", "deepsets"):
+            if args.feature_version in ("v3_enriched", "deepsets", "deepsets_v2"):
                 from core.point_in_time_dataset import load_enriched_records
                 warmup = min(3000, max(500, args.samples // 3))
                 records = load_enriched_records(db_path=args.db, limit=args.samples, warmup_matches=warmup)

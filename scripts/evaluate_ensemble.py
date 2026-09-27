@@ -20,6 +20,8 @@ from core.experiment import read_manifest, restore_splits
 from core.point_in_time_dataset import load_enriched_records
 from core.deepsets_dataset import batch_extract_team_tensors
 from core.enriched_features import batch_extract_enriched_features
+from core.features.pipeline import DraftFeaturePipeline
+from core.features.matchup_matrix import LaneMatchupTracker
 from core.calibration import apply_temperature_to_probabilities, load_calibration_artifact
 from core.training_metrics import evaluate_winner
 
@@ -40,12 +42,38 @@ def evaluate_ensemble(
         raise FileNotFoundError(f"Manifest not found: {manifest_path}")
 
     manifest = read_manifest(manifest_path)
-    logger.info("Loading records from %s to match split manifest...", db_path)
-    warmup = min(3000, max(500, samples // 3))
-    records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
-    splits = restore_splits(records, manifest)
+    total_split_samples = sum(len(v) for v in manifest["splits"].values())
+    effective_samples = max(samples, total_split_samples)
+    cache_path = checkpoint.parent / f"splits_cache_{effective_samples}.pkl"
+    if cache_path.exists():
+        logger.info("Loading cached splits from %s...", cache_path)
+        import pickle
+        with open(cache_path, "rb") as f:
+            splits = pickle.load(f)
+    else:
+        warmup = min(3000, max(500, effective_samples // 3))
+        logger.info("Loading %d records (warmup=%d) from %s to match split manifest...", effective_samples, warmup, db_path)
+        records = load_enriched_records(db_path=db_path, limit=effective_samples, warmup_matches=warmup)
+        splits = restore_splits(records, manifest)
+        try:
+            import pickle
+            with open(cache_path, "wb") as f:
+                pickle.dump(splits, f, protocol=pickle.HIGHEST_PROTOCOL)
+            logger.info("Cached splits to %s", cache_path)
+        except Exception as e:
+            logger.warning("Could not cache splits: %s", e)
     
     logger.info("Restored splits: %s", {k: len(v) for k, v in splits.items()})
+
+    # Train empirical matchup tracker on train split strictly
+    logger.info("Building point-in-time lane matchup tracker from train split (%d games)...", len(splits["train"]))
+    matchup_tracker = LaneMatchupTracker()
+    for r in splits["train"]:
+        fj = r["feature_json"]
+        w = r["labels_json"]["winner"]
+        matchup_tracker.update_match(fj.get("team_a") or [], fj.get("team_b") or [], winner=w)
+
+    pipeline = DraftFeaturePipeline(matchup_tracker=matchup_tracker)
 
     # 1. Evaluate Equivariant DeepSets Neural Model
     logger.info("Evaluating Equivariant DeepSets model from %s...", checkpoint)
@@ -55,8 +83,22 @@ def evaluate_ensemble(
         "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
     }
     model = tf.keras.models.load_model(checkpoint, custom_objects=custom_objects)
-    x_nn = {name: batch_extract_team_tensors([r["feature_json"] for r in rows])
-            for name, rows in splits.items()}
+    
+    in_dim = 8
+    try:
+        in_dim = int(model.inputs[0].shape[-1])
+    except Exception:
+        pass
+
+    if in_dim == 14:
+        logger.info("Detected 14-dim player tensor model; extracting enriched tensors...")
+        x_nn = {name: pipeline.batch_extract_tensors([r["feature_json"] for r in rows])
+                for name, rows in splits.items()}
+    else:
+        logger.info("Detected %d-dim player tensor model; extracting legacy tensors...", in_dim)
+        x_nn = {name: batch_extract_team_tensors([r["feature_json"] for r in rows])
+                for name, rows in splits.items()}
+
     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
          for name, rows in splits.items()}
     train_rate = float(y["train"].mean())
@@ -78,9 +120,9 @@ def evaluate_ensemble(
     else:
         nn_probs = nn_raw_probs
 
-    # 2. Train and Symmetrize Tree Models on Tabular Enriched Features
-    logger.info("Extracting tabular enriched features for Tree Models...")
-    x_tab = {name: batch_extract_enriched_features([r["feature_json"] for r in rows], mode="tabular")
+    # 2. Train and Symmetrize Tree Models on Tabular Enriched Domain Features
+    logger.info("Extracting tabular domain features (232-dim) for Tree Models...")
+    x_tab = {name: pipeline.batch_extract_tabular([r["feature_json"] for r in rows])
              for name, rows in splits.items()}
 
     # Data augmentation: Team swap symmetrization (doubles training size and forces exact anti-symmetry)
@@ -89,7 +131,7 @@ def evaluate_ensemble(
         {"team_a": r["feature_json"]["team_b"], "team_b": r["feature_json"]["team_a"]}
         for r in splits["train"]
     ]
-    x_tab_train_swapped = batch_extract_enriched_features(swapped_train_features, mode="tabular")
+    x_tab_train_swapped = pipeline.batch_extract_tabular(swapped_train_features)
     x_tab_aug = np.concatenate([x_tab["train"], x_tab_train_swapped], axis=0)
     y_aug = np.concatenate([y["train"], 1 - y["train"]], axis=0)
 
@@ -100,7 +142,7 @@ def evaluate_ensemble(
             {"team_a": r["feature_json"]["team_b"], "team_b": r["feature_json"]["team_a"]}
             for r in splits[split_name]
         ]
-        x_swap = batch_extract_enriched_features(swapped_feats, mode="tabular")
+        x_swap = pipeline.batch_extract_tabular(swapped_feats)
         p2 = model.predict_proba(x_swap)[:, 1]
         return 0.5 * (p1 + (1.0 - p2))
 
