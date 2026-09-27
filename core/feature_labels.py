@@ -220,6 +220,20 @@ TIMELINE_LABEL_KEYS = [f"first_to_{n}_kills" for n in TIMELINE_KILL_THRESHOLDS]
 # by the trainer when absent from a record's labels_json).
 ALL_LABEL_KEYS = LABEL_KEYS + TIMELINE_LABEL_KEYS
 
+# ---------------------------------------------------------------------------
+# Pruned Core Labels (7 high-signal heads, pruning out noise & sparse targets)
+# ---------------------------------------------------------------------------
+PRUNED_LABEL_KEYS: tuple[str, ...] = (
+    "winner",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "first_blood",
+    "total_kills",
+    "team_a_kills",
+    "team_b_kills",
+)
+
+
 
 def extract_timeline_labels(timeline_data: dict) -> dict | None:
     """

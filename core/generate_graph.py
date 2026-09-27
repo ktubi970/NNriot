@@ -13,6 +13,114 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 
 
+from core.feature_labels import ALL_LABEL_KEYS, PRUNED_LABEL_KEYS
+
+# Re-export PRUNED_LABEL_KEYS for generate_graph consumers
+__all__ = [
+    "LOSS_PER_HEAD",
+    "LOSS_WEIGHTS",
+    "METRICS_PER_HEAD",
+    "PRUNED_LABEL_KEYS",
+    "PRUNED_LOSS_PER_HEAD",
+    "PRUNED_LOSS_WEIGHTS",
+    "PRUNED_METRICS_PER_HEAD",
+    "HomoscedasticLossLayer",
+    "build_keras_model",
+    "build_multi_output_model",
+    "build_draft_dense_model",
+    "build_enriched_model",
+    "build_draft_multi_output_model",
+]
+
+# Pruned core 7 heads loss function mappings
+PRUNED_LOSS_PER_HEAD: dict[str, str] = {
+    "winner":               "categorical_crossentropy",
+    "team_b_kill_lead":     "categorical_crossentropy",
+    "kill_handicap":        "mse",
+    "first_blood":          "categorical_crossentropy",
+    "total_kills":          "mse",
+    "team_a_kills":         "mse",
+    "team_b_kills":         "mse",
+}
+
+# Pruned core 7 heads baseline loss weights
+PRUNED_LOSS_WEIGHTS: dict[str, float] = {
+    "winner":            1.0,
+    "team_b_kill_lead":  1.0,
+    "kill_handicap":     1.0,
+    "first_blood":       0.7,
+    "total_kills":       1.0,
+    "team_a_kills":      1.0,
+    "team_b_kills":      1.0,
+}
+
+# Pruned core 7 heads metrics
+PRUNED_METRICS_PER_HEAD: dict[str, list[str]] = {
+    "winner":               ["accuracy"],
+    "team_b_kill_lead":     ["accuracy"],
+    "kill_handicap":        ["mae"],
+    "first_blood":          ["accuracy"],
+    "total_kills":          ["mae"],
+    "team_a_kills":         ["mae"],
+    "team_b_kills":         ["mae"],
+}
+
+
+@tf.keras.utils.register_keras_serializable(package="nnriot")
+class HomoscedasticLossLayer(tf.keras.layers.Layer):
+    """Learned homoscedastic uncertainty weighting for multi-task losses (Kendall et al. CVPR 2018).
+
+    L = sum_t ( exp(-s_t) * L_t + 0.5 * s_t ) where s_t = log(sigma_t^2).
+    """
+
+    def __init__(self, task_names: list[str] | tuple[str, ...], **kwargs):
+        super().__init__(**kwargs)
+        self.task_names = [str(name) for name in task_names]
+        self.build(None)
+
+    def build(self, input_shape=None):
+        if not hasattr(self, "log_vars") or self.log_vars is None:
+            self.log_vars = self.add_weight(
+                name="log_vars",
+                shape=(len(self.task_names),),
+                initializer=tf.keras.initializers.Zeros(),
+                trainable=True,
+                dtype=tf.float32,
+            )
+        super().build(input_shape)
+
+    def call(self, task_losses: dict[str, tf.Tensor] | list[tf.Tensor] | tuple[tf.Tensor, ...]) -> tf.Tensor:
+        total = tf.constant(0.0, dtype=tf.float32)
+        if isinstance(task_losses, dict):
+            for idx, name in enumerate(self.task_names):
+                loss_t = tf.cast(task_losses[name], tf.float32)
+                loss_t = tf.reduce_mean(loss_t)
+                s_t = self.log_vars[idx]
+                precision = tf.exp(-s_t)
+                total = total + precision * loss_t + 0.5 * s_t
+        else:
+            for idx, loss_t in enumerate(task_losses):
+                loss_t = tf.cast(loss_t, tf.float32)
+                loss_t = tf.reduce_mean(loss_t)
+                s_t = self.log_vars[idx]
+                precision = tf.exp(-s_t)
+                total = total + precision * loss_t + 0.5 * s_t
+        return total
+
+    @property
+    def loss_weights(self) -> dict[str, float]:
+        """Return mapping of task name -> current precision weight exp(-s_t)."""
+        if hasattr(self, "log_vars") and self.log_vars is not None:
+            weights = tf.exp(-self.log_vars).numpy()
+            return dict(zip(self.task_names, (float(w) for w in weights)))
+        return {name: 1.0 for name in self.task_names}
+
+    def get_config(self) -> dict:
+        config = super().get_config()
+        config["task_names"] = list(self.task_names)
+        return config
+
+
 # Output head name -> loss function (Keras strings).
 # Keys must match feature_labels.ALL_LABEL_KEYS exactly (22 heads = 18 original
 # + 4 timeline first_to_N_kills).
