@@ -213,3 +213,16 @@ def test_selective_metrics_integrated_into_calibration_diagnostics():
     # Verify constant baseline skips selective metrics
     assert "selective_metrics" not in report["baseline"]["diagnostics"]
 
+
+
+def test_selective_diagnostics_use_served_boundary_selection():
+    """The training report must count boundary matches exactly as serving does."""
+    diagnostics = compute_calibration_diagnostics(
+        [0, 0, 0, 1, 1, 0], [0.46, 0.54, 0.42, 0.58, 0.49, 0.51],
+    )
+    metrics = diagnostics["selective_metrics"]
+    assert metrics["conviction_ge_4pct"]["count"] == 4
+    assert metrics["conviction_ge_4pct"]["coverage"] == pytest.approx(2 / 3)
+    assert metrics["conviction_ge_4pct"]["accuracy"] == 0.75
+    assert metrics["conviction_ge_8pct"]["count"] == 2
+    assert metrics["conviction_ge_8pct"]["accuracy"] == 1.0

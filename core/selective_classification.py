@@ -49,7 +49,30 @@ def compute_conviction(probabilities: np.ndarray | Sequence[float] | float) -> n
     if np.any((prob_arr < -1e-5) | (prob_arr > 1.0 + 1e-5)):
         raise ValueError("Probabilities must be within [0, 1]")
     prob_arr = np.clip(prob_arr, 0.0, 1.0)
-    return np.abs(prob_arr - 0.5)
+    # Canonicalize the favored side before subtraction. Although abs(p - .5)
+    # is algebraically identical, its last bit can differ for p and 1-p and
+    # change a decision at a decimal rounding boundary.
+    return np.maximum(prob_arr, 1.0 - prob_arr) - 0.5
+
+
+def conviction_at_least(
+    conviction: np.ndarray | Sequence[float] | float,
+    threshold: float,
+) -> np.ndarray | np.bool_:
+    """Apply the shared inclusive selection rule to canonical conviction.
+
+    Use compute_conviction first. Decisions use the serving precision of six
+    decimal places and the existing 1e-9 threshold tolerance. Python's round
+    is intentional: NumPy rounding can differ at half-unit boundaries.
+    The input score is not modified or used to recalibrate probabilities.
+    """
+    values = np.asarray(conviction, dtype=float)
+    rounded = np.fromiter(
+        (round(float(value), 6) for value in values.flat),
+        dtype=float,
+        count=values.size,
+    ).reshape(values.shape)
+    return rounded >= threshold - 1e-9
 
 
 def wilson_score_interval(
@@ -103,7 +126,8 @@ def evaluate_selective_coverage(
 ) -> Dict[str, Any]:
     """Evaluate accuracy, coverage, and Wilson bounds at a conviction threshold.
 
-    Retains predictions where conviction C = |y_prob - 0.5| >= threshold.
+    Retains predictions using the same rounded conviction and inclusive
+    threshold tolerance as serving (see conviction_at_least).
     Predictions are made via (y_prob >= 0.5).
 
     Args:
@@ -143,7 +167,7 @@ def evaluate_selective_coverage(
         }
 
     conviction = compute_conviction(y_prob_arr)
-    retained_mask = conviction >= threshold
+    retained_mask = conviction_at_least(conviction, threshold)
     retained_count = int(np.sum(retained_mask))
 
     if retained_count == 0:

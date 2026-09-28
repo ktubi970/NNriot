@@ -264,3 +264,59 @@ def test_selective_coverage_python_lists():
     assert res["count"] == 3
     assert res["coverage"] == 1.0
 
+
+
+@pytest.mark.parametrize(("probability", "threshold", "retained"), [
+    (0.46, 0.04, 1),
+    (0.54, 0.04, 1),
+    (0.42, 0.08, 1),
+    (0.58, 0.08, 1),
+    (0.5399996, 0.04, 1),
+    (0.5399994, 0.04, 0),
+    (0.4600005, 0.04, 0),
+    (0.5399995, 0.04, 0),
+    (0.5799996, 0.08, 1),
+    (0.5799994, 0.08, 0),
+    (0.475, 0.025, 1),
+    (0.525, 0.025, 1),
+    (0.5000004, 0.000001, 0),
+    (0.5000006, 0.000001, 1),
+])
+def test_selective_boundaries_match_serving_and_team_swap(probability, threshold, retained):
+    """Metrics must evaluate the same selection rule that serves each match."""
+    from core.selective_infer import classify_match_conviction
+
+    label = int(probability > 0.5)
+    for p, y in [(probability, label), (1.0 - probability, 1 - label)]:
+        result = evaluate_selective_coverage([y], [p], threshold=threshold)
+        serving = classify_match_conviction(p, action_threshold=threshold, high_threshold=threshold)
+        assert result["count"] == retained
+        assert result["coverage"] == float(retained)
+        assert result["accuracy"] == float(retained)
+        assert serving.is_actionable is bool(retained)
+        assert (serving.prediction != "abstain") is bool(retained)
+
+
+def test_selective_boundary_metrics_include_both_teams():
+    """Both sides of each boundary contribute to counts and Wilson intervals."""
+    probabilities = np.array([0.46, 0.54, 0.42, 0.58, 0.49, 0.51])
+    labels = np.array([0, 0, 0, 1, 1, 0])
+    for p, y in [(probabilities, labels), (1.0 - probabilities, 1 - labels)]:
+        result = evaluate_selective_coverage(y, p, threshold=0.04)
+        assert result["count"] == 4
+        assert result["coverage"] == pytest.approx(2 / 3)
+        assert result["accuracy"] == 0.75
+        assert result["wilson_lower"] == pytest.approx(0.300641842582402)
+        assert result["wilson_upper"] == pytest.approx(0.954412739190300)
+
+
+def test_threshold_search_uses_served_boundary_selection():
+    """An explicit boundary candidate is assessed using its served coverage."""
+    result = find_threshold_for_accuracy(
+        [0, 1], [0.46, 0.54], target_accuracy=1.0, min_coverage=1.0,
+        candidate_thresholds=[0.04],
+    )
+    assert result["target_met"] is True
+    assert result["threshold"] == 0.04
+    assert result["count"] == 2
+    assert result["coverage"] == 1.0

@@ -2,9 +2,12 @@
 
 Implements Chow's rejection option wrapper for single and batch match inferences.
 Categorizes predictions into three actionable conviction tiers:
-- HIGH_CONFIDENCE: Conviction C >= 0.08 (>= 8%), ~64% accuracy, is_actionable=True
-- ACTIONABLE: Conviction C >= 0.04 (>= 4%), >= 61.5% accuracy, is_actionable=True
-- COINFLIP: Conviction C < 0.04 (< 4%), ~51% accuracy (pure noise), is_actionable=False, prediction="abstain"
+- HIGH_CONFIDENCE: Conviction C >= 0.08 (>= 8%), is_actionable=True
+- ACTIONABLE: Conviction C >= 0.04 (>= 4%), is_actionable=True
+- COINFLIP: Conviction C < 0.04 (< 4%), is_actionable=False, prediction="abstain"
+
+Boundaries use six-decimal conviction and a 1e-9 comparison tolerance.
+Tier names alone provide no guarantee of predictive accuracy.
 
 Strictly guarantees anti-symmetry under team swap:
 Swapping team A and team B (P -> 1 - P) flips prediction ("team_a" <-> "team_b")
@@ -17,6 +20,8 @@ from pathlib import Path
 from typing import Any, Callable, NamedTuple, Sequence
 import numpy as np
 
+from core.selective_classification import compute_conviction, conviction_at_least
+
 DEFAULT_ACTION_THRESHOLD: float = 0.04
 DEFAULT_HIGH_THRESHOLD: float = 0.08
 
@@ -27,8 +32,6 @@ TIER_COINFLIP: str = "COINFLIP"
 PRED_TEAM_A: str = "team_a"
 PRED_TEAM_B: str = "team_b"
 PRED_ABSTAIN: str = "abstain"
-
-_EPSILON: float = 1e-9
 
 
 class SelectiveInferenceResult(NamedTuple):
@@ -91,11 +94,10 @@ def classify_match_conviction(
     p_team_b = float(np.clip(p_val, 0.0, 1.0))
     p_team_a = float(np.clip(1.0 - p_team_b, 0.0, 1.0))
 
-    # Round conviction to 6 decimal places to prevent float precision representation artifacts
-    # E.g. abs(0.46 - 0.5) is 0.03999999999999998 in IEEE-754
-    conviction = round(abs(p_team_b - 0.5), 6)
+    # Canonicalize before rounding so half-unit boundaries also survive team swap.
+    conviction = round(float(compute_conviction(p_team_b)), 6)
 
-    if conviction >= high_threshold - _EPSILON:
+    if conviction_at_least(conviction, high_threshold):
         tier = TIER_HIGH_CONFIDENCE
         is_actionable = True
         if p_team_b > 0.5:
@@ -104,7 +106,7 @@ def classify_match_conviction(
             prediction = PRED_TEAM_A
         else:
             prediction = PRED_ABSTAIN
-    elif conviction >= action_threshold - _EPSILON:
+    elif conviction_at_least(conviction, action_threshold):
         tier = TIER_ACTIONABLE
         is_actionable = True
         if p_team_b > 0.5:
