@@ -110,6 +110,8 @@ Sur Windows natif, vérifier le champ `gpu_devices` du rapport : une liste vide
 signifie que ce run utilise le CPU. Les variables de threads ci-dessus limitent
 la concurrence ; elles n'activent pas le GPU.
 
+Pour utiliser la carte NVIDIA, suivre le [parcours GPU sous WSL2](gpu_training.md) et lancer les scripts avec `scripts/train_gpu.ps1`.
+
 ## Modèle arborescent de référence (Tree Baseline)
 
 Un modèle baseline tabulaire basé sur `HistGradientBoostingClassifier` peut être entraîné via `scripts/train_tree_baseline.py`. Il utilise les mêmes découpes et le même contrat de features à 24 colonnes catégorielles (champions et rôles des 10 participants, plus mode, version, saison et région).
