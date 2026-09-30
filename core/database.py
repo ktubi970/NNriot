@@ -26,7 +26,7 @@ from core import config
 DB_PATH = config.DB_PATH
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 12
+SCHEMA_VERSION = 14
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -254,6 +254,53 @@ _MIGRATIONS = [
             "CREATE INDEX IF NOT EXISTS idx_match_participants_puuid ON match_participants(puuid, game_creation_time DESC)",
             "CREATE INDEX IF NOT EXISTS idx_match_participants_match ON match_participants(match_id)",
             "UPDATE schema_version SET version = 12",
+        ],
+    ),
+    # v12 -> v13 : add player_spatial_embeddings for trajectory GRU vectors
+    (
+        12,
+        [
+            """
+            CREATE TABLE IF NOT EXISTS player_spatial_embeddings (
+                match_id           TEXT NOT NULL,
+                puuid              TEXT NOT NULL,
+                game_creation_time INTEGER NOT NULL,
+                embedding_blob     BLOB NOT NULL,
+                PRIMARY KEY (match_id, puuid),
+                FOREIGN KEY(match_id) REFERENCES matches(match_id)
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_spatial_embeddings_lookup ON player_spatial_embeddings(puuid, game_creation_time DESC)",
+            "UPDATE schema_version SET version = 13",
+        ],
+    ),
+    # v13 -> v14 : migrate crawl_queue to support PUUIDs, region, and auto-increment ID
+    (
+        13,
+        [
+            """
+            CREATE TABLE IF NOT EXISTS crawl_queue_v2 (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                puuid        TEXT UNIQUE,
+                region       TEXT NOT NULL,
+                game_name    TEXT,
+                tag_line     TEXT,
+                priority     INTEGER DEFAULT 0,
+                is_processed INTEGER DEFAULT 0,
+                created_at   TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                processed_at TIMESTAMP
+            )
+            """,
+            """
+            INSERT INTO crawl_queue_v2 (game_name, tag_line, priority, is_processed, created_at, region)
+            SELECT game_name, tag_line, priority, is_processed, added_at, 'EUW'
+            FROM crawl_queue
+            """,
+            "DROP TABLE IF EXISTS crawl_queue",
+            "ALTER TABLE crawl_queue_v2 RENAME TO crawl_queue",
+            "CREATE INDEX IF NOT EXISTS idx_crawl_queue_lookup ON crawl_queue(is_processed, priority DESC, id ASC)",
+            "CREATE INDEX IF NOT EXISTS idx_crawl_queue_puuid ON crawl_queue(puuid)",
+            "UPDATE schema_version SET version = 14",
         ],
     ),
 ]
@@ -572,6 +619,56 @@ def match_timeline_exists(match_id: str, db_path: str = DB_PATH) -> bool:
             "SELECT 1 FROM match_timelines WHERE match_id = ? LIMIT 1", (match_id,)
         ).fetchone()
     return row is not None
+
+
+def save_player_spatial_embedding(
+    match_id: str,
+    puuid: str,
+    game_creation_time: int,
+    embedding: bytes,
+    db_path: str = DB_PATH,
+) -> None:
+    """Save a player's spatial trajectory embedding blob."""
+    with get_connection(db_path) as conn:
+        conn.execute(
+            """
+            INSERT OR REPLACE INTO player_spatial_embeddings
+            (match_id, puuid, game_creation_time, embedding_blob)
+            VALUES (?, ?, ?, ?)
+            """,
+            (match_id, puuid, int(game_creation_time), sqlite3.Binary(embedding)),
+        )
+
+
+def get_player_recent_spatial_embeddings(
+    puuid: str,
+    before_timestamp: int | None = None,
+    limit: int = 50,
+    db_path: str = DB_PATH,
+) -> list[bytes]:
+    """Retrieve up to `limit` spatial embeddings for a player strictly before `before_timestamp`."""
+    with get_connection(db_path) as conn:
+        if before_timestamp is not None:
+            rows = conn.execute(
+                """
+                SELECT embedding_blob FROM player_spatial_embeddings
+                WHERE puuid = ? AND game_creation_time < ?
+                ORDER BY game_creation_time DESC
+                LIMIT ?
+                """,
+                (puuid, int(before_timestamp), int(limit)),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT embedding_blob FROM player_spatial_embeddings
+                WHERE puuid = ?
+                ORDER BY game_creation_time DESC
+                LIMIT ?
+                """,
+                (puuid, int(limit)),
+            ).fetchall()
+    return [bytes(row["embedding_blob"]) for row in rows]
 
 
 def _compress_labels(labels: dict | None) -> str | None:
@@ -1365,16 +1462,16 @@ def get_db_stats(db_path: str = DB_PATH) -> dict:
 
 
 def add_to_crawl_queue(
-    game_name: str, tag_line: str, priority: int = 0, db_path: str = DB_PATH
+    game_name: str, tag_line: str, priority: int = 0, region: str = "EUW", db_path: str = DB_PATH
 ):
     """Add a player to the crawl queue if they don't already exist."""
     with get_connection(db_path) as conn:
         conn.execute(
             """
-            INSERT OR IGNORE INTO crawl_queue (game_name, tag_line, priority)
-            VALUES (?, ?, ?)
+            INSERT OR IGNORE INTO crawl_queue (game_name, tag_line, priority, region)
+            VALUES (?, ?, ?, ?)
             """,
-            (game_name, tag_line, priority),
+            (game_name, tag_line, priority, region),
         )
 
 
@@ -1383,9 +1480,9 @@ def get_next_from_crawl_queue(limit: int = 1, db_path: str = DB_PATH) -> list[di
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT game_name, tag_line FROM crawl_queue 
+            SELECT game_name, tag_line, region FROM crawl_queue 
             WHERE is_processed = 0 
-            ORDER BY priority DESC, added_at ASC 
+            ORDER BY priority DESC, id ASC 
             LIMIT ?
             """,
             (limit,),
@@ -1397,7 +1494,7 @@ def mark_as_processed(game_name: str, tag_line: str, db_path: str = DB_PATH):
     """Mark a player as processed in the crawl queue."""
     with get_connection(db_path) as conn:
         conn.execute(
-            "UPDATE crawl_queue SET is_processed = 1 WHERE game_name = ? AND tag_line = ?",
+            "UPDATE crawl_queue SET is_processed = 1, processed_at = CURRENT_TIMESTAMP WHERE game_name = ? AND tag_line = ?",
             (game_name, tag_line),
         )
 

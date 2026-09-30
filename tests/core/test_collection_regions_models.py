@@ -118,6 +118,7 @@ def test_collection_package_exports():
         "CrawlItem",
         "IngestionResult",
         "MatchQualityFilter",
+        "CrawlQueueRepository",
     }
     for symbol in expected_exports:
         assert hasattr(collection_pkg, symbol), f"Missing export: {symbol}"
