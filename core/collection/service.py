@@ -161,8 +161,11 @@ class CollectionService:
                 res = self.collect_player_matches(
                     puuid, region=region, count=matches_per_player
                 )
+                if res.errors > 0 and res.matches_saved == 0:
+                    stats["errors"] += 1
+                else:
+                    stats["processed"] += 1
                 stats["saved"] += res.records_saved
-                stats["processed"] += 1
                 self.tracker.add_log(f"[{region}] Saved {res.matches_saved} matches for {name}#{tag}")
             except Exception as e:
                 logger.error("Error for %s#%s: %s", name, tag, e)
@@ -291,90 +294,103 @@ class CollectionService:
         self.tracker.set_running(total=target_matches, player="Continuous Crawler")
         start_time = int(time.time()) - (days_back * 86400)
         batch_counter = 0
+        depletion_retries = 0
+        ladder_depth = 50
 
-        # Seed initial queue if empty
-        if self.queue_repo.get_stats()["pending"] == 0:
-            for region in regions:
-                canon = resolve_region(region)
-                api = self.api_factory(canon)
-                try:
-                    entries = api.get_top_players(total_count=50)
-                    puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
-                    self.queue_repo.enqueue_puuids(puuids, region=canon, priority=10)
-                except Exception as e:
-                    logger.warning("Failed seeding top players for %s: %s", canon, e)
-
-        while (
-            total_res.matches_saved < target_matches
-            and not (stop_event and stop_event.is_set())
-        ):
-            items = self.queue_repo.pop_next(limit=1)
-            if not items:
-                logger.info("Frontier queue depleted. Refreshing seeds...")
+        try:
+            # Seed initial queue if empty
+            if self.queue_repo.get_stats()["pending"] == 0:
                 for region in regions:
                     canon = resolve_region(region)
                     api = self.api_factory(canon)
                     try:
-                        entries = api.get_top_players(total_count=30)
+                        entries = api.get_top_players(total_count=ladder_depth)
                         puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
-                        self.queue_repo.enqueue_puuids(puuids, region=canon, priority=5)
+                        self.queue_repo.enqueue_puuids(puuids, region=canon, priority=10)
+                    except Exception as e:
+                        logger.warning("Failed seeding top players for %s: %s", canon, e)
+
+            while (
+                total_res.matches_saved < target_matches
+                and not (stop_event and stop_event.is_set())
+            ):
+                items = self.queue_repo.pop_next(limit=1)
+                if not items:
+                    depletion_retries += 1
+                    if depletion_retries > 5:
+                        logger.warning("Frontier queue depleted after multiple deepening attempts. Exiting crawler loop.")
+                        break
+
+                    ladder_depth += 50
+                    logger.info("Frontier queue depleted. Deepening seeds to top %d players...", ladder_depth)
+                    for region in regions:
+                        canon = resolve_region(region)
+                        api = self.api_factory(canon)
+                        try:
+                            entries = api.get_top_players(total_count=ladder_depth)
+                            puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
+                            self.queue_repo.enqueue_puuids(puuids, region=canon, priority=5)
+                        except Exception:
+                            pass
+
+                    if stop_event and stop_event.wait(timeout=2.0):
+                        break
+                    elif not stop_event:
+                        time.sleep(2)
+                    continue
+
+                depletion_retries = 0
+                item = items[0]
+                region = resolve_region(item.region)
+                puuid = item.puuid
+
+                if not puuid and item.game_name and item.tag_line:
+                    api = self.api_factory(region)
+                    try:
+                        puuid = api.get_puuid(item.game_name, item.tag_line)
                     except Exception:
-                        pass
+                        puuid = None
 
-                if stop_event and stop_event.wait(timeout=2.0):
-                    break
-                elif not stop_event:
-                    time.sleep(2)
-                continue
+                if not puuid:
+                    if item.id:
+                        self.queue_repo.mark_processed_by_id(item.id)
+                    continue
 
-            item = items[0]
-            region = resolve_region(item.region)
-            puuid = item.puuid
-
-            if not puuid and item.game_name and item.tag_line:
-                api = self.api_factory(region)
-                try:
-                    puuid = api.get_puuid(item.game_name, item.tag_line)
-                except Exception:
-                    puuid = None
-
-            if not puuid:
+                self.tracker.set_player(puuid[:12])
+                sub_res = self.collect_player_matches(
+                    puuid, region=region, count=batch_size, start_time=start_time
+                )
+                self.queue_repo.mark_processed(puuid)
                 if item.id:
                     self.queue_repo.mark_processed_by_id(item.id)
-                continue
 
-            self.tracker.set_player(puuid[:12])
-            sub_res = self.collect_player_matches(
-                puuid, region=region, count=batch_size, start_time=start_time
-            )
-            self.queue_repo.mark_processed(puuid)
-            if item.id:
-                self.queue_repo.mark_processed_by_id(item.id)
+                total_res.matches_saved += sub_res.matches_saved
+                total_res.records_saved += sub_res.records_saved
+                total_res.timelines_saved += sub_res.timelines_saved
+                total_res.embeddings_computed += sub_res.embeddings_computed
+                total_res.skipped += sub_res.skipped
+                total_res.errors += sub_res.errors
+                total_res.discovered_puuids.extend(sub_res.discovered_puuids)
+                self.tracker.step(sub_res.matches_saved)
 
-            total_res.matches_saved += sub_res.matches_saved
-            total_res.records_saved += sub_res.records_saved
-            total_res.timelines_saved += sub_res.timelines_saved
-            total_res.embeddings_computed += sub_res.embeddings_computed
-            total_res.skipped += sub_res.skipped
-            total_res.errors += sub_res.errors
-            total_res.discovered_puuids.extend(sub_res.discovered_puuids)
-            self.tracker.step(sub_res.matches_saved)
+                # Snowballing: enqueue newly discovered participants
+                if sub_res.discovered_puuids:
+                    discovered_by_region: dict[str, list[str]] = {}
+                    for p, r in sub_res.discovered_puuids:
+                        discovered_by_region.setdefault(r, []).append(p)
+                    for r, plist in discovered_by_region.items():
+                        self.queue_repo.enqueue_puuids(plist, region=r, priority=0)
 
-            # Snowballing: enqueue newly discovered participants
-            if sub_res.discovered_puuids:
-                discovered_by_region: dict[str, list[str]] = {}
-                for p, r in sub_res.discovered_puuids:
-                    discovered_by_region.setdefault(r, []).append(p)
-                for r, plist in discovered_by_region.items():
-                    self.queue_repo.enqueue_puuids(plist, region=r, priority=0)
+                batch_counter += 1
+                if batch_counter % 10 == 0:
+                    try:
+                        with database.get_connection(self.db_path) as conn:
+                            conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+                    except Exception as e:
+                        logger.warning("WAL checkpoint error: %s", e)
 
-            batch_counter += 1
-            if batch_counter % 10 == 0:
-                try:
-                    with database.get_connection(self.db_path) as conn:
-                        conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
-                except Exception as e:
-                    logger.warning("WAL checkpoint error: %s", e)
-
-        self.tracker.set_completed()
+            self.tracker.set_completed()
+        except Exception as e:
+            self.tracker.set_error(str(e))
+            raise
         return total_res
