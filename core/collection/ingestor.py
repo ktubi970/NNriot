@@ -67,11 +67,7 @@ class MatchIngestor:
                 return None
 
             queue_id = info.get("queueId")
-            if (
-                queue_id is not None
-                and self.filter.allowed_queue_ids
-                and queue_id not in self.filter.allowed_queue_ids
-            ):
+            if self.filter.allowed_queue_ids and queue_id not in self.filter.allowed_queue_ids:
                 return None
 
             teams = info.get("teams", [])
@@ -163,16 +159,6 @@ class MatchIngestor:
                 result.errors += 1
                 continue
 
-            # Queue check if present in info
-            queue_id = info.get("queueId")
-            if (
-                queue_id is not None
-                and self.filter.allowed_queue_ids
-                and queue_id not in self.filter.allowed_queue_ids
-            ):
-                result.skipped += 1
-                continue
-
             record = self.build_training_record(mid, details, region=region)
             if not record:
                 result.skipped += 1
@@ -224,27 +210,29 @@ class MatchIngestor:
 
                     try:
                         from core.spatial_rnn import extract_and_store_timeline_embeddings
-
+                    except ImportError as err:
+                        logger.warning("Could not import spatial_rnn: %s", err)
+                    else:
                         for t_mid, t_data in timelines.items():
-                            m_details = details_map.get(t_mid, {})
-                            info_dict = (
-                                m_details.get("info", {})
-                                if isinstance(m_details, dict)
-                                else {}
-                            )
-                            gtime = info_dict.get(
-                                "gameCreation", int(time.time() * 1000)
-                            )
-                            extract_and_store_timeline_embeddings(
-                                t_mid, t_data, gtime, db_path=self.db_path
-                            )
-                            result.embeddings_computed += 1
-                    except Exception as err:
-                        logger.warning(
-                            "Spatial embeddings extraction warning for %s: %s",
-                            region,
-                            err,
-                        )
+                            try:
+                                m_details = details_map.get(t_mid, {})
+                                info_dict = (
+                                    m_details.get("info", {})
+                                    if isinstance(m_details, dict)
+                                    else {}
+                                )
+                                gtime = info_dict.get("gameCreation") or int(time.time() * 1000)
+                                extract_and_store_timeline_embeddings(
+                                    t_mid, t_data, int(gtime), db_path=self.db_path
+                                )
+                                result.embeddings_computed += 1
+                            except Exception as err:
+                                logger.warning(
+                                    "Spatial embedding failed for %s (%s): %s",
+                                    t_mid,
+                                    region,
+                                    err,
+                                )
             except Exception as e:
                 logger.error("Error fetching timelines for batch: %s", e)
 

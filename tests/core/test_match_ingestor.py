@@ -201,3 +201,46 @@ def test_ingest_match_ids_handles_empty_and_errors(ingestor):
     res_error = ingestor.ingest_match_ids(["M_FAIL"], api=mock_api, region="EUW")
     assert res_error.matches_saved == 0
     assert res_error.errors == 1
+
+
+def test_build_training_record_rejects_missing_queue_id(ingestor):
+    # Match with None queueId
+    none_queue = _make_match_payload(queue_id=None)
+    assert ingestor.build_training_record("M_NONE", none_queue) is None
+
+    # Match without queueId key in info
+    no_queue = _make_match_payload()
+    del no_queue["info"]["queueId"]
+    assert ingestor.build_training_record("M_MISSING", no_queue) is None
+
+
+def test_ingest_match_ids_isolates_timeline_embedding_failure(ingestor):
+    mock_api = MagicMock()
+    mock_api.get_match_details_batch.return_value = {
+        "EUW1_1": _make_match_payload(),
+        "EUW1_2": _make_match_payload(),
+    }
+    mock_api.get_match_timelines_batch.return_value = {
+        "EUW1_1": {"info": {}},
+        "EUW1_2": {"info": {}},
+    }
+
+    # Simulate failure on first match, success on second match
+    def mock_extract(match_id, timeline_data, game_creation_time, db_path=None):
+        if match_id == "EUW1_1":
+            raise RuntimeError("Spatial RNN model computation crashed")
+        return 10
+
+    with patch(
+        "core.spatial_rnn.extract_and_store_timeline_embeddings", side_effect=mock_extract
+    ):
+        result = ingestor.ingest_match_ids(
+            ["EUW1_1", "EUW1_2"], api=mock_api, region="EUW"
+        )
+
+    assert result.matches_saved == 2
+    assert result.records_saved == 2
+    assert result.timelines_saved == 2
+    # Second match still computed successfully despite first match failing
+    assert result.embeddings_computed == 1
+
