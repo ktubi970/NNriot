@@ -122,6 +122,7 @@ def test_collection_package_exports():
         "CollectionTracker",
         "get_default_tracker",
         "MatchIngestor",
+        "CollectionService",
     }
     for symbol in expected_exports:
         assert hasattr(collection_pkg, symbol), f"Missing export: {symbol}"
