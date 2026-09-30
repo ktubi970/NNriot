@@ -114,7 +114,7 @@ _CHAMPION_PROFILES: dict[str, ChampionStaticProfile] = {
     "Lux": ChampionStaticProfile(0.05, 0.95, 0.00, 0.65, 0.15, 1.0, 0.50),
     "Xerath": ChampionStaticProfile(0.05, 0.95, 0.00, 0.55, 0.25, 1.0, 0.51),
     "Ziggs": ChampionStaticProfile(0.05, 0.95, 0.00, 0.45, 0.35, 1.0, 0.51),
-    "LeBlanc": ChampionStaticProfile(0.10, 0.90, 0.00, 0.45, -0.20, 1.0, 0.48),
+    "Leblanc": ChampionStaticProfile(0.10, 0.90, 0.00, 0.45, -0.20, 1.0, 0.48),
     "Fizz": ChampionStaticProfile(0.10, 0.90, 0.00, 0.50, 0.10, 0.0, 0.51),
     "Ekko": ChampionStaticProfile(0.15, 0.85, 0.00, 0.55, 0.30, 0.0, 0.50),
     "Katarina": ChampionStaticProfile(0.30, 0.70, 0.00, 0.05, 0.20, 0.0, 0.50),
@@ -145,7 +145,17 @@ for idx, name in enumerate(CANONICAL_CHAMPIONS):
 
 
 def get_champion_profile(name: str | None) -> ChampionStaticProfile:
-    """Return static domain profile for a champion name string."""
+    """Return static domain profile for a champion name string.
+
+    Resolution order:
+    1. champion_to_id(name) → STATIC_PROFILES_BY_ID[cid]  (canonical ID-based, alias-safe)
+    2. _CHAMPION_PROFILES.get(normalize_champion_name(name))  (dict fallback)
+    3. DEFAULT_PROFILE
+    """
+    cid = champion_to_id(name)
+    if cid != UNK_CHAMPION_ID and 0 <= cid < len(STATIC_PROFILES_BY_ID):
+        return STATIC_PROFILES_BY_ID[cid]
+    # Fallback: direct dict lookup (handles edge cases where registry diverges)
     norm = normalize_champion_name(name)
     return _CHAMPION_PROFILES.get(norm, DEFAULT_PROFILE)
 

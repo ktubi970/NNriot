@@ -24,7 +24,7 @@ from core.selective_infer import (
 )
 from core.calibration import apply_temperature_to_probabilities
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
-from core.equivariant_model import ThreeClassEquivariantSoftmax
+from core.equivariant_model import ThreeClassEquivariantSoftmax, NNRIOT_CUSTOM_OBJECTS
 from core.shapley_credit import compute_counterfactual_shapley
 
 logger = logging.getLogger("prediction_service")
@@ -62,16 +62,10 @@ class PredictionService:
 
         import tensorflow as tf
 
-        custom_objects = {
-            "SiameseTeamEncoder": SiameseTeamEncoder,
-            "AntiSymmetricSoftmax": AntiSymmetricSoftmax,
-            "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
-        }
-
         with self._lock:
             try:
                 logger.info("Loading neural checkpoint from %s...", self.checkpoint_path)
-                self._model = tf.keras.models.load_model(self.checkpoint_path, custom_objects=custom_objects)
+                self._model = tf.keras.models.load_model(self.checkpoint_path, custom_objects=NNRIOT_CUSTOM_OBJECTS)
             except Exception as e:
                 logger.warning("Could not load neural model from %s: %e", self.checkpoint_path, e)
                 self._model = None

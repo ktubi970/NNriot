@@ -17,7 +17,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
-from core.equivariant_model import ThreeClassEquivariantSoftmax
+from core.equivariant_model import ThreeClassEquivariantSoftmax, NNRIOT_CUSTOM_OBJECTS
+from core.selective_classification import (
+    evaluate_selective_coverage,
+    DEFAULT_CONVICTION_THRESHOLDS,
+    format_conviction_key,
+)
 from core.experiment import (
     compute_enriched_dataset_sha256, read_feature_contract, read_manifest,
     resolve_result_end_times, restore_splits,
@@ -102,12 +107,7 @@ def evaluate_ensemble(
 
     # 1. Evaluate Equivariant DeepSets Neural Model
     logger.info("Evaluating Equivariant DeepSets model from %s...", checkpoint)
-    custom_objects = {
-        "SiameseTeamEncoder": SiameseTeamEncoder,
-        "AntiSymmetricSoftmax": AntiSymmetricSoftmax,
-        "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
-    }
-    model = tf.keras.models.load_model(checkpoint, custom_objects=custom_objects)
+    model = tf.keras.models.load_model(checkpoint, custom_objects=NNRIOT_CUSTOM_OBJECTS)
     
     in_dim, representation = _model_input_policy(model)
     contract = None
@@ -267,16 +267,10 @@ def evaluate_ensemble(
     nn_lgb_eval = evaluate_winner(test_y, nn_lgb_probs, train_rate, diagnostics=True)
 
     # 5. Confidence Stratification (Accuracy by conviction margin)
-    stratification = {}
-    for margin in (0.00, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.15):
-        mask = np.abs(ensemble_test_probs - 0.5) >= margin
-        if mask.any():
-            acc = float(np.mean((ensemble_test_probs[mask] >= 0.5) == test_y[mask]))
-            stratification[f"conviction_ge_{int(margin*100)}pct"] = {
-                "coverage_pct": round(float(mask.mean() * 100), 1),
-                "count": int(mask.sum()),
-                "accuracy": round(acc, 4),
-            }
+    stratification = {
+        format_conviction_key(tau): evaluate_selective_coverage(test_y, ensemble_test_probs, tau)
+        for tau in DEFAULT_CONVICTION_THRESHOLDS
+    }
 
     report = {
         "artifact_scope": "training_evaluation",

@@ -12,7 +12,12 @@ from __future__ import annotations
 
 from typing import Any
 import tensorflow as tf
-from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
+from core.deepsets_layers import (
+    SiameseTeamEncoder,
+    AntiSymmetricSoftmax,
+    SetTransformerPMA,
+    SinkhornCrossAttention,
+)
 from core.generate_graph import (
     LOSS_PER_HEAD,
     LOSS_WEIGHTS,
@@ -165,6 +170,30 @@ class EvidentialDirichletSoftmax(tf.keras.layers.Layer):
             "return_dict": self.return_dict,
         })
         return config
+
+
+
+# ---------------------------------------------------------------------------
+# Centralized custom objects registry for checkpoint loading.
+# Import this dict in every tf.keras.models.load_model() call to guarantee
+# that all custom Keras layers are properly deserialized, including layers
+# that are registered via @register_keras_serializable but may not be
+# importable in restricted environments.
+# ---------------------------------------------------------------------------
+from core.periodic_embeddings import PeriodicNumericalEmbedding
+from core.generate_graph import HomoscedasticLossLayer
+
+NNRIOT_CUSTOM_OBJECTS: dict[str, Any] = {
+    "SiameseTeamEncoder": SiameseTeamEncoder,
+    "AntiSymmetricSoftmax": AntiSymmetricSoftmax,
+    "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
+    "SkewSymmetricBilinearDense": SkewSymmetricBilinearDense,
+    "EvidentialDirichletSoftmax": EvidentialDirichletSoftmax,
+    "SetTransformerPMA": SetTransformerPMA,
+    "SinkhornCrossAttention": SinkhornCrossAttention,
+    "PeriodicNumericalEmbedding": PeriodicNumericalEmbedding,
+    "HomoscedasticLossLayer": HomoscedasticLossLayer,
+}
 
 
 def build_equivariant_deepsets_model(

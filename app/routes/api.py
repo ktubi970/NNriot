@@ -33,6 +33,7 @@ def _system_service():
 from core.feature_labels import VECTOR_DIM
 from core.calibration import UncalibratedModelError
 from core.pre_match_dataset import to_pre_match_features
+from core.prediction_service import get_prediction_service
 
 from .. import core
 
@@ -510,43 +511,81 @@ def api_predict_custom():
         # Use centralized pre-match feature extraction
         feature_dict = to_pre_match_features(match_data)
 
-        sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
-        dense_vec = sparse_vec.toarray()
+        # ── Primary path: route through PredictionService Facade (AGENTS.md §2) ──
+        chk_path = current_app.config.get("NNRIOT_CHECKPOINT_PATH")
+        service = get_prediction_service(checkpoint_path=chk_path) if chk_path else None
 
-        with core.predict_lock:
-            preds = core.global_trainer.predict(dense_vec)
+        if service is not None and service.is_ready():
+            result = service.predict_match(feature_dict)
+            if not result.get("success"):
+                return jsonify(result), 503
 
-        formatted = core._format_multi_output_response(preds)
-        # Keep the legacy fields for the custom predictor UI
-        blue_prob_nn = formatted["winner"]["team_a"]
-        red_prob_nn = formatted["winner"]["team_b"]
+            blue_prob_nn = result["winner"]["team_a"]
+            red_prob_nn = result["winner"]["team_b"]
 
-        response_data = {
-            "success": True,
-            "nn_results": {
+            response_data = {
+                "success": True,
+                "nn_results": {
+                    "blue_win_probability": blue_prob_nn,
+                    "red_win_probability": red_prob_nn,
+                },
+                "predicted_winner": result["winner"]["predicted"].upper()
+                    if "predicted" in result["winner"] else ("BLUE" if blue_prob_nn > red_prob_nn else "RED"),
+                "confidence": result["winner"].get("confidence", round(max(blue_prob_nn, red_prob_nn), 4)),
                 "blue_win_probability": blue_prob_nn,
-                "red_win_probability":  red_prob_nn,
-            },
-            "predicted_winner": "BLUE" if blue_prob_nn > red_prob_nn else "RED",
-            "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
-            "blue_win_probability": blue_prob_nn,
-            "red_win_probability":  red_prob_nn,
-            "blue_win_prob": blue_prob_nn,
-            "red_win_prob": red_prob_nn,
-            "explanation": "Multi-head NN analysis complete.",
-            "llm_active": False,
-            # Include the full multi-output dict for clients that want it
-            "multi_output": {
-                k: v for k, v in formatted.items()
-                if k not in (
-                    "success",
-                    "predicted_outcome",
-                    "win_probability",
-                    "lose_probability",
-                    "confidence",
-                )
-            },
-        }
+                "red_win_probability": red_prob_nn,
+                "blue_win_prob": blue_prob_nn,
+                "red_win_prob": red_prob_nn,
+                "explanation": "Multi-head NN analysis complete (PredictionService).",
+                "llm_active": False,
+                # Structured outputs from PredictionService
+                "selective_decision": result.get("selective_decision"),
+                "shapley_credits": result.get("shapley_credits"),
+                "draft_composition": result.get("draft_composition"),
+                "epistemic_uncertainty": result.get("epistemic_uncertainty"),
+                # Legacy multi_output key for backward compatibility
+                "multi_output": {
+                    "winner": result["winner"],
+                    "selective_decision": result.get("selective_decision"),
+                },
+            }
+        else:
+            # ── Legacy fallback path (pre-PredictionService) ──────────────────
+            sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
+            dense_vec = sparse_vec.toarray()
+
+            with core.predict_lock:
+                preds = core.global_trainer.predict(dense_vec)
+
+            formatted = core._format_multi_output_response(preds)
+            blue_prob_nn = formatted["winner"]["team_a"]
+            red_prob_nn = formatted["winner"]["team_b"]
+
+            response_data = {
+                "success": True,
+                "nn_results": {
+                    "blue_win_probability": blue_prob_nn,
+                    "red_win_probability": red_prob_nn,
+                },
+                "predicted_winner": "BLUE" if blue_prob_nn > red_prob_nn else "RED",
+                "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
+                "blue_win_probability": blue_prob_nn,
+                "red_win_probability": red_prob_nn,
+                "blue_win_prob": blue_prob_nn,
+                "red_win_prob": red_prob_nn,
+                "explanation": "Multi-head NN analysis complete.",
+                "llm_active": False,
+                "multi_output": {
+                    k: v for k, v in formatted.items()
+                    if k not in (
+                        "success",
+                        "predicted_outcome",
+                        "win_probability",
+                        "lose_probability",
+                        "confidence",
+                    )
+                },
+            }
 
         return jsonify(response_data)
 

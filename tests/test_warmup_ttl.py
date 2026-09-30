@@ -38,7 +38,7 @@ def test_get_stale_puuids_old_record_is_stale(tmp_path):
     database.init_db(db)
     database.save_player("OLD_PUUID", "Name", "Tag", db_path=db)
     # Manually backdate
-    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
                      (old_date, "OLD_PUUID"))
@@ -55,7 +55,7 @@ def test_get_stale_puuids_mixed(tmp_path):
     database.save_player("FRESH", "Name", "Tag", db_path=db)
     # Stale player
     database.save_player("STALE", "Name", "Tag", db_path=db)
-    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?", (old_date, "STALE"))
     # Missing player — not inserted
@@ -70,7 +70,7 @@ def test_get_stale_puuids_threshold_boundary(tmp_path):
     database.init_db(db)
     database.save_player("BOUNDARY", "Name", "Tag", db_path=db)
     # Set to 3 days ago — well within 7-day window
-    recent = (_dt.datetime.utcnow() - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    recent = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
                      (recent, "BOUNDARY"))

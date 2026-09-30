@@ -16,7 +16,7 @@ if str(REPO_ROOT) not in sys.path:
 from core.features.matchup_matrix import LaneMatchupTracker
 from core.features.pipeline import DraftFeaturePipeline, ENRICHED_PLAYER_TENSOR_DIM
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
-from core.equivariant_model import ThreeClassEquivariantSoftmax
+from core.equivariant_model import ThreeClassEquivariantSoftmax, NNRIOT_CUSTOM_OBJECTS
 from core.training_metrics import evaluate_winner
 from core.calibration import fit_temperature, apply_temperature_to_probabilities
 
@@ -52,12 +52,7 @@ def main():
     train_rate = float(y_train.mean())
 
     logger.info("Loading model from %s...", checkpoint)
-    custom_objects = {
-        "SiameseTeamEncoder": SiameseTeamEncoder,
-        "AntiSymmetricSoftmax": AntiSymmetricSoftmax,
-        "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
-    }
-    model = tf.keras.models.load_model(checkpoint, custom_objects=custom_objects)
+    model = tf.keras.models.load_model(checkpoint, custom_objects=NNRIOT_CUSTOM_OBJECTS)
 
     # Inferences
     logger.info("Predicting validation set...")

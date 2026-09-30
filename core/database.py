@@ -1097,7 +1097,7 @@ def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,
     if not puuids:
         return []
 
-    cutoff = _dt.datetime.utcnow() - _dt.timedelta(days=stale_after_days)
+    cutoff = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=stale_after_days)
     cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
 
     # Use SQL placeholders for the IN clause

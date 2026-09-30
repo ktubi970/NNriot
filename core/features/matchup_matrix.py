@@ -14,6 +14,7 @@ from typing import Any, Sequence
 import numpy as np
 
 from core.champion_registry import UNK_CHAMPION_ID, champion_to_id
+from core.draft_features import _ROLE_ALIASES
 
 DEFAULT_MATCHUP_WEIGHT: float = 15.0  # Equivalent games prior weight for 1v1 matchup
 DEFAULT_GLOBAL_WEIGHT: float = 50.0   # Equivalent games prior weight for overall champion WR
@@ -49,7 +50,8 @@ class LaneMatchupTracker:
         if cid_a == UNK_CHAMPION_ID or cid_b == UNK_CHAMPION_ID or cid_a == cid_b:
             return 0.0
 
-        role_clean = str(role or "UNKNOWN").upper().strip()
+        role_clean = _ROLE_ALIASES.get(str(role or "UNKNOWN").upper().strip(),
+                                       str(role or "UNKNOWN").upper().strip())
         low_cid, high_cid = (cid_a, cid_b) if cid_a < cid_b else (cid_b, cid_a)
         key = (role_clean, low_cid, high_cid)
 
@@ -112,7 +114,8 @@ class LaneMatchupTracker:
         def _get_role_map(participants):
             res = {}
             for p in participants:
-                r = str(p.get("role") or p.get("teamPosition") or "").upper().strip()
+                r_raw = str(p.get("role") or p.get("teamPosition") or "").upper().strip()
+                r = _ROLE_ALIASES.get(r_raw, r_raw)
                 cid = champion_to_id(p.get("champion") or p.get("championName"))
                 if r and cid != UNK_CHAMPION_ID:
                     res[r] = cid

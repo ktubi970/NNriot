@@ -25,6 +25,11 @@ from core.training_utils import _build_targets
 from core.pcgrad import pcgrad_step
 from core.training_metrics import evaluate_winner
 from core.calibration import fit_temperature, apply_temperature_to_probabilities, save_calibration_artifact
+from core.selective_classification import (
+    evaluate_selective_coverage,
+    DEFAULT_CONVICTION_THRESHOLDS,
+    format_conviction_key,
+)
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("train_deepsets_v2")
@@ -184,16 +189,10 @@ def train_deepsets_v2(
     test_eval_cal = evaluate_winner(y["test"], cal_test_probs, train_rate, diagnostics=True)
 
     # Selective classification tables
-    stratification = {}
-    for margin in (0.00, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.15):
-        mask = np.abs(cal_test_probs - 0.5) >= margin
-        if mask.any():
-            acc = float(np.mean((cal_test_probs[mask] >= 0.5) == y["test"][mask]))
-            stratification[f"conviction_ge_{int(margin*100)}pct"] = {
-                "coverage_pct": round(float(mask.mean() * 100), 1),
-                "count": int(mask.sum()),
-                "accuracy": round(acc, 4),
-            }
+    stratification = {
+        format_conviction_key(tau): evaluate_selective_coverage(y["test"], cal_test_probs, tau)
+        for tau in DEFAULT_CONVICTION_THRESHOLDS
+    }
 
     metrics_report = {
         "schema_version": 2,
