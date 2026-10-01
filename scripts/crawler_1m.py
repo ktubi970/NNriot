@@ -23,9 +23,9 @@ from core.repository import MatchRepository, TrainingRepository
 logger = logging.getLogger("crawler_1m")
 
 
-def print_db_status():
-    stats = database.get_db_stats()
-    svc = CollectionService()
+def print_db_status(db_path: str | None = None):
+    svc = CollectionService(db_path=db_path)
+    stats = database.get_db_stats(db_path=db_path) if db_path else database.get_db_stats()
     q_stats = svc.queue_repo.get_stats()
     print("\n--- Crawler & Database Status ---")
     print(f"Total Matches:    {stats.get('matches', 0):,}")
@@ -116,7 +116,7 @@ def main():
     args = parser.parse_args()
 
     if args.status:
-        print_db_status()
+        print_db_status(args.db)
         return
 
     regions = [r.strip().upper() for r in args.regions.split(",") if r.strip()]

@@ -16,8 +16,8 @@ from core.collection import CollectionService, resolve_region
 
 
 def print_status(db_path: str | None = None):
-    stats = database.get_db_stats(db_path=db_path) if db_path else database.get_db_stats()
     svc = CollectionService(db_path=db_path)
+    stats = database.get_db_stats(db_path=db_path) if db_path else database.get_db_stats()
     q_stats = svc.queue_repo.get_stats()
 
     print("\n--- NNriot Unified Collection & Database Status ---")
@@ -61,7 +61,12 @@ def main():
 
     if args.top:
         print(f"Collecting top league players in {regions}...")
-        service.collect_top_leagues(regions=regions, total_players_per_region=100, matches_per_player=args.batch_size)
+        service.collect_top_leagues(
+            regions=regions,
+            total_players_per_region=100,
+            matches_per_player=args.batch_size,
+            days_back=args.days_back,
+        )
         return
 
     stop_event = threading.Event()
@@ -70,8 +75,11 @@ def main():
         print("\nStopping crawler gracefully...")
         stop_event.set()
 
-    signal.signal(signal.SIGINT, handle_signal)
-    signal.signal(signal.SIGTERM, handle_signal)
+    try:
+        signal.signal(signal.SIGINT, handle_signal)
+        signal.signal(signal.SIGTERM, handle_signal)
+    except (ValueError, AttributeError):
+        pass
 
     print(f"Starting continuous crawler towards +{args.target} matches in {regions}...")
     service.run_crawler(
