@@ -71,6 +71,45 @@ def _region_from_match_id(match_id: str) -> str | None:
     return TAG_TO_REGION.get(prefix)
 
 
+def _wait_for_new_key(
+    api: riot_api.RiotAPI,
+    api_by_region: dict[str, riot_api.RiotAPI],
+    poll_interval: float = 10.0,
+) -> None:
+    """Pause backfill when RIOT_API_KEY expires and poll .env until a new key is provided."""
+    old_key = api.api_key
+    banner = (
+        "\n"
+        + "=" * 72 + "\n"
+        + " [PAUSE] La clé Riot API a expiré ou a été rejetée (HTTP 403 / 401).\n"
+        + " Le backfill est suspendu en toute sécurité (AUCUN placeholder NULL inséré).\n\n"
+        + " PROCÉDURE DE REPRISE EN COURS D'EXÉCUTION :\n"
+        + " 1. Ouvrez https://developer.riotgames.com/ et générez une nouvelle clé.\n"
+        + " 2. Collez-la dans votre fichier .env (ex: RIOT_API_KEY=RGAPI-...).\n"
+        + " 3. Enregistrez le fichier .env.\n\n"
+        + " Le script détectera automatiquement la nouvelle clé et reprendra le travail.\n"
+        + " (Appuyez sur Ctrl+C pour quitter proprement si vous préférez arrêter).\n"
+        + "=" * 72 + "\n"
+    )
+    print(banner, flush=True)
+    logger.warning("Riot API key expired. Waiting for a new key in .env...")
+
+    while True:
+        try:
+            time.sleep(poll_interval)
+        except KeyboardInterrupt:
+            logger.info("Backfill interrompu par l'utilisateur.")
+            raise
+
+        new_key = api.reload_key()
+        if new_key and new_key != old_key:
+            logger.info("Nouvelle clé détectée dans .env ! Reprise automatique du backfill...")
+            print("\n[OK] Nouvelle clé détectée ! Reprise du backfill...\n", flush=True)
+            for r_api in api_by_region.values():
+                r_api.api_key = new_key
+            break
+
+
 def backfill_timelines(
     db_path: str = database.DB_PATH,
     chunk_size: int = _CHUNK_SIZE,
@@ -142,18 +181,27 @@ def backfill_timelines(
                 api_by_region[region] = riot_api.RiotAPI(region=region)
             api = api_by_region[region]
 
-            try:
-                results = api.get_match_timelines_batch(
-                    mids, max_workers=min(chunk_size, len(mids))
-                )
-            except Exception:
-                stats["errors"] += len(mids)
-                logger.error(
-                    "Batch timeline fetch failed for region=%s mids=%s",
-                    region,
-                    mids,
-                    exc_info=True,
-                )
+            results = None
+            while True:
+                try:
+                    results = api.get_match_timelines_batch(
+                        mids, max_workers=min(chunk_size, len(mids))
+                    )
+                    break
+                except riot_api.RiotAuthError:
+                    _wait_for_new_key(api, api_by_region)
+                except Exception:
+                    stats["errors"] += len(mids)
+                    logger.error(
+                        "Batch timeline fetch failed for region=%s mids=%s",
+                        region,
+                        mids,
+                        exc_info=True,
+                    )
+                    break
+
+            if results is None:
+                # Transient failure: do NOT mark matches as NULL; retry on next pass
                 continue
 
             # 4) Save and track stats

@@ -315,6 +315,8 @@ class RiotAPI:
                         results[mid] = data
                         if verbose:
                             logger.info("      [%s/%s] Téléchargement : %s", completed, total, mid)
+                except RiotAuthError:
+                    raise
                 except Exception as e:
                     logger.error(f"      Error fetching match {mid}: {e}", exc_info=True)
         return results
@@ -355,6 +357,8 @@ class RiotAPI:
                         results[mid] = data
                         if verbose:
                             logger.info("      [%s/%s] Timeline: %s", completed, total, mid)
+                except RiotAuthError:
+                    raise
                 except Exception as e:
                     logger.error(f"Error fetching timeline for {mid}: {e}", exc_info=True)
         return results
