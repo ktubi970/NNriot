@@ -1,8 +1,17 @@
+"""Background collector service for continuous match discovery."""
 import logging
 import os
-from core import riot_api
+import signal
+import sys
+import threading
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+REPO_ROOT = os.path.dirname(BASE_DIR)
+if REPO_ROOT not in sys.path:
+    sys.path.insert(0, REPO_ROOT)
+
 from core import database
-import time
+from core.collection import CollectionService
 from scripts.data_collector import (
     resolve_region,
     EXCLUDED_GAME_MODES,
@@ -23,10 +32,26 @@ def get_db_size():
 
 
 def run_collector():
-    # We will initialize API per region inside the loop
+    """Run continuous collection using CollectionService."""
     database.init_db()
+    service = CollectionService()
 
-    # Seeds to ensure queue is never empty
+    print(f"Background collector started. Target DB: {database.DB_PATH}")
+    print(f"Size limit: {MAX_DB_SIZE / (1024**3):.1f} GB")
+
+    stop_event = threading.Event()
+
+    def handle_signal(sig, frame):
+        print("\nStopping background collector gracefully...")
+        stop_event.set()
+
+    try:
+        signal.signal(signal.SIGINT, handle_signal)
+        signal.signal(signal.SIGTERM, handle_signal)
+    except (ValueError, AttributeError):
+        pass
+
+    # Seeds to ensure initial queue coverage
     seeds = [
         ("Hide on bush", "KR1"),
         ("Chovy", "KR1"),
@@ -38,113 +63,14 @@ def run_collector():
         ("T1 Zeus", "KR1"),
         ("T1 Oner", "KR1"),
     ]
+    service.collect_seed_players(seeds, matches_per_player=10)
 
-    for name, tag in seeds:
-        database.add_to_crawl_queue(name, tag, priority=10)
-
-    print(f"Background collector started. Target DB: {database.DB_PATH}")
-    print(f"Size limit: {MAX_DB_SIZE / (1024**3):.1f} GB")
-
-    while True:
-        # Check size limit
-        current_size = get_db_size()
-        if current_size >= MAX_DB_SIZE:
-            print(
-                f"Database reached size limit ({current_size / (1024**3):.2f} GB). Stopping."
-            )
-            break
-
-        # Get next player from persistent queue
-        players = database.get_next_from_crawl_queue(limit=1)
-        if not players:
-            print("Crawl queue empty. Re-seeding...")
-            for name, tag in seeds:
-                database.add_to_crawl_queue(name, tag)
-            time.sleep(5)
-            continue
-
-        player = players[0]
-        name, tag = player["game_name"], player["tag_line"]
-
-        try:
-            print(f"Processing {name}#{tag}...")
-
-            # Resolve region from tag
-            try:
-                region = resolve_region(tag)
-            except ValueError:
-                print(f"  Unsupported tag {tag}, skipping.")
-                database.mark_as_processed(name, tag)
-                continue
-
-            api = riot_api.RiotAPI(region)
-            puuid = api.get_puuid(name, tag)
-            if not puuid:
-                database.mark_as_processed(name, tag)
-                continue
-
-            database.save_player(puuid, name, tag)
-
-            # Fetch last 20 ranked solo matches
-            match_ids = api.get_match_ids(puuid, count=20, queue=420, type="ranked")
-
-            # Filter matches we already have
-            new_mids = [mid for mid in match_ids if not database.match_exists(mid)]
-
-            if not new_mids:
-                print(f"  No new matches for {name}")
-                database.mark_as_processed(name, tag)
-                continue
-
-            # Fetch details in parallel (Batch size 5)
-            print(f"  Fetching {len(new_mids)} new matches in parallel...")
-            details_map = api.get_match_details_batch(new_mids, max_workers=5)
-
-            matches_batch = []
-            training_records_batch = []
-
-            for mid, details in details_map.items():
-                # Pre-filter non-CLASSIC modes so we don't seed the crawl queue
-                # with their participants (no useful training pool growth).
-                info = details.get("info", {})
-                if (info.get("gameMode") or "").upper() != "CLASSIC":
-                    continue
-
-                for p in info.get("participants", []):
-                    # Grow the crawl pool via DB
-                    p_name = p.get("riotIdGameName")
-                    p_tag = p.get("riotIdTagline")
-                    if p_name and p_tag:
-                        database.add_to_crawl_queue(p_name, p_tag, priority=0)
-
-                record = _build_training_record(mid, details, region=region)
-                if record is None:
-                    continue
-                matches_batch.append((mid, details))
-                training_records_batch.append(record)
-
-            # Flush batches
-            if matches_batch:
-                database.save_matches_batch(matches_batch)
-            if training_records_batch:
-                database.save_training_records_batch(training_records_batch)
-
-            if FETCH_TIMELINES and new_mids:
-                timelines = api.get_match_timelines_batch(new_mids, max_workers=5)
-                if timelines:
-                    database.save_match_timelines_batch(list(timelines.items()))
-
-            database.mark_as_processed(name, tag)
-            print(
-                f"  Finished {name}#{tag}. Queue stats: {database.get_crawl_queue_stats()}"
-            )
-
-            # Rate limit buffer
-            time.sleep(2)
-
-        except Exception as e:
-            logger.error(f"Error processing {name}: {e}", exc_info=True)
-            time.sleep(10)
+    service.run_crawler(
+        target_matches=100000,
+        regions=["KR", "EUW", "NA"],
+        batch_size=20,
+        stop_event=stop_event,
+    )
 
 
 if __name__ == "__main__":
