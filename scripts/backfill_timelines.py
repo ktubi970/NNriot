@@ -66,22 +66,9 @@ def _region_from_match_id(match_id: str) -> str | None:
         return None
     prefix = match_id.split("_", 1)[0].upper()
 
-    # Map platform IDs to the RiotAPI region constructor.
-    # Source: data_collector._TAG_TO_REGION ÔÇö keep in sync.
-    mapping = {
-        "BR1": "BR",
-        "EUN1": "EUN",
-        "EUW1": "EUW",
-        "JP1": "JP",
-        "KR": "KR",
-        "LA1": "LA1",
-        "LA2": "LA2",
-        "NA1": "NA",
-        "OC1": "OCE",
-        "RU": "RU",
-        "TR1": "TR",
-    }
-    return mapping.get(prefix)
+    # Map platform IDs to the RiotAPI region constructor using centralized mapping
+    from core.collection.regions import TAG_TO_REGION
+    return TAG_TO_REGION.get(prefix)
 
 
 def backfill_timelines(

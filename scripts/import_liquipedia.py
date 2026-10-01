@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 
 from core import database
 from core import riot_api
-from scripts import data_collector
+from core.collection import CollectionService
 
 
 def normalise_handle(handle, default_tag="EUW"):
@@ -172,7 +172,8 @@ def import_from_liquipedia(stats_url, matches_per_player=50):
         if accounts_to_collect:
             print(f"  [*] Collecting metadata and {matches_per_player} matches for {len(accounts_to_collect)} accounts...")
             try:
-                data_collector.collect_by_puuid(accounts_to_collect, matches_per_player=matches_per_player)
+                service = CollectionService()
+                service.collect_by_puuid_accounts(accounts_to_collect, matches_per_player=matches_per_player)
             except Exception as e:
                 print(f"  [!] Collection failed: {e}")
 

@@ -18,7 +18,7 @@ import logging
 from flask import Blueprint, request, jsonify, current_app
 
 from core import database
-from scripts import live_game
+from core import live_game
 from core.collection import CollectionService, resolve_region
 from core.collection.service import (
     DEFAULT_LOOKBACK_DAYS,
