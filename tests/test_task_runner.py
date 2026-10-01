@@ -150,8 +150,11 @@ def test_history_and_batch_endpoints_with_task_runner(monkeypatch):
     client = flask_app.test_client()
 
     from scripts import data_collector
+    from core.collection import CollectionService
     monkeypatch.setattr(data_collector, "collect_training_data", lambda *args, **kwargs: None)
     monkeypatch.setattr(data_collector, "collect_batch_with_smurfs", lambda *args, **kwargs: None)
+    monkeypatch.setattr(CollectionService, "collect_seed_players", lambda *args, **kwargs: None)
+    monkeypatch.setattr(CollectionService, "collect_batch_with_smurfs", lambda *args, **kwargs: None)
 
     # Test /api/history/collect
     with app_core.collection_lock:
@@ -189,10 +192,12 @@ def test_route_failure_propagates_to_task_runner(monkeypatch):
     client = flask_app.test_client()
 
     from scripts import data_collector
+    from core.collection import CollectionService
     def failing_collector(*args, **kwargs):
         raise ValueError("Simulated route failure in collector")
 
     monkeypatch.setattr(data_collector, "collect_training_data", failing_collector)
+    monkeypatch.setattr(CollectionService, "collect_seed_players", failing_collector)
 
     with app_core.collection_lock:
         app_core.collection_status["status"] = "idle"

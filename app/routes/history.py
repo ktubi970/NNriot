@@ -5,8 +5,8 @@ import logging
 
 from flask import Blueprint, request, jsonify, current_app
 
-from scripts import data_collector
 from core import database
+from core.collection import CollectionService, resolve_region
 from core.task_runner import global_task_runner
 from ..services.system_service import SystemService
 
@@ -56,7 +56,8 @@ def api_history_collect():
         def run_collection():
             try:
                 seeds = [(game_name, tag_line)]
-                data_collector.collect_training_data(seeds, matches_per_player=count, db_path=db_path)
+                service = CollectionService(db_path=db_path)
+                service.collect_seed_players(seeds, matches_per_player=count)
 
                 with core.collection_lock:
                     core.collection_status["status"] = "completed"
@@ -113,7 +114,8 @@ def api_history_collect_batch():
                     for p in players
                     if p.get("game_name") and p.get("tag_line")
                 ]
-                data_collector.collect_training_data(seeds, matches_per_player=10, db_path=db_path)
+                service = CollectionService(db_path=db_path)
+                service.collect_seed_players(seeds, matches_per_player=10)
 
                 with core.collection_lock:
                     core.collection_status["status"] = "completed"
@@ -173,17 +175,19 @@ def api_batch_collect():
         if not player_list:
             return jsonify({"error": "No valid players found"}), 400
 
-        with data_collector.batch_lock:
-            if data_collector.batch_status["status"] == "running":
-                return jsonify({"error": "A batch job is already running"}), 409
+        service = CollectionService(db_path=current_app.config["NNRIOT_DB_PATH"])
+        if service.tracker.status == "running":
+            return jsonify({"error": "A batch job is already running"}), 409
+
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+
+        def run_batch():
+            svc = CollectionService(db_path=db_path)
+            svc.collect_batch_with_smurfs(player_list, sources=sources, count=count)
 
         job_id = global_task_runner.submit_task(
             "batch_collect",
-            data_collector.collect_batch_with_smurfs,
-            player_list,
-            sources,
-            count,
-            db_path=current_app.config["NNRIOT_DB_PATH"],
+            run_batch,
         )
 
         return jsonify(
@@ -201,10 +205,9 @@ def api_batch_collect():
 
 @history_bp.route("/api/batch/status", methods=["GET"])
 def api_batch_status():
-    with data_collector.batch_lock:
-        # Create a copy to send with a bounded window of logs
-        status_copy = dict(data_collector.batch_status)
-        status_copy["logs"] = list(data_collector.batch_status.get("logs", []))[-100:]
+    service = CollectionService(db_path=current_app.config["NNRIOT_DB_PATH"])
+    status_copy = service.tracker.to_dict()
+    status_copy["logs"] = list(status_copy.get("logs", []))[-100:]
     latest_job = global_task_runner.get_latest_by_type("batch_collect")
     if latest_job and "job_id" not in status_copy:
         status_copy["job_id"] = latest_job["job_id"]
@@ -250,34 +253,13 @@ def api_player_history():
     # 1. Live Riot API Fetch if requested and key is present
     if sync_riot and riot_key:
         try:
-            region = data_collector.resolve_region(tag)
+            region = resolve_region(tag)
             with riot_api.RiotAPI(region) as api:
                 puuid = api.get_puuid(name, tag)
                 if puuid:
                     database.save_player(puuid, name, tag, db_path=db_path)
-                    match_ids = api.get_match_ids(puuid, count=count)
-                    new_mids = [
-                        mid
-                        for mid in match_ids
-                        if not database.get_raw_match(mid, db_path=db_path)
-                    ]
-                    if new_mids:
-                        details_map = api.get_match_details_batch(new_mids, max_workers=3)
-                        matches_batch = []
-                        training_batch = []
-                        for mid, det in details_map.items():
-                            matches_batch.append((mid, det))
-                            rec = data_collector._build_training_record(
-                                mid, det, region=region
-                            )
-                            if rec:
-                                training_batch.append(rec)
-                        if matches_batch:
-                            database.save_matches_batch(matches_batch, db_path=db_path)
-                        if training_batch:
-                            database.save_training_records_batch(
-                                training_batch, db_path=db_path
-                            )
+                    service = CollectionService(db_path=db_path)
+                    service.collect_player_matches(puuid, region=region, count=count)
         except riot_api.RiotAuthError as e:
             logger.warning(f"Live Riot sync auth failed: {e}")
             return jsonify({

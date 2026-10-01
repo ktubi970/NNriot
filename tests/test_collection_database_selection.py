@@ -80,6 +80,12 @@ def test_web_collection_jobs_capture_selected_database(tmp_path, monkeypatch, ro
     monkeypatch.setattr(global_task_runner, "submit_task", enqueue)
     for name in ("collect_training_data", "collect_by_puuid", "collect_batch_with_smurfs"):
         monkeypatch.setattr(data_collector, name, collect)
+    from core.collection import CollectionService
+    def service_collect(self, *args, **kwargs):
+        calls.append({"db_path": self.db_path, **kwargs})
+        return {}
+    for name in ("collect_seed_players", "collect_by_puuid_accounts", "collect_batch_with_smurfs"):
+        monkeypatch.setattr(CollectionService, name, service_collect)
     client = application.test_client()
     if route == "seed":
         response = client.post("/api/history/collect", json={"game_name": "Player", "tag_line": "EUW"})

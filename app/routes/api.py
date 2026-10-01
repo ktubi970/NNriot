@@ -19,7 +19,13 @@ from flask import Blueprint, request, jsonify, current_app
 
 from core import database
 from scripts import live_game
-from scripts import data_collector
+from core.collection import CollectionService, resolve_region
+from core.collection.service import (
+    DEFAULT_LOOKBACK_DAYS,
+    DEFAULT_MATCHES_PER_PLAYER,
+    DEFAULT_PLAYERS_PER_REGION,
+    DEFAULT_REGIONS,
+)
 from core import riot_api
 from core import json_utils
 from core.task_runner import global_task_runner
@@ -447,8 +453,9 @@ def api_predict_custom():
 
                     def _refresh_stale():
                         try:
-                            result = data_collector.collect_by_puuid(
-                                accounts, matches_per_player=20, db_path=db_path
+                            service = CollectionService(db_path=db_path)
+                            result = service.collect_by_puuid_accounts(
+                                accounts, matches_per_player=20
                             )
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
@@ -651,9 +658,6 @@ def api_spectator_active():
             )
 
         # Enhance participants with local database info (puuid and stats)
-        # We need to resolve each participant
-        from scripts.data_collector import resolve_region
-
         region = resolve_region(tag)
         participants = game_data.get("participants", [])
 
@@ -680,7 +684,8 @@ def api_spectator_active():
                 try:
                     # Use seeds approach
                     seeds = [(p["name"], p["tag"]) for p in new_players]
-                    data_collector.collect_training_data(seeds, matches_per_player=10, db_path=db_path)
+                    service = CollectionService(db_path=db_path)
+                    service.collect_seed_players(seeds, matches_per_player=10)
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
                     raise
@@ -740,16 +745,16 @@ def api_monitor_metrics():
                 "versions": sorted(checkpoint_versions),
             }
 
-        # Training configuration — regions/lookback come from data_collector
+        # Training configuration — regions/lookback come from core.collection
         # so the UI tracks the collector defaults. batch_size/epochs are
         # hardcoded here to avoid importing TF-heavy continuous_trainer; if
         # the trainer constants change, bump these to match (continuous_trainer
         # BATCH_SIZE / EPOCHS_PER_BATCH).
         metrics["training_config"] = {
-            "regions": data_collector.DEFAULT_REGIONS,
-            "players_per_region": data_collector.DEFAULT_PLAYERS_PER_REGION,
-            "matches_per_player": data_collector.DEFAULT_MATCHES_PER_PLAYER,
-            "lookback_days": data_collector.DEFAULT_LOOKBACK_DAYS,
+            "regions": DEFAULT_REGIONS,
+            "players_per_region": DEFAULT_PLAYERS_PER_REGION,
+            "matches_per_player": DEFAULT_MATCHES_PER_PLAYER,
+            "lookback_days": DEFAULT_LOOKBACK_DAYS,
             "model_type": "ResMLP-22",  # 22-head multi-output model
             "batch_size": 500,
             "epochs": 100,

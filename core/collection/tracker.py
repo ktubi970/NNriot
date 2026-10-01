@@ -21,6 +21,12 @@ class CollectionTracker:
         self._end_time: Optional[float] = None
         self._error: Optional[str] = None
 
+    @property
+    def status(self) -> str:
+        """Return the current collection status in a thread-safe manner."""
+        with self._lock:
+            return self._status
+
     def set_running(self, total: int = 0, player: str = "") -> None:
         """Start tracking a new collection job."""
         with self._lock:

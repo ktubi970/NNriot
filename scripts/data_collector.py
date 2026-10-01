@@ -112,13 +112,45 @@ def collect_by_puuid(
     )
 
 
-batch_status: dict[str, Any] = {
-    "status": "idle",
-    "total": 0,
-    "current": 0,
-    "player": "",
-    "logs": [],
-}
+class _SyncedLogList(list):
+    def append(self, item):
+        super().append(item)
+        from core.collection.tracker import get_default_tracker
+        get_default_tracker().add_log(str(item))
+
+    def extend(self, items):
+        super().extend(items)
+        from core.collection.tracker import get_default_tracker
+        tracker = get_default_tracker()
+        with tracker._lock:
+            for it in items:
+                tracker._logs.append(str(it))
+
+
+class _SyncedBatchStatus(dict):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        super().__setitem__("status", "idle")
+        super().__setitem__("total", 0)
+        super().__setitem__("current", 0)
+        super().__setitem__("player", "")
+        super().__setitem__("logs", _SyncedLogList())
+
+    def __setitem__(self, key, value):
+        from core.collection.tracker import get_default_tracker
+        tracker = get_default_tracker()
+        if key == "status":
+            tracker._status = str(value)
+        elif key == "logs":
+            value = _SyncedLogList(value)
+            with tracker._lock:
+                tracker._logs.clear()
+                for item in value:
+                    tracker._logs.append(str(item))
+        super().__setitem__(key, value)
+
+
+batch_status: dict[str, Any] = _SyncedBatchStatus()
 batch_lock = threading.Lock()
 
 

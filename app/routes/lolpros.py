@@ -6,7 +6,7 @@ import threading
 from flask import Blueprint, request, jsonify, current_app
 
 from core import database
-from scripts import data_collector
+from core.collection import CollectionService
 from core.task_runner import global_task_runner
 
 from .. import core
@@ -161,8 +161,9 @@ def api_lolpros_import():
                                 "error": None,
                             }
                         )
-                    result = data_collector.collect_by_puuid(
-                        accs_payload, matches_per_player=20, db_path=db_path
+                    service = CollectionService(db_path=db_path)
+                    result = service.collect_by_puuid_accounts(
+                        accs_payload, matches_per_player=20
                     )
                     logger.info(f"lolpros collection done: {result}")
                     with core.collection_lock:
