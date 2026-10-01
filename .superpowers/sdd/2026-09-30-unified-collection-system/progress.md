@@ -7,3 +7,4 @@ Task 3: minor (deferred): return None for eta_minutes when total <= 0 or status 
 Task 3: complete (commits 155a196..2215137, review clean)
 Task 4: complete (commits 2215137..2735c12, review approved after fixes)
 Task 5: complete (commits 2735c12..d2b0397, review approved with replenishment hardening)
+Task 6: complete (commits d2b0397..b87b35f, review approved with CLI hardening)
