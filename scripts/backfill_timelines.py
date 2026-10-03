@@ -114,6 +114,7 @@ def backfill_timelines(
     db_path: str = database.DB_PATH,
     chunk_size: int = _CHUNK_SIZE,
     limit: int | None = None,
+    duration_hours: float | None = None,
     sleep_between_chunks: float = _SLEEP_BETWEEN_CHUNKS,
 ) -> dict:
     """
@@ -123,6 +124,7 @@ def backfill_timelines(
         db_path: SQLite DB path.
         chunk_size: How many parallel timeline fetches per Riot API batch.
         limit: Stop after fetching N timelines (None = all missing).
+        duration_hours: Stop after running for this many hours (None = no time limit).
         sleep_between_chunks: Seconds to sleep between chunks to respect
             Riot's rate-limit headers.
 
@@ -132,11 +134,18 @@ def backfill_timelines(
     database.init_db(db_path)
 
     stats = {"processed": 0, "saved": 0, "errors": 0, "skipped_region_unknown": 0}
+    start_time = time.monotonic()
+    max_seconds = duration_hours * 3600.0 if duration_hours is not None else None
 
     # Cache one RiotAPI instance per region (each does its own rate-limit tracking)
     api_by_region: dict[str, riot_api.RiotAPI] = {}
 
     while True:
+        # Check elapsed time limit before querying DB
+        if max_seconds is not None and (time.monotonic() - start_time) >= max_seconds:
+            logger.info("Reached maximum duration of %.2f hours — stopping.", duration_hours)
+            break
+
         # 1) Find next chunk of matches without a timeline
         with database.get_connection(db_path) as conn:
             rows = conn.execute(
@@ -236,17 +245,23 @@ def backfill_timelines(
                         [(m,) for m in null_marks],
                     )
 
+        elapsed_sec = time.monotonic() - start_time
         logger.info(
-            "Progress: processed=%d saved=%d errors=%d skipped=%d",
+            "Progress: processed=%d saved=%d errors=%d skipped=%d (elapsed: %.1fm / %.2fh)",
             stats["processed"],
             stats["saved"],
             stats["errors"],
             stats["skipped_region_unknown"],
+            elapsed_sec / 60.0,
+            elapsed_sec / 3600.0,
         )
 
-        # 5) Early termination on --limit
+        # 5) Early termination on --limit or --duration
         if limit is not None and stats["processed"] >= limit:
-            logger.info("Reached --limit %d ÔÇö stopping.", limit)
+            logger.info("Reached --limit %d — stopping.", limit)
+            break
+        if max_seconds is not None and elapsed_sec >= max_seconds:
+            logger.info("Reached maximum duration of %.2f hours — stopping.", duration_hours)
             break
 
         # 6) Sleep between chunks to respect rate limits
@@ -270,6 +285,13 @@ def main(argv=None):
         help="Stop after this many matches processed.",
     )
     parser.add_argument(
+        "--duration", "--duration-hours",
+        dest="duration_hours",
+        type=float,
+        default=None,
+        help="Stop after running for this many hours (e.g. 10 or 0.5).",
+    )
+    parser.add_argument(
         "--sleep", type=float, default=_SLEEP_BETWEEN_CHUNKS,
         help="Seconds to sleep between chunks (default 1.2).",
     )
@@ -281,7 +303,10 @@ def main(argv=None):
     logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
     print(f"Source database: {db_path}")
     result = backfill_timelines(
-        db_path=db_path, chunk_size=args.chunk, limit=args.limit,
+        db_path=db_path,
+        chunk_size=args.chunk,
+        limit=args.limit,
+        duration_hours=args.duration_hours,
         sleep_between_chunks=args.sleep,
     )
     print(f"Result: {result}")

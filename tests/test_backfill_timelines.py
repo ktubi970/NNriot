@@ -170,3 +170,25 @@ def test_backfill_pauses_and_resumes_on_key_renewal(tmp_path, monkeypatch):
     assert database.match_timeline_exists("EUW1_RENEW", db_path=db) is True
     # Verify timeline_json is NOT NULL
     assert database.get_match_timeline("EUW1_RENEW", db_path=db) is not None
+
+
+def test_backfill_duration_limit(tmp_path):
+    """Backfill stops when duration_hours limit is reached."""
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+    for i in range(10):
+        _insert_match(db, f"EUW1_{i}")
+
+    fake_timeline = {"info": {"frames": []}}
+    with patch.object(bt.riot_api.RiotAPI, "get_match_timelines_batch",
+                      return_value={f"EUW1_{i}": fake_timeline for i in range(10)}):
+        stats = bt.backfill_timelines(
+            db_path=db,
+            chunk_size=1,
+            duration_hours=0.0000001,
+            sleep_between_chunks=0,
+        )
+
+    assert stats["processed"] >= 1
+    assert stats["processed"] < 10
+
