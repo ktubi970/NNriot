@@ -95,18 +95,14 @@ def test_extract_timeline_lane_metrics_short_game():
     metrics = extract_timeline_lane_metrics(timeline_data)
     assert len(metrics) == 10
     # Should use frame 9 (last available)
-    # Blue gold at frame 9 = 2700, Red gold = 1800 -> GD = 900
     p1 = metrics["puuid_1"]
     assert p1["gd15"] == 900.0
-    # Blue cs = 6*9 + 1*9 = 63, Red cs = 5*9 + 1*9 = 54 -> CSD = 9
     assert p1["csd15"] == 9.0
-    # Blue xp = 2250, Red xp = 1800 -> XPD = 450
     assert p1["xpd15"] == 450.0
     assert p1["fbi10"] == 0.0
 
 
 def test_extract_timeline_lane_metrics_fallback_participants():
-    # Timeline without info.participants, but participants passed as external argument
     frames = [
         {
             "participantFrames": {
@@ -154,6 +150,109 @@ def test_extract_timeline_first_blood_after_10min():
     metrics = extract_timeline_lane_metrics(timeline_data)
     for p in metrics.values():
         assert p["fbi10"] == 0.0
+
+
+def test_first_blood_neutral_execution_then_real_fb():
+    # Execution at min 2 (killerId == 0), then real FB at min 4 (killerId == 3, assist 4)
+    frames = [
+        {"participantFrames": {str(i): {"totalGold": 1000, "minionsKilled": 10, "jungleMinionsKilled": 0, "xp": 500} for i in range(1, 11)}, "events": []}
+        for _ in range(16)
+    ]
+    frames[2]["events"] = [{
+        "type": "CHAMPION_KILL",
+        "timestamp": 120000,
+        "killerId": 0,
+        "victimId": 6,
+    }]
+    frames[4]["events"] = [{
+        "type": "CHAMPION_KILL",
+        "timestamp": 240000,
+        "killerId": 3,
+        "assistingParticipantIds": [4],
+        "victimId": 8,
+    }]
+
+    timeline_data = {
+        "info": {
+            "participants": [{"participantId": i, "puuid": f"puuid_{i}"} for i in range(1, 11)],
+            "frames": frames,
+        }
+    }
+
+    metrics = extract_timeline_lane_metrics(timeline_data)
+    assert metrics["puuid_3"]["fbi10"] == 1.0
+    assert metrics["puuid_4"]["fbi10"] == 1.0
+    assert metrics["puuid_1"]["fbi10"] == 0.0
+    assert metrics["puuid_6"]["fbi10"] == 0.0
+
+
+def test_strict_participant_ids_rejection():
+    # Non-standard participant IDs: 1..9, 11 (missing 10)
+    timeline_data = {
+        "info": {
+            "participants": [{"participantId": i, "puuid": f"puuid_{i}"} for i in [1, 2, 3, 4, 5, 6, 7, 8, 9, 11]],
+            "frames": [{"participantFrames": {}, "events": []}],
+        }
+    }
+    assert extract_timeline_lane_metrics(timeline_data) == {}
+
+
+def test_malformed_frames_and_events_resilience():
+    # Non-list frames
+    assert extract_timeline_lane_metrics({"info": {"frames": "not-a-list"}}) == {}
+    assert extract_timeline_lane_metrics({"info": {"frames": 12345}}) == {}
+
+    # Target frame is not a dict
+    timeline_bad_frame = {
+        "info": {
+            "participants": [{"participantId": i, "puuid": f"puuid_{i}"} for i in range(1, 11)],
+            "frames": ["invalid_frame_string"],
+        }
+    }
+    assert extract_timeline_lane_metrics(timeline_bad_frame) == {}
+
+    # Malformed stats, non-dict participant frames, malformed event attributes
+    timeline_dirty = {
+        "info": {
+            "participants": [{"participantId": i, "puuid": f"puuid_{i}"} for i in range(1, 11)],
+            "frames": [
+                None,  # malformed frame element
+                {
+                    "participantFrames": {
+                        "1": {"totalGold": "bad_gold", "minionsKilled": None, "xp": "invalid"},
+                        "2": "not_a_dict",
+                        # remaining 3..10 missing from participantFrames
+                    },
+                    "events": [
+                        "not_a_dict_event",
+                        {
+                            "type": "CHAMPION_KILL",
+                            "timestamp": "not_a_number",
+                            "killerId": "not_an_int",
+                            "assistingParticipantIds": "not_a_list",
+                        },
+                        {
+                            "type": "CHAMPION_KILL",
+                            "timestamp": 180000,
+                            "killerId": 1,
+                            "assistingParticipantIds": [2, "bad_assist"],
+                            "victimId": 6,
+                        },
+                    ],
+                },
+            ],
+        }
+    }
+    res = extract_timeline_lane_metrics(timeline_dirty)
+    assert len(res) == 10
+    # Safe float fallback to 0.0
+    assert res["puuid_1"]["gd15"] == 0.0
+    assert res["puuid_1"]["csd15"] == 0.0
+    assert res["puuid_1"]["xpd15"] == 0.0
+    # Event parsing safely identified killer 1 and assist 2
+    assert res["puuid_1"]["fbi10"] == 1.0
+    assert res["puuid_2"]["fbi10"] == 1.0
+    assert res["puuid_3"]["fbi10"] == 0.0
 
 
 def test_extract_timeline_lane_metrics_empty_or_malformed():

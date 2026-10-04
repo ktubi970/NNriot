@@ -7,6 +7,16 @@ FIRST_BLOOD_CUTOFF_MS: int = 600_000  # 10 minutes in milliseconds
 TARGET_FRAME_MINUTE: int = 15
 
 
+def _safe_float(val: Any, default: float = 0.0) -> float:
+    """Safely convert value to float, defaulting on None, ValueError, or TypeError."""
+    if val is None:
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
+
 def extract_timeline_lane_metrics(
     timeline_data: dict[str, Any] | None,
     participants: list[dict[str, Any]] | None = None,
@@ -28,46 +38,62 @@ def extract_timeline_lane_metrics(
     if not isinstance(info, dict):
         return {}
 
-    frames = info.get("frames") or []
-    if not frames:
+    raw_frames = info.get("frames")
+    if not isinstance(raw_frames, list) or not raw_frames:
         return {}
 
-    part_meta = info.get("participants") or []
+    part_meta = info.get("participants")
     pid_to_puuid: dict[int, str] = {}
     if isinstance(part_meta, list):
         for p in part_meta:
             if isinstance(p, dict):
-                pid = p.get("participantId")
+                pid_raw = p.get("participantId")
                 puuid = p.get("puuid")
-                if pid is not None and puuid:
-                    pid_to_puuid[int(pid)] = str(puuid)
+                if pid_raw is not None and puuid:
+                    try:
+                        pid = int(pid_raw)
+                        pid_to_puuid[pid] = str(puuid)
+                    except (ValueError, TypeError):
+                        pass
 
     # Fallback to participants list if provided
-    if participants and isinstance(participants, list):
+    if isinstance(participants, list):
         for idx, p in enumerate(participants, start=1):
             if isinstance(p, dict):
-                pid = p.get("participantId") or idx
+                pid_raw = p.get("participantId")
                 puuid = p.get("puuid")
-                if puuid and int(pid) not in pid_to_puuid:
-                    pid_to_puuid[int(pid)] = str(puuid)
+                if puuid:
+                    try:
+                        pid = int(pid_raw) if pid_raw is not None else idx
+                    except (ValueError, TypeError):
+                        pid = idx
+                    if pid not in pid_to_puuid:
+                        pid_to_puuid[pid] = str(puuid)
 
-    if len(pid_to_puuid) < 10:
-        # Require all 10 participants for valid lane differential
+    # Require all participants 1..10 to be present for valid lane differential
+    if not all(pid in pid_to_puuid for pid in range(1, 11)):
         return {}
 
     # Target frame: minute 15, or last available frame if game ended earlier
-    frame_idx = min(TARGET_FRAME_MINUTE, len(frames) - 1)
-    target_frame = frames[frame_idx]
-    p_frames = target_frame.get("participantFrames") or {}
+    frame_idx = min(TARGET_FRAME_MINUTE, len(raw_frames) - 1)
+    target_frame = raw_frames[frame_idx]
+    if not isinstance(target_frame, dict):
+        return {}
 
-    # Extract per-participant stats
+    p_frames = target_frame.get("participantFrames")
+    if not isinstance(p_frames, dict):
+        p_frames = {}
+
+    # Extract per-participant stats safely
     stats: dict[int, dict[str, float]] = {}
     for pid in range(1, 11):
-        pf = p_frames.get(str(pid)) or {}
-        gold = float(pf.get("totalGold") or 0.0)
-        minions = float(pf.get("minionsKilled") or 0.0)
-        monsters = float(pf.get("jungleMinionsKilled") or 0.0)
-        xp = float(pf.get("xp") or 0.0)
+        pf = p_frames.get(str(pid))
+        if not isinstance(pf, dict):
+            pf = {}
+        gold = _safe_float(pf.get("totalGold"))
+        minions = _safe_float(pf.get("minionsKilled"))
+        monsters = _safe_float(pf.get("jungleMinionsKilled"))
+        xp = _safe_float(pf.get("xp"))
         stats[pid] = {
             "gold": gold,
             "cs": minions + monsters,
@@ -75,21 +101,47 @@ def extract_timeline_lane_metrics(
         }
 
     # Detect First Blood involvement before 10 min
+    # In Riot timelines, neutral executions (minion/tower) have killerId == 0.
+    # Only killerId in range(1, 11) counts as genuine First Blood.
     fb_involved_pids: set[int] = set()
     found_first_blood = False
 
-    for frame in frames:
-        events = frame.get("events") or []
+    for frame in raw_frames:
+        if not isinstance(frame, dict):
+            continue
+        events = frame.get("events")
+        if not isinstance(events, list):
+            continue
         for ev in events:
             if isinstance(ev, dict) and ev.get("type") == "CHAMPION_KILL":
-                ts = ev.get("timestamp") or 0
+                try:
+                    killer_raw = ev.get("killerId")
+                    killer = int(killer_raw) if killer_raw is not None else None
+                except (ValueError, TypeError):
+                    killer = None
+
+                # Neutral execution or invalid killer: do not mark as First Blood
+                if killer is None or killer not in range(1, 11):
+                    continue
+
+                ts = _safe_float(ev.get("timestamp"), default=0.0)
+
+                assists_raw = ev.get("assistingParticipantIds")
+                assists: list[int] = []
+                if isinstance(assists_raw, list):
+                    for a in assists_raw:
+                        try:
+                            a_int = int(a)
+                            if a_int in range(1, 11):
+                                assists.append(a_int)
+                        except (ValueError, TypeError):
+                            pass
+
                 if ts <= FIRST_BLOOD_CUTOFF_MS:
-                    killer = ev.get("killerId")
-                    assists = ev.get("assistingParticipantIds") or []
-                    if killer:
-                        fb_involved_pids.add(int(killer))
+                    fb_involved_pids.add(killer)
                     for a in assists:
-                        fb_involved_pids.add(int(a))
+                        fb_involved_pids.add(a)
+
                 found_first_blood = True
                 break
         if found_first_blood:
@@ -98,10 +150,7 @@ def extract_timeline_lane_metrics(
     # Calculate differentials against opposite lane counterpart (1 <-> 6, 2 <-> 7, etc.)
     result: dict[str, dict[str, float]] = {}
     for pid in range(1, 11):
-        puuid = pid_to_puuid.get(pid)
-        if not puuid:
-            continue
-
+        puuid = pid_to_puuid[pid]
         opp_pid = pid + 5 if pid <= 5 else pid - 5
         my_stat = stats.get(pid, {"gold": 0.0, "cs": 0.0, "xp": 0.0})
         opp_stat = stats.get(opp_pid, {"gold": 0.0, "cs": 0.0, "xp": 0.0})
