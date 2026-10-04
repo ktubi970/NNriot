@@ -14,6 +14,7 @@ from core.champion_registry import (
     NUM_CHAMPIONS,
     UNK_CHAMPION_ID,
     champion_to_id,
+    id_to_champion,
 )
 from core.draft_features import (
     ROLE_INDEX,
@@ -33,10 +34,14 @@ from core.features.draft_composition import (
     MACRO_CLASH_DIM,
 )
 
-# Tensor dimensions per player: 14 features:
+# Tensor dimensions per player: 14 baseline features:
 # [champ_id, role_id, smooth_wr, smooth_cwr, champ_exp, rec_wr, role_fam, tot_exp,
 #  smooth_kda, smooth_cspm, smooth_gpm, early_aggression, lane_matchup_delta, champ_base_wr]
 ENRICHED_PLAYER_TENSOR_DIM: int = 14
+TIMELINE_PLAYER_FEATURE_COUNT: int = 4
+ENRICHED_PLAYER_TIMELINE_TENSOR_DIM: int = ENRICHED_PLAYER_TENSOR_DIM + TIMELINE_PLAYER_FEATURE_COUNT  # 18
+SPATIAL_TRAJECTORY_DIM: int = 32
+ENRICHED_PLAYER_SPATIAL_TENSOR_DIM: int = ENRICHED_PLAYER_TENSOR_DIM + SPATIAL_TRAJECTORY_DIM  # 46
 
 # Tabular dimension: 10 role IDs + 170 comp diff + 33 player priors + 5 lane deltas + 7 comp diff + 7 comp sum = 232
 ENRICHED_TABULAR_DIM: int = 10 + NUM_CHAMPIONS + 33 + 5 + 7 + 7
@@ -56,12 +61,19 @@ class DraftFeaturePipeline:
     def extract_tensors(
         self,
         feature_dict: dict[str, Any] | None,
+        include_spatial: bool = False,
+        include_timeline: bool = False,
     ) -> tuple[np.ndarray, np.ndarray]:
-        """Extract (team_a, team_b) tensors of shape (5, 14) each."""
-        t_a = np.zeros((5, ENRICHED_PLAYER_TENSOR_DIM), dtype=np.float32)
-        t_b = np.zeros((5, ENRICHED_PLAYER_TENSOR_DIM), dtype=np.float32)
+        """Extract (team_a, team_b) tensors of shape (5, 14), (5, 18), or spatial extended."""
+        base_dim = ENRICHED_PLAYER_TIMELINE_TENSOR_DIM if include_timeline else ENRICHED_PLAYER_TENSOR_DIM
+        feat_dim = base_dim + (SPATIAL_TRAJECTORY_DIM if include_spatial else 0)
+        t_a = np.zeros((5, feat_dim), dtype=np.float32)
+        t_b = np.zeros((5, feat_dim), dtype=np.float32)
 
-        default_priors = PlayerPriorsTracker.get_default_priors(extended=True)
+        default_priors = PlayerPriorsTracker.get_default_priors(
+            extended=True, include_timeline=include_timeline
+        )
+        timeline_fallback = [0.0, 0.0, 0.0, 0.10]
 
         if not isinstance(feature_dict, dict):
             feature_dict = {}
@@ -106,15 +118,29 @@ class DraftFeaturePipeline:
             cid_a = champion_to_id(pa.get("champion") or pa.get("championName"))
             cid_b = champion_to_id(pb.get("champion") or pb.get("championName"))
 
-            # Player priors (10 features)
+            # Player priors (10 base or 14 timeline-augmented)
             def _get_priors(p, cid):
                 if "priors" in p and isinstance(p["priors"], (list, tuple)):
                     p_list = [float(x) for x in p["priors"]]
-                    if len(p_list) >= 10:
-                        return p_list[:10]
-                    return p_list[:6] + default_priors[6:10]
+                    if include_timeline:
+                        if len(p_list) >= 14:
+                            return p_list[:14]
+                        if len(p_list) >= 10:
+                            return p_list[:10] + timeline_fallback
+                        if len(p_list) >= 6:
+                            return p_list[:6] + default_priors[6:10] + timeline_fallback
+                        return p_list + default_priors[len(p_list):14]
+                    else:
+                        if len(p_list) >= 10:
+                            return p_list[:10]
+                        if len(p_list) >= 6:
+                            return p_list[:6] + default_priors[6:10]
+                        return p_list + default_priors[len(p_list):10]
                 if self.player_tracker is not None:
-                    return self.player_tracker.get_player_priors(p.get("puuid"), cid, role_name, extended=True)
+                    champ_name = p.get("champion") or p.get("championName") or id_to_champion(cid)
+                    return self.player_tracker.get_player_priors(
+                        p.get("puuid"), champ_name, role_name, extended=True, include_timeline=include_timeline
+                    )
                 return default_priors
 
             pri_a = _get_priors(pa, cid_a)
@@ -128,18 +154,42 @@ class DraftFeaturePipeline:
             prof_a = get_champion_profile_by_id(cid_a)
             prof_b = get_champion_profile_by_id(cid_b)
 
-            # Layout: [cid, slot, p0..p9 (10 priors), matchup_delta, base_wr] -> 14 features
-            t_a[slot, 0] = float(cid_a)
-            t_a[slot, 1] = float(slot)
-            t_a[slot, 2:12] = pri_a
-            t_a[slot, 12] = float(delta_a)
-            t_a[slot, 13] = float(prof_a.base_winrate)
+            if include_timeline:
+                # Layout: [cid, slot, p0..p9 (10 priors), t0..t3 (4 timeline), matchup_delta, base_wr] -> 18 features
+                t_a[slot, 0] = float(cid_a)
+                t_a[slot, 1] = float(slot)
+                t_a[slot, 2:12] = pri_a[:10]
+                t_a[slot, 12:16] = pri_a[10:14]
+                t_a[slot, 16] = float(delta_a)
+                t_a[slot, 17] = float(prof_a.base_winrate)
 
-            t_b[slot, 0] = float(cid_b)
-            t_b[slot, 1] = float(slot)
-            t_b[slot, 2:12] = pri_b
-            t_b[slot, 12] = float(delta_b)
-            t_b[slot, 13] = float(prof_b.base_winrate)
+                t_b[slot, 0] = float(cid_b)
+                t_b[slot, 1] = float(slot)
+                t_b[slot, 2:12] = pri_b[:10]
+                t_b[slot, 12:16] = pri_b[10:14]
+                t_b[slot, 16] = float(delta_b)
+                t_b[slot, 17] = float(prof_b.base_winrate)
+            else:
+                # Layout: [cid, slot, p0..p9 (10 priors), matchup_delta, base_wr] -> 14 features
+                t_a[slot, 0] = float(cid_a)
+                t_a[slot, 1] = float(slot)
+                t_a[slot, 2:12] = pri_a[:10]
+                t_a[slot, 12] = float(delta_a)
+                t_a[slot, 13] = float(prof_a.base_winrate)
+
+                t_b[slot, 0] = float(cid_b)
+                t_b[slot, 1] = float(slot)
+                t_b[slot, 2:12] = pri_b[:10]
+                t_b[slot, 12] = float(delta_b)
+                t_b[slot, 13] = float(prof_b.base_winrate)
+
+            if include_spatial:
+                spat_a = self.player_tracker.get_player_spatial_vector(pa.get("puuid")) if self.player_tracker else np.zeros(SPATIAL_TRAJECTORY_DIM, dtype=np.float32)
+                spat_b = self.player_tracker.get_player_spatial_vector(pb.get("puuid")) if self.player_tracker else np.zeros(SPATIAL_TRAJECTORY_DIM, dtype=np.float32)
+                spat_start = 18 if include_timeline else 14
+                spat_end = spat_start + SPATIAL_TRAJECTORY_DIM
+                t_a[slot, spat_start:spat_end] = spat_a
+                t_b[slot, spat_start:spat_end] = spat_b
 
         return t_a, t_b
 
@@ -194,14 +244,20 @@ class DraftFeaturePipeline:
     def batch_extract_tensors(
         self,
         features_list: Sequence[dict[str, Any] | None],
+        include_spatial: bool = False,
+        include_timeline: bool = False,
     ) -> dict[str, np.ndarray]:
         """Batch extract tensors for multiple matches."""
+        base_dim = ENRICHED_PLAYER_TIMELINE_TENSOR_DIM if include_timeline else ENRICHED_PLAYER_TENSOR_DIM
+        feat_dim = base_dim + (SPATIAL_TRAJECTORY_DIM if include_spatial else 0)
         n = len(features_list)
-        batch_a = np.zeros((n, 5, ENRICHED_PLAYER_TENSOR_DIM), dtype=np.float32)
-        batch_b = np.zeros((n, 5, ENRICHED_PLAYER_TENSOR_DIM), dtype=np.float32)
+        batch_a = np.zeros((n, 5, feat_dim), dtype=np.float32)
+        batch_b = np.zeros((n, 5, feat_dim), dtype=np.float32)
 
         for i, fj in enumerate(features_list):
-            ta, tb = self.extract_tensors(fj)
+            ta, tb = self.extract_tensors(
+                fj, include_spatial=include_spatial, include_timeline=include_timeline
+            )
             batch_a[i] = ta
             batch_b[i] = tb
 
@@ -247,9 +303,10 @@ class DraftFeaturePipeline:
     def batch_extract_v3(
         self,
         features_list: Sequence[dict[str, Any] | None],
+        include_timeline: bool = False,
     ) -> dict[str, np.ndarray]:
         """Extract both player tensors and macro clash vector for DeepSets v3."""
-        tensors = self.batch_extract_tensors(features_list)
+        tensors = self.batch_extract_tensors(features_list, include_timeline=include_timeline)
         clash = self.batch_extract_macro_clash(features_list)
         return {
             "team_a": tensors["team_a"],
