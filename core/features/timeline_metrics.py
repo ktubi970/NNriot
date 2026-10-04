@@ -17,6 +17,17 @@ def _safe_float(val: Any, default: float = 0.0) -> float:
         return default
 
 
+
+def _normalize_role(role_raw: str) -> str:
+    r = role_raw.strip().upper()
+    return {
+        "MID": "MIDDLE",
+        "BOT": "BOTTOM",
+        "SUPPORT": "UTILITY",
+        "SUP": "UTILITY",
+        "ADC": "BOTTOM",
+    }.get(r, r)
+
 def extract_timeline_lane_metrics(
     timeline_data: dict[str, Any] | None,
     participants: list[dict[str, Any]] | None = None,
@@ -44,15 +55,19 @@ def extract_timeline_lane_metrics(
 
     part_meta = info.get("participants")
     pid_to_puuid: dict[int, str] = {}
+    pid_to_role: dict[int, str] = {}
     if isinstance(part_meta, list):
         for p in part_meta:
             if isinstance(p, dict):
                 pid_raw = p.get("participantId")
                 puuid = p.get("puuid")
+                role_raw = p.get("teamPosition") or p.get("role") or ""
                 if pid_raw is not None and puuid:
                     try:
                         pid = int(pid_raw)
                         pid_to_puuid[pid] = str(puuid)
+                        if role_raw:
+                            pid_to_role[pid] = _normalize_role(str(role_raw))
                     except (ValueError, TypeError):
                         pass
 
@@ -62,6 +77,7 @@ def extract_timeline_lane_metrics(
             if isinstance(p, dict):
                 pid_raw = p.get("participantId")
                 puuid = p.get("puuid")
+                role_raw = p.get("teamPosition") or p.get("role") or p.get("individualPosition") or ""
                 if puuid:
                     try:
                         pid = int(pid_raw) if pid_raw is not None else idx
@@ -69,6 +85,8 @@ def extract_timeline_lane_metrics(
                         pid = idx
                     if pid not in pid_to_puuid:
                         pid_to_puuid[pid] = str(puuid)
+                    if pid not in pid_to_role and role_raw:
+                        pid_to_role[pid] = _normalize_role(str(role_raw))
 
     # Require all participants 1..10 to be present for valid lane differential
     if not all(pid in pid_to_puuid for pid in range(1, 11)):
@@ -149,9 +167,32 @@ def extract_timeline_lane_metrics(
 
     # Calculate differentials against opposite lane counterpart (1 <-> 6, 2 <-> 7, etc.)
     result: dict[str, dict[str, float]] = {}
+    
+    blue_roles: dict[str, int] = {}
+    red_roles: dict[str, int] = {}
+    for pid in range(1, 11):
+        role = pid_to_role.get(pid, "")
+        if not role:
+            continue
+        if pid <= 5:
+            blue_roles[role] = pid
+        else:
+            red_roles[role] = pid
+
     for pid in range(1, 11):
         puuid = pid_to_puuid[pid]
-        opp_pid = pid + 5 if pid <= 5 else pid - 5
+        role = pid_to_role.get(pid, "")
+        opp_pid = None
+        
+        if role:
+            if pid <= 5:
+                opp_pid = red_roles.get(role)
+            else:
+                opp_pid = blue_roles.get(role)
+        
+        if opp_pid is None:
+            opp_pid = pid + 5 if pid <= 5 else pid - 5
+            
         my_stat = stats.get(pid, {"gold": 0.0, "cs": 0.0, "xp": 0.0})
         opp_stat = stats.get(opp_pid, {"gold": 0.0, "cs": 0.0, "xp": 0.0})
 

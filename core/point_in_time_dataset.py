@@ -183,29 +183,28 @@ def load_enriched_records(
                 parts_by_match.setdefault(prow["match_id"], []).append(prow)
 
         raw_timelines_by_match: dict[str, Any] = {}
-        if include_timeline and has_timelines:
-            logger.info("Batch pre-fetching timelines for %d candidate matches...", len(candidate_mids))
-            for i in range(0, len(candidate_mids), chunk_size):
-                chunk = candidate_mids[i : i + chunk_size]
-                ph = ",".join("?" for _ in chunk)
-                t_cursor = conn.execute(
-                    f"""
-                    SELECT match_id, timeline_json
-                    FROM match_timelines
-                    WHERE match_id IN ({ph})
-                    """,
-                    chunk,
-                )
-                for trow in t_cursor:
-                    raw_tj = trow["timeline_json"]
-                    if raw_tj is not None:
-                        raw_timelines_by_match[trow["match_id"]] = raw_tj
+        timeline_window_idx = 0
+        TIMELINE_WINDOW_SIZE = 500
 
         match_count = 0
         valid_post_warmup = 0
 
-        for row in candidates:
+        for c_idx, row in enumerate(candidates):
             mid = row["match_id"]
+            
+            if include_timeline and has_timelines and c_idx >= timeline_window_idx:
+                # Fetch next window of timelines
+                window_mids = [r["match_id"] for r in candidates[timeline_window_idx:timeline_window_idx + TIMELINE_WINDOW_SIZE]]
+                if window_mids:
+                    ph = ",".join("?" for _ in window_mids)
+                    t_cursor = conn.execute(
+                        f"SELECT match_id, timeline_json FROM match_timelines WHERE match_id IN ({ph})",
+                        window_mids
+                    )
+                    for trow in t_cursor:
+                        if trow["timeline_json"] is not None:
+                            raw_timelines_by_match[trow["match_id"]] = trow["timeline_json"]
+                timeline_window_idx += TIMELINE_WINDOW_SIZE
             gtime = row["game_creation_time"]
             winner = row["winner_label"]
 
@@ -213,7 +212,7 @@ def load_enriched_records(
             if not _valid_timestamp(gtime) or not _valid_labels(labels, winner):
                 continue
 
-            parts = parts_by_match.get(mid, [])
+            parts = parts_by_match.pop(mid, [])
             if len(parts) != 10:
                 continue
 
@@ -268,12 +267,12 @@ def load_enriched_records(
 
             # 3. Accumulate timeline metrics AFTER feature extraction
             if include_timeline and has_timelines:
-                raw_tj = raw_timelines_by_match.get(mid)
+                raw_tj = raw_timelines_by_match.pop(mid, None)
                 if raw_tj is not None:
                     t_data = _parse_timeline_json(raw_tj)
                     if t_data:
                         participant_meta = [
-                            {"participantId": idx, "puuid": p["puuid"]}
+                            {"participantId": idx, "puuid": p["puuid"], "teamPosition": p["team_position"]}
                             for idx, p in enumerate(parts, start=1)
                         ]
                         lane_metrics = extract_timeline_lane_metrics(t_data, participants=participant_meta)
