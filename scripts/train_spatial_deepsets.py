@@ -22,6 +22,7 @@ from core.features.pipeline import DraftFeaturePipeline, ENRICHED_PLAYER_SPATIAL
 from core.player_priors import PlayerPriorsTracker
 from core.equivariant_model import build_equivariant_deepsets_model, NNRIOT_CUSTOM_OBJECTS
 from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD, get_adjusted_loss_weights
+from core.pcgrad import create_compiled_pcgrad_step
 from core.training_utils import _build_targets
 from core.training_metrics import evaluate_winner
 from core.calibration import fit_temperature, apply_temperature_to_probabilities
@@ -208,19 +209,35 @@ def train_spatial_deepsets(
         if head in model.output_names
     }
 
-    @tf.function
-    def train_step(xa, xb, yb):
-        with tf.GradientTape() as tape:
-            preds = model({"team_a": xa, "team_b": xb}, training=True)
-            losses = []
-            for head, loss_fn in loss_fns.items():
-                if head in preds and head in yb:
-                    w = loss_weights.get(head, 1.0)
-                    losses.append(w * tf.reduce_mean(loss_fn(yb[head], preds[head])))
-            batch_loss = tf.add_n(losses)
-        grads = tape.gradient(batch_loss, model.trainable_variables)
-        model.optimizer.apply_gradients(zip(grads, model.trainable_variables))
-        return batch_loss
+    if use_pcgrad:
+        logger.info("Using compiled PCGrad multi-task gradient deconfliction.")
+        pcgrad_step = create_compiled_pcgrad_step(
+            model=model,
+            optimizer=model.optimizer,
+            loss_fns=loss_fns,
+            loss_weights=loss_weights,
+            jit_compile=False,
+        )
+
+        def train_step(xa, xb, yb):
+            losses = pcgrad_step({"team_a": xa, "team_b": xb}, yb)
+            return tf.add_n(list(losses.values()))
+    else:
+        logger.info("Using standard vectorized GradientTape.")
+
+        @tf.function
+        def train_step(xa, xb, yb):
+            with tf.GradientTape() as tape:
+                preds = model({"team_a": xa, "team_b": xb}, training=True)
+                losses = []
+                for head, loss_fn in loss_fns.items():
+                    if head in preds and head in yb:
+                        w = loss_weights.get(head, 1.0)
+                        losses.append(w * tf.reduce_mean(loss_fn(yb[head], preds[head])))
+                batch_loss = tf.add_n(losses)
+            grads = tape.gradient(batch_loss, model.trainable_variables)
+            model.optimizer.apply_gradients(zip(grads, model.trainable_variables))
+            return batch_loss
 
     logger.info("Starting training on %d samples (%d val, %d test)...", n_train, len(x["val"]["team_a"]), len(x["test"]["team_a"]))
 
