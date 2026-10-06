@@ -245,6 +245,7 @@ def train_spatial_deepsets(
     best_weights = None
     best_epoch = 0
     patience = 5
+    history: list[dict] = []
 
     for epoch in range(1, epochs + 1):
         t0 = time.time()
@@ -282,6 +283,14 @@ def train_spatial_deepsets(
         val_winner_probs = val_preds["winner"].numpy()[:, 1]
         val_winner_labels = np.argmax(y["val"]["winner"], axis=1)
         val_acc = float(np.mean((val_winner_probs >= 0.5) == val_winner_labels))
+
+        history.append({
+            "epoch": epoch,
+            "train_loss": round(float(train_loss), 5),
+            "val_loss": round(float(val_loss), 5),
+            "val_acc": round(float(val_acc), 5),
+            "epoch_time_s": round(float(epoch_time), 2),
+        })
 
         bias_info = ""
         try:
@@ -338,6 +347,7 @@ def train_spatial_deepsets(
         "player_feature_dim": ENRICHED_PLAYER_SPATIAL_TENSOR_DIM,
         "n_samples": len(records),
         "temperature": round(float(temperature), 4),
+        "history": history,
         "test_eval_raw": test_eval_raw,
         "test_eval_cal": test_eval_cal,
         "selective_stratification": stratification,
