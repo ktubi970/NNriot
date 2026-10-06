@@ -24,6 +24,7 @@ __all__ = [
     "PRUNED_LOSS_PER_HEAD",
     "PRUNED_LOSS_WEIGHTS",
     "PRUNED_METRICS_PER_HEAD",
+    "get_adjusted_loss_weights",
     "HomoscedasticLossLayer",
     "build_keras_model",
     "build_multi_output_model",
@@ -64,6 +65,24 @@ PRUNED_METRICS_PER_HEAD: dict[str, list[str]] = {
     "team_a_kills":         ["mae"],
     "team_b_kills":         ["mae"],
 }
+
+
+def get_adjusted_loss_weights(
+    aux_scale: float = 0.1,
+    base_weights: dict[str, float] | None = None,
+) -> dict[str, float]:
+    """Scale auxiliary regression heads by aux_scale to prevent gradient domination."""
+    if base_weights is None:
+        base_weights = PRUNED_LOSS_WEIGHTS
+    adjusted = dict(base_weights)
+    mse_heads = {
+        "total_kills", "team_a_kills", "team_b_kills", "kill_handicap",
+        "total_barons", "total_dragons", "total_towers",
+    }
+    for head in mse_heads:
+        if head in adjusted:
+            adjusted[head] = float(adjusted[head] * aux_scale)
+    return adjusted
 
 
 @tf.keras.utils.register_keras_serializable(package="nnriot")
