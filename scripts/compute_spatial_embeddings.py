@@ -106,6 +106,8 @@ def compute_and_save_spatial_embeddings(
 
             participants = timeline_data.get("info", {}).get("participants") or []
             if not participants:
+                logger.warning("Timeline for %s has empty participants — marking handled.", mid)
+                metadata.append((mid, "__EMPTY_TRAJECTORY__", int(creation_time)))
                 continue
 
             match_puuids = []
@@ -132,16 +134,25 @@ def compute_and_save_spatial_embeddings(
                 for puuid in match_puuids:
                     metadata.append((mid, puuid, int(creation_time)))
                 valid_matches_in_chunk += 1
+            else:
+                logger.warning("Timeline for %s has 0 valid participants (remake/aborted) — marking handled.", mid)
+                metadata.append((mid, "__EMPTY_TRAJECTORY__", int(creation_time)))
 
+        db_records = []
         if all_early:
             early_tensor = np.stack(all_early, axis=0)
             mid_tensor = np.stack(all_mid, axis=0)
             emb_matrix = encoder([early_tensor, mid_tensor]).numpy().astype(np.float32)
 
-            db_records = []
-            for (mid, puuid, ctime), emb_vec in zip(metadata, emb_matrix):
+            for (mid, puuid, ctime), emb_vec in zip(metadata[:len(emb_matrix)], emb_matrix):
                 db_records.append((mid, puuid, ctime, emb_vec.tobytes()))
 
+        # Add empty sentinel records for matches with 0 participants
+        for mid, puuid, ctime in metadata:
+            if puuid == "__EMPTY_TRAJECTORY__":
+                db_records.append((mid, puuid, ctime, b"\x00" * 128))
+
+        if db_records:
             with get_connection(db_path) as conn:
                 conn.executemany(
                     """
@@ -153,6 +164,9 @@ def compute_and_save_spatial_embeddings(
                 )
 
             saved_embeddings += len(db_records)
+        else:
+            logger.info("No further records to extract. Stopping.")
+            break
 
         processed_matches += len(rows)
         elapsed = time.time() - t_start
