@@ -203,8 +203,8 @@ def train_spatial_deepsets(
 
     loss_weights = get_adjusted_loss_weights(aux_scale=aux_weight_scale)
     loss_fns = {
-        head: model.loss[head] if isinstance(model.loss, dict) and head in model.loss
-        else tf.keras.losses.get(LOSS_PER_HEAD[head])
+        head: tf.keras.losses.get(model.loss[head]) if isinstance(model.loss, dict) and head in model.loss
+        else tf.keras.losses.get(LOSS_PER_HEAD.get(head, "mse"))
         for head in LOSS_PER_HEAD
         if head in model.output_names
     }

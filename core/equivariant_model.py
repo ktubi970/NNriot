@@ -415,10 +415,10 @@ def build_equivariant_deepsets_model(
         optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
 
     # Configure losses with optional label smoothing on categorical heads
-    def _create_loss(loss_spec: str) -> tf.keras.losses.Loss | str:
+    def _create_loss(loss_spec: str) -> tf.keras.losses.Loss:
         if loss_spec == "categorical_crossentropy":
             return tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
-        return loss_spec
+        return tf.keras.losses.get(loss_spec)
 
     # Compile with appropriate losses/weights/metrics for active heads
     if pruned_heads:
