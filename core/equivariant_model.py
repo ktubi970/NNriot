@@ -11,10 +11,12 @@ Guarantees exact mathematical team-swap anti-symmetry and permutation invariance
 from __future__ import annotations
 
 from typing import Any
+import numpy as np
 import tensorflow as tf
 from core.deepsets_layers import (
     SiameseTeamEncoder,
     AntiSymmetricSoftmax,
+    DirectionalSideBias,
     SetTransformerPMA,
     SinkhornCrossAttention,
 )
@@ -173,6 +175,38 @@ class EvidentialDirichletSoftmax(tf.keras.layers.Layer):
 
 
 
+@tf.keras.utils.register_keras_serializable(package="nnriot")
+class SpatialJitter(tf.keras.layers.Layer):
+    """Adds Gaussian noise only to continuous features (indices >= discrete_dim) during training.
+
+    Protects categorical champion IDs and role indices (dimensions 0 and 1) from noise,
+    while perturbing continuous trajectory/heatmap embeddings for data augmentation.
+    """
+
+    def __init__(self, stddev: float = 0.05, discrete_dim: int = 2, **kwargs: Any) -> None:
+        super().__init__(**kwargs)
+        self.stddev = float(stddev)
+        self.discrete_dim = int(discrete_dim)
+
+    def call(self, inputs: tf.Tensor, training: bool | None = None) -> tf.Tensor:
+        if not training or self.stddev <= 0.0:
+            return inputs
+        if inputs.shape[-1] is not None and inputs.shape[-1] <= self.discrete_dim:
+            return inputs
+        discrete = inputs[..., :self.discrete_dim]
+        continuous = inputs[..., self.discrete_dim:]
+        noise = tf.random.normal(tf.shape(continuous), mean=0.0, stddev=self.stddev, dtype=continuous.dtype)
+        return tf.concat([discrete, continuous + noise], axis=-1)
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update({
+            "stddev": self.stddev,
+            "discrete_dim": self.discrete_dim,
+        })
+        return config
+
+
 # ---------------------------------------------------------------------------
 # Centralized custom objects registry for checkpoint loading.
 # Import this dict in every tf.keras.models.load_model() call to guarantee
@@ -186,6 +220,7 @@ from core.generate_graph import HomoscedasticLossLayer
 NNRIOT_CUSTOM_OBJECTS: dict[str, Any] = {
     "SiameseTeamEncoder": SiameseTeamEncoder,
     "AntiSymmetricSoftmax": AntiSymmetricSoftmax,
+    "DirectionalSideBias": DirectionalSideBias,
     "ThreeClassEquivariantSoftmax": ThreeClassEquivariantSoftmax,
     "SkewSymmetricBilinearDense": SkewSymmetricBilinearDense,
     "EvidentialDirichletSoftmax": EvidentialDirichletSoftmax,
@@ -193,6 +228,7 @@ NNRIOT_CUSTOM_OBJECTS: dict[str, Any] = {
     "SinkhornCrossAttention": SinkhornCrossAttention,
     "PeriodicNumericalEmbedding": PeriodicNumericalEmbedding,
     "HomoscedasticLossLayer": HomoscedasticLossLayer,
+    "SpatialJitter": SpatialJitter,
 }
 
 
@@ -209,6 +245,12 @@ def build_equivariant_deepsets_model(
     use_evidential: bool = True,
     pruned_heads: bool = True,
     use_bilinear: bool = True,
+    enable_side_bias: bool = True,
+    blue_win_prior: float = 0.525,
+    optimizer_type: str = "adam",
+    weight_decay: float = 1e-3,
+    spatial_noise_std: float = 0.0,
+    label_smoothing: float = 0.0,
 ) -> tf.keras.Model:
     """Build the equivariant Siamese DeepSets multi-task model.
 
@@ -219,20 +261,32 @@ def build_equivariant_deepsets_model(
 
     Outputs:
         When pruned_heads=True (default):
-            Dictionary of 7 core heads (from PRUNED_LABEL_KEYS) + "winner_uncertainty" if use_evidential=True.
+            Dictionary of 7 core heads (from PRUNED_LABEL_KEYS)
+            + "draft_advantage" (strictly anti-symmetric pure draft score)
+            + "winner_uncertainty" if use_evidential=True.
         When pruned_heads=False:
-            Dictionary of 22 named head tensors matching ALL_LABEL_KEYS + "winner_uncertainty" if use_evidential=True.
+            Dictionary of 22 named head tensors matching ALL_LABEL_KEYS
+            + "draft_advantage"
+            + "winner_uncertainty" if use_evidential=True.
     """
     input_a = tf.keras.Input(shape=(5, player_feature_dim), name="team_a")
     input_b = tf.keras.Input(shape=(5, player_feature_dim), name="team_b")
 
+    if spatial_noise_std > 0.0:
+        jitter_layer = SpatialJitter(stddev=spatial_noise_std, name="spatial_jitter")
+        enc_input_a = jitter_layer(input_a)
+        enc_input_b = jitter_layer(input_b)
+    else:
+        enc_input_a = input_a
+        enc_input_b = input_b
+
     if include_macro_clash and macro_feature_dim > 0:
         input_macro = tf.keras.Input(shape=(macro_feature_dim,), name="macro_clash")
         inputs = {"team_a": input_a, "team_b": input_b, "macro_clash": input_macro}
-        encoder_inputs = (input_a, input_b, input_macro)
+        encoder_inputs = (enc_input_a, enc_input_b, input_macro)
     else:
         inputs = {"team_a": input_a, "team_b": input_b}
-        encoder_inputs = (input_a, input_b)
+        encoder_inputs = (enc_input_a, enc_input_b)
 
     encoder = SiameseTeamEncoder(
         embed_dim=embed_dim,
@@ -259,11 +313,31 @@ def build_equivariant_deepsets_model(
         winner_linear = tf.keras.layers.Dense(
             1, use_bias=False, kernel_regularizer=reg, name="winner_linear_logit"
         )(t_diff_in)
-        s_winner = tf.keras.layers.Add(name="winner_logit")([winner_bilinear, winner_linear])
+        s_winner_draft = tf.keras.layers.Add(name="winner_draft_logit")([winner_bilinear, winner_linear])
     else:
-        s_winner = tf.keras.layers.Dense(
-            1, use_bias=False, kernel_regularizer=reg, name="winner_logit"
+        s_winner_draft = tf.keras.layers.Dense(
+            1, use_bias=False, kernel_regularizer=reg, name="winner_draft_logit"
         )(t_diff_in)
+
+    # Pure side-neutral draft advantage head (strictly anti-symmetric: 50% for mirror matchups)
+    outputs["draft_advantage"] = AntiSymmetricSoftmax(name="draft_advantage")(s_winner_draft)
+
+    # Arena side decoupling
+    if enable_side_bias:
+        if 0.0 < blue_win_prior < 1.0:
+            if use_evidential:
+                # In Dirichlet evidential softmax, evidence e = softplus(s) is augmented by
+                # alpha = e + 1, giving S = alpha_a + alpha_b = e_a + e_b + 2.
+                # Near s = 0, S_0 = 2 * ln(2) + 2. To yield expected win probability blue_win_prior,
+                # the directional logit shift is s = -(2 * p_blue - 1) * (2 * ln(2) + 2):
+                initial_winner_bias = float(-(2.0 * blue_win_prior - 1.0) * (2.0 * np.log(2.0) + 2.0))
+            else:
+                initial_winner_bias = float(0.5 * np.log((1.0 - blue_win_prior) / blue_win_prior))
+        else:
+            initial_winner_bias = -0.05
+        s_winner = DirectionalSideBias(initial_bias=initial_winner_bias, name="winner_side_bias")(s_winner_draft)
+    else:
+        s_winner = s_winner_draft
 
     if use_evidential:
         p_winner, u_winner = EvidentialDirichletSoftmax(name="winner_evidential")(s_winner)
@@ -272,10 +346,14 @@ def build_equivariant_deepsets_model(
     else:
         outputs["winner"] = AntiSymmetricSoftmax(name="winner")(s_winner)
 
-    # 2. Team B kill lead (Directional anti-symmetric 2-class softmax)
-    s_lead = tf.keras.layers.Dense(
-        1, use_bias=False, kernel_regularizer=reg, name="team_b_kill_lead_logit"
+    # 2. Team B kill lead (Directional anti-symmetric 2-class softmax + side bias)
+    s_lead_draft = tf.keras.layers.Dense(
+        1, use_bias=False, kernel_regularizer=reg, name="team_b_kill_lead_draft_logit"
     )(t_diff_in)
+    if enable_side_bias:
+        s_lead = DirectionalSideBias(initial_bias=-0.05, name="team_b_kill_lead_side_bias")(s_lead_draft)
+    else:
+        s_lead = s_lead_draft
     outputs["team_b_kill_lead"] = AntiSymmetricSoftmax(name="team_b_kill_lead")(s_lead)
 
     # 3. Directional anti-symmetric linear regression: kill_handicap (Team A kills - Team B kills)
@@ -286,11 +364,15 @@ def build_equivariant_deepsets_model(
         handicap_linear = tf.keras.layers.Dense(
             1, use_bias=False, activation="linear", kernel_regularizer=reg, name="kill_handicap_linear"
         )(t_diff_in)
-        outputs["kill_handicap"] = tf.keras.layers.Add(name="kill_handicap")([handicap_bilinear, handicap_linear])
+        s_handicap_draft = tf.keras.layers.Add(name="kill_handicap_draft")([handicap_bilinear, handicap_linear])
     else:
-        outputs["kill_handicap"] = tf.keras.layers.Dense(
-            1, use_bias=False, activation="linear", kernel_regularizer=reg, name="kill_handicap"
+        s_handicap_draft = tf.keras.layers.Dense(
+            1, use_bias=False, activation="linear", kernel_regularizer=reg, name="kill_handicap_draft"
         )(t_diff_in)
+    if enable_side_bias:
+        outputs["kill_handicap"] = DirectionalSideBias(initial_bias=0.5, name="kill_handicap")(s_handicap_draft)
+    else:
+        outputs["kill_handicap"] = tf.keras.layers.Activation("linear", name="kill_handicap")(s_handicap_draft)
 
     # 4. Individual team kills: team_a_kills and team_b_kills (shared linear layer)
     team_kill_layer = tf.keras.layers.Dense(1, activation="linear", kernel_regularizer=reg, name="team_kills_shared")
@@ -326,18 +408,30 @@ def build_equivariant_deepsets_model(
 
     model = tf.keras.Model(inputs=inputs, outputs=outputs, name="NNriot_EquivariantDeepSets")
 
+    # Configure optimizer
+    if optimizer_type.lower() == "adamw":
+        optimizer = tf.keras.optimizers.AdamW(learning_rate=learning_rate, weight_decay=weight_decay)
+    else:
+        optimizer = tf.keras.optimizers.Adam(learning_rate=learning_rate)
+
+    # Configure losses with optional label smoothing on categorical heads
+    def _create_loss(loss_spec: str) -> tf.keras.losses.Loss | str:
+        if loss_spec == "categorical_crossentropy":
+            return tf.keras.losses.CategoricalCrossentropy(label_smoothing=label_smoothing)
+        return loss_spec
+
     # Compile with appropriate losses/weights/metrics for active heads
     if pruned_heads:
-        loss_dict = {k: v for k, v in PRUNED_LOSS_PER_HEAD.items() if k in outputs}
+        loss_dict = {k: _create_loss(v) for k, v in PRUNED_LOSS_PER_HEAD.items() if k in outputs}
         loss_weights_dict = {k: v for k, v in PRUNED_LOSS_WEIGHTS.items() if k in outputs}
         metrics_dict = {k: v for k, v in PRUNED_METRICS_PER_HEAD.items() if k in outputs}
     else:
-        loss_dict = {k: v for k, v in LOSS_PER_HEAD.items() if k in outputs}
+        loss_dict = {k: _create_loss(v) for k, v in LOSS_PER_HEAD.items() if k in outputs}
         loss_weights_dict = {k: v for k, v in LOSS_WEIGHTS.items() if k in outputs}
         metrics_dict = {k: v for k, v in METRICS_PER_HEAD.items() if k in outputs}
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=learning_rate),
+        optimizer=optimizer,
         loss=loss_dict,
         loss_weights=loss_weights_dict,
         metrics=metrics_dict,
