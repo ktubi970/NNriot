@@ -20,6 +20,7 @@ from core.pre_match_dataset import _decode
 from core.database import DB_PATH, get_connection
 from core.features.pipeline import DraftFeaturePipeline, ENRICHED_PLAYER_SPATIAL_TENSOR_DIM
 from core.player_priors import PlayerPriorsTracker
+from core.spatial_rnn import load_spatial_encoder_weights, spatial_encoder_id
 from core.equivariant_model import build_equivariant_deepsets_model, NNRIOT_CUSTOM_OBJECTS
 from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD, get_adjusted_loss_weights
 from core.pcgrad import create_compiled_pcgrad_step
@@ -69,6 +70,36 @@ def load_spatial_training_records(db_path: str = DB_PATH, limit: int | None = No
     return records
 
 
+def load_spatial_embeddings_by_puuid(db_path: str, encoder_id: str) -> dict[str, list[tuple[int, np.ndarray]]]:
+    """Map puuid -> chronological (game_creation_time, embedding) from the pinned encoder only."""
+    with get_connection(db_path) as conn:
+        emb_rows = conn.execute(
+            """
+            SELECT puuid, game_creation_time, embedding_blob
+            FROM player_spatial_embeddings
+            WHERE encoder_id = ?
+            ORDER BY game_creation_time ASC
+            """,
+            (encoder_id,),
+        ).fetchall()
+        ignored = conn.execute(
+            "SELECT COUNT(*) FROM player_spatial_embeddings WHERE encoder_id IS NOT ?", (encoder_id,)
+        ).fetchone()[0]
+    if not emb_rows:
+        raise ValueError(
+            f"{db_path} holds no spatial embeddings from encoder {encoder_id}; "
+            "run scripts/compute_spatial_embeddings.py --recompute-all first"
+        )
+    if ignored:
+        logger.warning("Ignoring %d spatial embeddings from other or unknown encoders.", ignored)
+
+    player_embeddings_by_puuid: dict[str, list[tuple[int, np.ndarray]]] = {}
+    for row in emb_rows:
+        vec = np.frombuffer(row["embedding_blob"], dtype=np.float32)
+        player_embeddings_by_puuid.setdefault(row["puuid"], []).append((row["game_creation_time"], vec))
+    return player_embeddings_by_puuid
+
+
 def prepare_spatial_dataset(
     records: list[dict],
     db_path: str = DB_PATH,
@@ -77,22 +108,8 @@ def prepare_spatial_dataset(
     """Extract 46D spatial tensors sequentially in chronological order to prevent data leakage."""
     logger.info("Extracting spatial tensors with chronological PlayerPriorsTracker...")
 
-    # Load all spatial embeddings into memory mapped by puuid -> list of (game_creation_time, embedding)
-    with get_connection(db_path) as conn:
-        emb_rows = conn.execute(
-            """
-            SELECT puuid, game_creation_time, embedding_blob
-            FROM player_spatial_embeddings
-            ORDER BY game_creation_time ASC
-            """
-        ).fetchall()
-
-    player_embeddings_by_puuid: dict[str, list[tuple[int, np.ndarray]]] = {}
-    for row in emb_rows:
-        puuid = row["puuid"]
-        gtime = row["game_creation_time"]
-        vec = np.frombuffer(row["embedding_blob"], dtype=np.float32)
-        player_embeddings_by_puuid.setdefault(puuid, []).append((gtime, vec))
+    encoder_id = spatial_encoder_id(load_spatial_encoder_weights())
+    player_embeddings_by_puuid = load_spatial_embeddings_by_puuid(db_path, encoder_id)
 
     tracker = PlayerPriorsTracker()
     pipeline = DraftFeaturePipeline(player_tracker=tracker)

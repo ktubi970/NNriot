@@ -25,23 +25,13 @@ def test_migration_14_schema_and_data_preservation(tmp_path):
     """Test upgrading from schema v13 to v14 preserves existing queue data and creates indices."""
     db_file = str(tmp_path / "migration_test.db")
 
-    # Manually create schema at v13
+    # Build a genuine v13 schema from the real migrations, then seed the legacy queue
     with sqlite3.connect(db_file) as conn:
-        conn.execute("CREATE TABLE schema_version (version INTEGER NOT NULL)")
-        conn.execute("INSERT INTO schema_version (version) VALUES (13)")
-        conn.execute(
-            """
-            CREATE TABLE crawl_queue (
-                game_name TEXT,
-                tag_line  TEXT,
-                priority  INTEGER DEFAULT 0,
-                is_processed INTEGER DEFAULT 0,
-                added_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                PRIMARY KEY(game_name, tag_line)
-            )
-            """
-        )
-        conn.execute("CREATE INDEX idx_crawl_processed ON crawl_queue(is_processed)")
+        for from_version, statements in database._MIGRATIONS:
+            if from_version >= 13:
+                break
+            for sql in statements:
+                conn.execute(sql)
         conn.execute(
             "INSERT INTO crawl_queue (game_name, tag_line, priority, is_processed) VALUES ('Faker', 'KR1', 5, 0)"
         )
@@ -56,7 +46,7 @@ def test_migration_14_schema_and_data_preservation(tmp_path):
     with sqlite3.connect(db_file) as conn:
         conn.row_factory = sqlite3.Row
         ver = conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0]
-        assert ver == 14
+        assert ver == database.SCHEMA_VERSION
 
         # Verify table columns
         cols = {row["name"]: row["type"] for row in conn.execute("PRAGMA table_info(crawl_queue)").fetchall()}

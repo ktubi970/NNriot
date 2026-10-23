@@ -26,7 +26,7 @@ from core import config
 DB_PATH = config.DB_PATH
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -301,6 +301,15 @@ _MIGRATIONS = [
             "CREATE INDEX IF NOT EXISTS idx_crawl_queue_lookup ON crawl_queue(is_processed, priority DESC, id ASC)",
             "CREATE INDEX IF NOT EXISTS idx_crawl_queue_puuid ON crawl_queue(puuid)",
             "UPDATE schema_version SET version = 14",
+        ],
+    ),
+    # v14 -> v15 : record which pinned encoder produced each spatial embedding
+    # (NULL = unknown provenance, written before the encoder weights were committed)
+    (
+        14,
+        [
+            "ALTER TABLE player_spatial_embeddings ADD COLUMN encoder_id TEXT",
+            "UPDATE schema_version SET version = 15",
         ],
     ),
 ]
@@ -626,17 +635,18 @@ def save_player_spatial_embedding(
     puuid: str,
     game_creation_time: int,
     embedding: bytes,
+    encoder_id: str,
     db_path: str = DB_PATH,
 ) -> None:
-    """Save a player's spatial trajectory embedding blob."""
+    """Save a player's spatial trajectory embedding blob and the encoder that produced it."""
     with get_connection(db_path) as conn:
         conn.execute(
             """
             INSERT OR REPLACE INTO player_spatial_embeddings
-            (match_id, puuid, game_creation_time, embedding_blob)
-            VALUES (?, ?, ?, ?)
+            (match_id, puuid, game_creation_time, embedding_blob, encoder_id)
+            VALUES (?, ?, ?, ?, ?)
             """,
-            (match_id, puuid, int(game_creation_time), sqlite3.Binary(embedding)),
+            (match_id, puuid, int(game_creation_time), sqlite3.Binary(embedding), encoder_id),
         )
 
 

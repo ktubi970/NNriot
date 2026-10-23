@@ -1,4 +1,4 @@
-"""Offline schema-v14 merge. Inputs are read-only; outputs are never overwritten.
+"""Offline schema-v15 merge. Inputs are read-only; outputs are never overwritten.
 
 The gzip JSONL archive is also the classification manifest. ``kind=source_row``
 preserves exact SQLite values discarded by canonical precedence or regeneration;
@@ -7,8 +7,8 @@ for every source match. A successful report is the publication readiness marker.
 
 Crawl queue entries match on PUUID (legacy rows without one: Riot ID and region);
 the target wins and imported entries receive fresh ids. Source spatial embeddings
-are archived, never imported: each encoder run starts from random weights, so two
-databases' embeddings are not comparable.
+are archived, never imported: they are derived data, legacy rows have no recorded
+encoder, and the staged output can be recomputed with the pinned encoder.
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _val
 logger = logging.getLogger(__name__)
 
 
-SCHEMA_VERSION = 14
+SCHEMA_VERSION = 15
 TABLES = ("schema_version", "matches", "training_dataset", "match_participants",
           "match_timelines", "players", "player_aliases", "champions", "crawl_queue",
           "player_spatial_embeddings")
@@ -54,7 +54,7 @@ REQUIRED = {
     "player_aliases": {"alias_puuid", "canonical_puuid"}, "champions": {"name"},
     "crawl_queue": {"id", "puuid", "region", "game_name", "tag_line", "priority", "is_processed",
         "created_at", "processed_at"},
-    "player_spatial_embeddings": {"match_id", "puuid", "game_creation_time", "embedding_blob"},
+    "player_spatial_embeddings": {"match_id", "puuid", "game_creation_time", "embedding_blob", "encoder_id"},
 }
 REGIONS = frozenset(TAG_TO_REGION.values())
 

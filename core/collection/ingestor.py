@@ -222,10 +222,11 @@ class MatchIngestor:
                                     else {}
                                 )
                                 gtime = info_dict.get("gameCreation") or int(time.time() * 1000)
-                                extract_and_store_timeline_embeddings(
+                                # 0 means skipped: the database holds embeddings from other encoder weights.
+                                if extract_and_store_timeline_embeddings(
                                     t_mid, t_data, int(gtime), db_path=self.db_path
-                                )
-                                result.embeddings_computed += 1
+                                ):
+                                    result.embeddings_computed += 1
                             except Exception as err:
                                 logger.warning(
                                     "Spatial embedding failed for %s (%s): %s",

@@ -5,12 +5,22 @@ Processes spatio-temporal trajectories (x, y, t) from League of Legends matches:
 - Phase 2 (15-25 min): Mid-game rotations, neutral objective presence, and grouping (10 timesteps, masked).
 Guarantees side-invariance through coordinate normalization:
 - Red side coordinates are inverted so base is mapped to (0, 0) identically to Blue side.
+
+The encoder is a fixed, untrained projection. Its weights are committed in
+``core/assets/spatial_encoder_v1.json`` and identified by ``encoder_id``; every
+stored embedding records that id so embeddings from different weights are never mixed.
 """
 from __future__ import annotations
 
+import hashlib
+import json
+import logging
+from pathlib import Path
 from typing import Any
 import numpy as np
 import tensorflow as tf
+
+logger = logging.getLogger(__name__)
 
 MAP_SIZE: float = 15000.0
 
@@ -21,6 +31,15 @@ SPATIAL_FEATURE_DIM: int = 4  # [x_norm, y_norm, delta_dist, in_combat]
 EARLY_EMBEDDING_DIM: int = 16
 MID_EMBEDDING_DIM: int = 16
 TOTAL_SPATIAL_EMBEDDING_DIM: int = EARLY_EMBEDDING_DIM + MID_EMBEDDING_DIM  # 32
+
+SPATIAL_ENCODER_FORMAT: str = "nnriot.spatial_encoder.v1"
+SPATIAL_ENCODER_NAME: str = "dual_phase_gru_v1"
+SPATIAL_ENCODER_SEED: int = 20261023
+SPATIAL_ENCODER_WEIGHTS_PATH: Path = Path(__file__).resolve().parent / "assets" / "spatial_encoder_v1.json"
+
+
+class MixedSpatialEncoderError(ValueError):
+    """Raised when embeddings from different encoder weights would share one database."""
 
 
 def normalize_spatial_coordinates(
@@ -134,7 +153,10 @@ def extract_dual_phase_trajectory(
 
 
 def build_dual_phase_trajectory_encoder() -> tf.keras.Model:
-    """Build and compile the Keras dual-phase spatio-temporal GRU encoder."""
+    """Build the dual-phase GRU encoder architecture with random Keras weights.
+
+    Stored embeddings must come from ``load_pinned_spatial_encoder()`` instead.
+    """
     # Early phase input (0-15m)
     early_input = tf.keras.layers.Input(
         shape=(EARLY_TIMESTEPS, SPATIAL_FEATURE_DIM),
@@ -169,14 +191,94 @@ def build_dual_phase_trajectory_encoder() -> tf.keras.Model:
     return model
 
 
-_GLOBAL_SPATIAL_ENCODER = None
+def _initial_weight(path: str, shape: tuple[int, ...], rng: np.random.Generator) -> np.ndarray:
+    # Same laws as the Keras defaults, drawn from NumPy so a seed does not depend on TF's RNG.
+    if path.endswith("bias"):
+        return np.zeros(shape, dtype=np.float32)
+    if path.endswith("recurrent_kernel"):
+        rows, cols = shape
+        q, r = np.linalg.qr(rng.standard_normal((max(rows, cols), min(rows, cols))))
+        q *= np.sign(np.diag(r))
+        return (q.T if rows < cols else q).astype(np.float32)
+    limit = np.sqrt(6.0 / (shape[0] + shape[1]))
+    return rng.uniform(-limit, limit, size=shape).astype(np.float32)
 
 
-def get_spatial_encoder() -> tf.keras.Model:
-    global _GLOBAL_SPATIAL_ENCODER
-    if _GLOBAL_SPATIAL_ENCODER is None:
-        _GLOBAL_SPATIAL_ENCODER = build_dual_phase_trajectory_encoder()
-    return _GLOBAL_SPATIAL_ENCODER
+def generate_spatial_encoder_weights(seed: int = SPATIAL_ENCODER_SEED) -> dict[str, Any]:
+    """Draw encoder weights from ``seed`` in the committed asset's JSON layout."""
+    rng = np.random.default_rng(seed)
+    model = build_dual_phase_trajectory_encoder()
+    weights = []
+    for weight in model.weights:
+        values = _initial_weight(weight.path, tuple(weight.shape), rng)
+        weights.append({"path": weight.path, "shape": list(weight.shape), "values": values.ravel().tolist()})
+    return {"format": SPATIAL_ENCODER_FORMAT, "encoder": SPATIAL_ENCODER_NAME, "seed": seed, "weights": weights}
+
+
+def spatial_encoder_id(payload: dict[str, Any]) -> str:
+    """Identify encoder weights by their values, independently of the JSON file bytes."""
+    digest = hashlib.sha256()
+    for weight in payload["weights"]:
+        digest.update(json.dumps([weight["path"], list(weight["shape"])]).encode("utf-8"))
+        digest.update(np.asarray(weight["values"], dtype="<f4").tobytes())
+    return f"{payload['encoder']}-{digest.hexdigest()[:16]}"
+
+
+def load_spatial_encoder_weights(path: str | Path = SPATIAL_ENCODER_WEIGHTS_PATH) -> dict[str, Any]:
+    payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    if payload.get("format") != SPATIAL_ENCODER_FORMAT or payload.get("encoder") != SPATIAL_ENCODER_NAME:
+        raise ValueError(f"unsupported spatial encoder weights file: {path}")
+    return payload
+
+
+def load_pinned_spatial_encoder(
+    path: str | Path = SPATIAL_ENCODER_WEIGHTS_PATH,
+) -> tuple[tf.keras.Model, str]:
+    """Build the encoder with the committed weights and return it with its ``encoder_id``."""
+    payload = load_spatial_encoder_weights(path)
+    model = build_dual_phase_trajectory_encoder()
+    expected = [(w.path, tuple(w.shape)) for w in model.weights]
+    if [(w["path"], tuple(w["shape"])) for w in payload["weights"]] != expected:
+        raise ValueError(f"spatial encoder weights do not match the encoder architecture: {path}")
+    model.set_weights([np.asarray(w["values"], dtype=np.float32).reshape(w["shape"]) for w in payload["weights"]])
+    return model, spatial_encoder_id(payload)
+
+
+def foreign_spatial_encoder(conn, encoder_id: str) -> str | None:
+    """Return another encoder found among stored embeddings ("unknown" for legacy rows), or None."""
+    row = conn.execute(
+        "SELECT COALESCE(encoder_id, 'unknown') FROM player_spatial_embeddings WHERE encoder_id IS NOT ? LIMIT 1",
+        (encoder_id,),
+    ).fetchone()
+    return row[0] if row else None
+
+
+_PINNED_SPATIAL_ENCODER: tuple[tf.keras.Model, str] | None = None
+_ENCODER_COMPATIBLE_DATABASES: dict[str, bool] = {}
+
+
+def get_pinned_spatial_encoder() -> tuple[tf.keras.Model, str]:
+    global _PINNED_SPATIAL_ENCODER
+    if _PINNED_SPATIAL_ENCODER is None:
+        _PINNED_SPATIAL_ENCODER = load_pinned_spatial_encoder()
+    return _PINNED_SPATIAL_ENCODER
+
+
+def _database_accepts_encoder(db_path: str, encoder_id: str) -> bool:
+    # Checked once per process: a compatible database only receives pinned rows from here on.
+    key = str(Path(db_path).resolve())
+    if key not in _ENCODER_COMPATIBLE_DATABASES:
+        from core.database import get_connection
+        with get_connection(db_path) as conn:
+            foreign = foreign_spatial_encoder(conn, encoder_id)
+        if foreign:
+            logger.warning(
+                "Skipping spatial embeddings for %s: it already holds embeddings from encoder %s. "
+                "Run scripts/compute_spatial_embeddings.py --recompute-all, then restart collection.",
+                db_path, foreign,
+            )
+        _ENCODER_COMPATIBLE_DATABASES[key] = foreign is None
+    return _ENCODER_COMPATIBLE_DATABASES[key]
 
 
 def extract_and_store_timeline_embeddings(
@@ -185,7 +287,10 @@ def extract_and_store_timeline_embeddings(
     game_creation_time: int,
     db_path: str | None = None,
 ) -> int:
-    """Extract and immediately persist 32D spatial embeddings for all participants in a match timeline."""
+    """Extract and persist 32D spatial embeddings for all participants in a match timeline.
+
+    Returns 0 without writing when the database already holds embeddings from other encoder weights.
+    """
     from core.database import save_player_spatial_embedding, DB_PATH
     db = db_path or DB_PATH
 
@@ -194,7 +299,9 @@ def extract_and_store_timeline_embeddings(
     if not participants:
         return 0
 
-    encoder = get_spatial_encoder()
+    encoder, encoder_id = get_pinned_spatial_encoder()
+    if not _database_accepts_encoder(db, encoder_id):
+        return 0
     early_batch = []
     mid_batch = []
     puuids = []
@@ -224,6 +331,7 @@ def extract_and_store_timeline_embeddings(
             puuid=puuid,
             game_creation_time=int(game_creation_time),
             embedding=emb_vec.tobytes(),
+            encoder_id=encoder_id,
             db_path=db,
         )
 

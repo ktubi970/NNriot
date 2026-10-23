@@ -1,7 +1,9 @@
 """Batch compute and persist player spatial trajectory embeddings.
 
-Reads match timelines from `match_timelines`, runs the DualPhaseTrajectoryGRUEncoder,
-and writes 32D embeddings into `player_spatial_embeddings`.
+Reads match timelines from `match_timelines`, runs the pinned DualPhaseTrajectoryGRUEncoder,
+and writes 32D embeddings with their `encoder_id` into `player_spatial_embeddings`.
+Refuses to append to a database holding embeddings from other encoder weights;
+`--recompute-all` replaces every stored embedding instead.
 """
 from __future__ import annotations
 
@@ -23,26 +25,43 @@ import numpy as np
 
 from core.database import DB_PATH, get_connection
 from core.spatial_rnn import (
+    MixedSpatialEncoderError,
     extract_dual_phase_trajectory,
-    build_dual_phase_trajectory_encoder,
+    foreign_spatial_encoder,
+    load_pinned_spatial_encoder,
 )
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("compute_spatial_embeddings")
+
+EMPTY_TRAJECTORY = "__EMPTY_TRAJECTORY__"
 
 
 def compute_and_save_spatial_embeddings(
     db_path: str = DB_PATH,
     batch_size: int = 250,
     limit: int | None = None,
+    recompute_all: bool = False,
 ) -> dict[str, int]:
     """Process timelines and store player trajectory embeddings in memory-efficient chunks."""
-    logger.info("Initializing DualPhaseTrajectoryGRUEncoder...")
-    encoder = build_dual_phase_trajectory_encoder()
+    encoder, encoder_id = load_pinned_spatial_encoder()
+    logger.info("Loaded pinned DualPhaseTrajectoryGRUEncoder %s", encoder_id)
 
     processed_matches = 0
     saved_embeddings = 0
     t_start = time.time()
+
+    with get_connection(db_path) as conn:
+        if recompute_all:
+            deleted = conn.execute("DELETE FROM player_spatial_embeddings").rowcount
+            logger.warning("Deleted %d stored spatial embeddings before recomputing them with %s.", deleted, encoder_id)
+        else:
+            foreign = foreign_spatial_encoder(conn, encoder_id)
+            if foreign:
+                raise MixedSpatialEncoderError(
+                    f"{db_path} already holds spatial embeddings from encoder {foreign}; appending {encoder_id} "
+                    "would mix embedding spaces. Rerun with --recompute-all to replace every stored embedding."
+                )
 
     # Query fast remaining matches count for progress reporting
     with get_connection(db_path) as conn:
@@ -90,7 +109,9 @@ def compute_and_save_spatial_embeddings(
 
         all_early = []
         all_mid = []
-        metadata: list[tuple[str, str, int]] = []
+        # One key per encoded trajectory, in the same order as all_early/all_mid.
+        trajectory_keys: list[tuple[str, str, int]] = []
+        db_records: list[tuple[str, str, int, bytes, str]] = []
         valid_matches_in_chunk = 0
 
         for row in rows:
@@ -107,7 +128,7 @@ def compute_and_save_spatial_embeddings(
             participants = timeline_data.get("info", {}).get("participants") or []
             if not participants:
                 logger.warning("Timeline for %s has empty participants — marking handled.", mid)
-                metadata.append((mid, "__EMPTY_TRAJECTORY__", int(creation_time)))
+                db_records.append((mid, EMPTY_TRAJECTORY, int(creation_time), b"\x00" * 128, encoder_id))
                 continue
 
             match_puuids = []
@@ -132,33 +153,27 @@ def compute_and_save_spatial_embeddings(
                 all_early.extend(match_early)
                 all_mid.extend(match_mid)
                 for puuid in match_puuids:
-                    metadata.append((mid, puuid, int(creation_time)))
+                    trajectory_keys.append((mid, puuid, int(creation_time)))
                 valid_matches_in_chunk += 1
             else:
                 logger.warning("Timeline for %s has 0 valid participants (remake/aborted) — marking handled.", mid)
-                metadata.append((mid, "__EMPTY_TRAJECTORY__", int(creation_time)))
+                db_records.append((mid, EMPTY_TRAJECTORY, int(creation_time), b"\x00" * 128, encoder_id))
 
-        db_records = []
         if all_early:
             early_tensor = np.stack(all_early, axis=0)
             mid_tensor = np.stack(all_mid, axis=0)
             emb_matrix = encoder([early_tensor, mid_tensor]).numpy().astype(np.float32)
 
-            for (mid, puuid, ctime), emb_vec in zip(metadata[:len(emb_matrix)], emb_matrix):
-                db_records.append((mid, puuid, ctime, emb_vec.tobytes()))
-
-        # Add empty sentinel records for matches with 0 participants
-        for mid, puuid, ctime in metadata:
-            if puuid == "__EMPTY_TRAJECTORY__":
-                db_records.append((mid, puuid, ctime, b"\x00" * 128))
+            for (mid, puuid, ctime), emb_vec in zip(trajectory_keys, emb_matrix, strict=True):
+                db_records.append((mid, puuid, ctime, emb_vec.tobytes(), encoder_id))
 
         if db_records:
             with get_connection(db_path) as conn:
                 conn.executemany(
                     """
                     INSERT OR REPLACE INTO player_spatial_embeddings
-                    (match_id, puuid, game_creation_time, embedding_blob)
-                    VALUES (?, ?, ?, ?)
+                    (match_id, puuid, game_creation_time, embedding_blob, encoder_id)
+                    VALUES (?, ?, ?, ?, ?)
                     """,
                     db_records,
                 )
@@ -191,6 +206,12 @@ if __name__ == "__main__":
     parser.add_argument("--db", type=str, default=DB_PATH, help="Path to database")
     parser.add_argument("--limit", type=int, default=None, help="Limit number of matches")
     parser.add_argument("--batch", type=int, default=100, help="Batch size")
+    parser.add_argument("--recompute-all", action="store_true",
+                        help="Delete every stored spatial embedding and recompute them with the pinned encoder")
     args = parser.parse_args()
 
-    compute_and_save_spatial_embeddings(db_path=args.db, limit=args.limit, batch_size=args.batch)
+    try:
+        compute_and_save_spatial_embeddings(db_path=args.db, limit=args.limit, batch_size=args.batch,
+                                            recompute_all=args.recompute_all)
+    except MixedSpatialEncoderError as exc:
+        parser.exit(1, f"Refused: {exc}\n")

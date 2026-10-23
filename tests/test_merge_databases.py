@@ -13,7 +13,7 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-MERGE_SCHEMA_VERSION = 14
+MERGE_SCHEMA_VERSION = 15
 
 
 def database(path, schema_version=MERGE_SCHEMA_VERSION):
@@ -36,9 +36,10 @@ def enqueue(path, *entries):
                          tuple(row.values()))
 
 
-def embed(path, match_id, puuid, blob=b"\x01" * 128, created=1000):
+def embed(path, match_id, puuid, blob=b"\x01" * 128, created=1000, encoder_id="dual_phase_gru_v1-test"):
     with sqlite3.connect(path) as conn:
-        conn.execute("INSERT INTO player_spatial_embeddings VALUES (?,?,?,?)", (match_id, puuid, created, blob))
+        conn.execute("INSERT INTO player_spatial_embeddings VALUES (?,?,?,?,?)",
+                     (match_id, puuid, created, blob, encoder_id))
 
 
 def raw(match_id="EUW1_1", date=1000):
@@ -102,17 +103,17 @@ def test_merge_contract_tracks_the_application_schema():
 def test_older_schema_inputs_are_refused_with_migration_guidance(tmp_path, stale):
     paths = {name: database(tmp_path / f"{name}.db", 12 if name == stale else MERGE_SCHEMA_VERSION)
              for name in ("source", "target")}
-    with pytest.raises(ValueError, match="only schema version 14 is supported.*migrate a copy"):
+    with pytest.raises(ValueError, match="only schema version 15 is supported.*migrate a copy"):
         run(tmp_path, paths["source"], paths["target"])
     assert not (tmp_path / "merged.db").exists()
 
 
-def test_report_declares_v14_and_counts_spatial_embeddings(tmp_path):
+def test_report_declares_v15_and_counts_spatial_embeddings(tmp_path):
     source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
     add_match(target)
     embed(target, "EUW1_1", "real-puuid-0")
     report = run(tmp_path, source, target)
-    assert report["schema_version"] == 14
+    assert report["schema_version"] == 15
     assert report["before"]["target"]["player_spatial_embeddings"] == 1
     assert report["after"]["player_spatial_embeddings"] == 1
     assert "player_spatial_embeddings" in report["inputs"]["target"]["tables"]
