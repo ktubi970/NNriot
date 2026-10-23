@@ -197,6 +197,9 @@ def test_run_crawler_seeds_and_snowballs(service):
 
 
 def test_run_crawler_respects_stop_event(service):
+    mock_api = MagicMock()
+    mock_api.get_top_players.return_value = []
+    service.api_factory = MagicMock(return_value=mock_api)
     stop_event = threading.Event()
     stop_event.set()
 

@@ -150,11 +150,9 @@ def test_candidate_selection_uses_validation_labels_only(tmp_path, monkeypatch):
     rows = records(200)
 
     val_sizes = []
-    test_eval_calls = 0
     original_evaluate = tree_module.evaluate_winner
 
     def spy_evaluate_winner(y_true, probabilities, train_rate, **kwargs):
-        nonlocal test_eval_calls
         if len(y_true) == 30:  # validation size for n=200 is 30, test size is 30
             val_sizes.append(len(y_true))
         res = original_evaluate(y_true, probabilities, train_rate, **kwargs)

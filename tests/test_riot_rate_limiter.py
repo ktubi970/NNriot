@@ -24,7 +24,9 @@ def test_rate_limiter_delays_when_second_limit_reached():
     assert elapsed >= 0.9
 
 
-def test_get_match_ids_supports_queue_and_type():
+def test_get_match_ids_supports_queue_and_type(monkeypatch):
+    monkeypatch.setenv("RIOT_API_KEY", "RGAPI-test-key")
+    monkeypatch.setenv("RIOT_DISABLE_RATE_LIMIT", "1")
     api = RiotAPI(region="EUW")
     mock_resp = MagicMock()
     mock_resp.status_code = 200

@@ -20,3 +20,9 @@ Before publishing, check the report's accepted and archived totals, SQLite integ
 Publication is an explicit maintenance step: close every SQLite connection, checkpoint WAL content, retain a rollback copy of the current operational database, then switch `NNRIOT_DB_PATH` to the validated staged result or replace the configured file. Keep the SQLite main file and its `-wal` and `-shm` sidecars together until connections are closed and checkpointed. Point `NNRIOT_ANALYTICS_DB_PATH` at the rebuilt analytics mart. Smoke test the web app, history, training command, and analytics health with the configured paths.
 
 Delete only the specifically obsolete source and derived analytics files after those checks pass and the gzip JSONL archive and report are retained. Include their matching SQLite sidecars once safely checkpointed. Keep unrelated databases in worktrees, scratch directories, and other runs out of the cleanup. The merge tool itself does not publish or delete any database.
+
+## Current schema and version verification
+
+The application schema is v14. Read `SELECT MAX(version) FROM schema_version`; `PRAGMA user_version` is not the application migration ledger and can remain 0. v12 introduced indexed match participants, v13 added `player_spatial_embeddings`, and v14 migrated the crawl queue to PUUID/region records. `core/database.py` applies ordered migrations. The 9 October serving/evaluation work opened the source read-only and made no schema changes. Keep the staged merge, backup, validation and publication protocol above for future schema/data changes.
+
+**Known limitation:** `scripts/merge_databases.py` still implements the schema-v12 contract only. It refuses v13/v14 inputs (`only schema version 12 is supported`), so current operational databases cannot be merged until the tool handles `player_spatial_embeddings` and the PUUID/region crawl queue. Its tests build v12 fixtures explicitly and assert that the current schema is refused.

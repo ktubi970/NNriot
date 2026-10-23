@@ -171,8 +171,10 @@ def test_snapshot_matches_original_aggregate_exactly(snapshot_db, samples):
             "FROM matches WHERE game_mode='CLASSIC'"
         ).fetchone()
         conn.commit()
+    from core.database import SCHEMA_VERSION
+
     assert source_snapshot(str(snapshot_db)) == {
-        "source_schema_version": "12",
+        "source_schema_version": str(SCHEMA_VERSION),
         "source_match_count": str(count),
         "source_max_creation_ms": str(maximum),
     }

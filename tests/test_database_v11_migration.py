@@ -58,4 +58,3 @@ def test_save_match_timelines_batch(tmp_path):
 
 def test_schema_version_is_at_least_12():
     assert database.SCHEMA_VERSION >= 12
-    assert database.SCHEMA_VERSION == 12

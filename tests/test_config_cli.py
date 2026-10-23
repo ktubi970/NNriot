@@ -200,11 +200,12 @@ def test_factory_uses_injected_database_for_schema_and_routes(tmp_path):
     env["NNRIOT_ANALYTICS_DB_PATH"] = str(mart)
     env["PYTHONPATH"] = str(project_root)
     script = (
-        "import sqlite3; from app import create_app; "
+        "import sqlite3, sys; from app import create_app; "
         f"a=create_app({{'TESTING': True, 'NNRIOT_DB_PATH': {str(selected)!r}, "
         f"'ANALYTICS_DB_PATH': {str(mart)!r}}}); "
         f"assert a.config['NNRIOT_DB_PATH'] == {str(selected)!r}; "
         f"assert a.config['ANALYTICS_DB_PATH'] == {str(mart)!r}; "
+        "assert 'tensorflow' not in sys.modules; "
         f"assert sqlite3.connect({str(selected)!r}).execute("
         "\"SELECT name FROM sqlite_master WHERE name='schema_version'\").fetchone(); "
         "assert a.test_client().get('/api/db-health').status_code == 200; "
@@ -238,7 +239,8 @@ def test_start_bat_dispatches_train_continuous_help():
         pytest.skip("Windows launcher")
     project_root = Path(__file__).resolve().parents[1]
     process = subprocess.run(
-        ["cmd", "/c", "start.bat", "train-continuous", "--help"],
+        # Absolute path: cmd ignores the cwd when NoDefaultCurrentDirectoryInExePath is set.
+        ["cmd", "/c", str(project_root / "start.bat"), "train-continuous", "--help"],
         cwd=project_root, capture_output=True, text=True, timeout=30,
     )
     assert process.returncode == 0, process.stderr

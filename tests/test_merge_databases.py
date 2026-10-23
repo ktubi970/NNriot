@@ -13,11 +13,18 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-def database(path):
+# The merger's contract is schema v12; later application migrations are not
+# supported yet, so fixtures stop at v12 instead of following the latest schema.
+MERGE_SCHEMA_VERSION = 12
+
+
+def database(path, schema_version=MERGE_SCHEMA_VERSION):
     # Migrations are inert SQL; no app/config/network initialization is needed.
     from core.database import _MIGRATIONS
     with sqlite3.connect(path) as conn:
-        for _, statements in _MIGRATIONS:
+        for from_version, statements in _MIGRATIONS:
+            if from_version >= schema_version:
+                break
             for sql in statements:
                 conn.execute(sql)
     return path
@@ -72,6 +79,16 @@ def rows(path, table):
 def archived(report):
     with gzip.open(report["archive"]["path"], "rt", encoding="utf-8") as handle:
         return [json.loads(line) for line in handle]
+
+
+def test_current_application_schema_is_refused_until_merge_supports_it(tmp_path):
+    from core.database import SCHEMA_VERSION
+    assert SCHEMA_VERSION > MERGE_SCHEMA_VERSION
+    source = database(tmp_path / "source.db", schema_version=SCHEMA_VERSION)
+    target = database(tmp_path / "target.db", schema_version=SCHEMA_VERSION)
+    with pytest.raises(ValueError, match="only schema version 12 is supported"):
+        run(tmp_path, source, target)
+    assert not (tmp_path / "merged.db").exists()
 
 
 def test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable(tmp_path):
