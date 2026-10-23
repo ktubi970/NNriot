@@ -13,12 +13,15 @@ export interface Champion {
 
 export interface PlayerStats {
   summonerName: string;
+  tagLine?: string;
+  puuid?: string;
+  source?: 'database' | 'lolpros';
   tier?: string;
   rank?: string;
   lp?: number;
-  winrate: number;
-  totalGames: number;
-  kda: string;
+  winrate?: number;
+  totalGames?: number;
+  kda?: string;
   championGames?: number;
   championWinrate?: number;
   isPro?: boolean;
@@ -27,13 +30,15 @@ export interface PlayerStats {
 
 export interface PlayerSearchResult {
   summonerName: string;
+  puuid?: string;
+  source?: 'database' | 'lolpros';
   tagLine?: string;
-  tier: string;
+  tier?: string;
   rank?: string;
-  lp: number;
-  winrate: number;
-  totalGames: number;
-  kda: string;
+  lp?: number;
+  winrate?: number;
+  totalGames?: number;
+  kda?: string;
   isPro?: boolean;
   proTeam?: string;
   mainRole?: Role;
@@ -57,27 +62,55 @@ export interface FeatureImpact {
   team: 'blue' | 'red';
 }
 
+export interface TeamProbabilities {
+  blue: number;
+  red: number;
+}
+
+export interface SelectiveDecision {
+  conviction: number | null;
+  tier: string;
+  isActionable: boolean;
+  abstained: boolean;
+  thresholdApplied: number | null;
+  recommendation: string;
+}
+
 export interface PredictionResult {
   blueWinProb: number; // e.g. 0.584 (58.4%)
   redWinProb: number;  // e.g. 0.416 (41.6%)
   confidence: number;  // e.g. 0.85
+  rawProbabilities: TeamProbabilities;
+  calibratedProbabilities: TeamProbabilities | null;
+  calibrationStatus: string;
+  selectiveDecision: SelectiveDecision;
+  modelId: string | null;
+  draftAdvantage: TeamProbabilities | null;
+  explanationMethod: string | null;
+  historyAvailable: boolean;
+  priorPolicy: string | null;
   blueExpectedKills?: number;
   redExpectedKills?: number;
   expectedDuration?: string;
   features: FeatureImpact[];
   latencyMs: number;
-  modelType: 'neural_tf' | 'standalone_hashing';
+  modelType: 'neural_tf';
   timestamp: string;
 }
 
 export interface SystemStatus {
   model_loaded: boolean;
-  tensorflow_version: string;
-  input_dimension: number | string;
-  output_classes: number;
+  tensorflow_version: string | null;
+  input_dimension: number | string | null;
+  output_classes: number | null;
   status: string;
   latencyMs?: number;
   apiConnected?: boolean;
+  model_id?: string;
+  feature_contract?: string;
+  calibration_available?: boolean;
+  serving_validation?: { status: string };
+  trainer_loaded?: boolean;
 }
 
 export interface AnalyticsChatMessage {

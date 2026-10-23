@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useId } from 'react';
 import { PlayerMatchRecord } from '../../types';
 import { fetchPlayerHistory } from '../../services/api';
+import { AccessibleDialog } from '../atoms/AccessibleDialog';
 import { RoleIcon } from '../atoms/RoleIcon';
-import { CyberBadge } from '../atoms/CyberBadge';
-import { GlowButton } from '../atoms/GlowButton';
-import { X, RefreshCw, Trophy, Swords, Clock, Coins, ShieldCheck, Flame, ExternalLink } from 'lucide-react';
+import { X, RefreshCw, Clock } from 'lucide-react';
 
 interface MatchHistoryModalProps {
   isOpen: boolean;
@@ -13,237 +12,114 @@ interface MatchHistoryModalProps {
   onClose: () => void;
 }
 
+function displayValue(value: unknown): string {
+  if (typeof value === 'number' && Number.isFinite(value)) return value.toLocaleString();
+  if (typeof value === 'string' && value.trim()) return value;
+  return 'Non renseigné';
+}
+
 export const MatchHistoryModal: React.FC<MatchHistoryModalProps> = ({
-  isOpen,
-  summonerName,
-  tagLine = 'EUW',
-  onClose,
+  isOpen, summonerName, tagLine = 'EUW', onClose,
 }) => {
   const [matches, setMatches] = useState<PlayerMatchRecord[]>([]);
-  const [playerData, setPlayerData] = useState<any>(null);
+  const [playerData, setPlayerData] = useState<Record<string, unknown> | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSyncingRiot, setIsSyncingRiot] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pendingRef = useRef(false);
+  const requestRef = useRef(0);
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const headingId = useId();
 
-  const loadHistory = async (syncRiot: boolean = false) => {
-    if (!summonerName) return;
+  const loadHistory = useCallback(async (syncRiot = false) => {
+    if (!summonerName || pendingRef.current) return;
+    pendingRef.current = true;
+    const request = ++requestRef.current;
     if (syncRiot) setIsSyncingRiot(true);
     else setIsLoading(true);
-
+    setError(null);
     try {
       const data = await fetchPlayerHistory(summonerName, tagLine, 10, syncRiot);
-      if (data) {
-        setPlayerData(data.player);
-        setMatches(data.matches || []);
-      }
+      if (request !== requestRef.current) return;
+      setPlayerData(data.player && typeof data.player === 'object' ? data.player : null);
+      setMatches(Array.isArray(data.matches) ? data.matches : []);
+    } catch (cause) {
+      if (request !== requestRef.current) return;
+      setError(cause instanceof Error ? cause.message : 'L’historique est indisponible. Réessayez plus tard.');
     } finally {
-      setIsLoading(false);
-      setIsSyncingRiot(false);
+      if (request === requestRef.current) {
+        pendingRef.current = false;
+        setIsLoading(false);
+        setIsSyncingRiot(false);
+      }
     }
-  };
+  }, [summonerName, tagLine]);
 
   useEffect(() => {
-    if (isOpen && summonerName) {
-      loadHistory(false);
-    }
-  }, [isOpen, summonerName, tagLine]);
+    requestRef.current += 1;
+    pendingRef.current = false;
+    setMatches([]);
+    setPlayerData(null);
+    setError(null);
+    setIsLoading(false);
+    setIsSyncingRiot(false);
+    if (isOpen && summonerName) void loadHistory();
+    return () => { requestRef.current += 1; pendingRef.current = false; };
+  }, [isOpen, summonerName, loadHistory]);
 
-  // Handle escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    if (isOpen) {
-      window.addEventListener('keydown', handleKeyDown);
-      return () => window.removeEventListener('keydown', handleKeyDown);
-    }
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
-
-  const winsCount = matches.filter(m => m.win).length;
-  const winRate = matches.length > 0 ? Math.round((winsCount / matches.length) * 100) : 50;
+  const wins = matches.filter(match => match.win).length;
+  const winRate = matches.length > 0 ? Math.round(wins / matches.length * 100) : null;
+  const summary = [
+    { label: 'Rang', value: playerData?.tier ? `${displayValue(playerData.tier)}${typeof playerData.lp === 'number' ? ` · ${playerData.lp} LP` : ''}` : 'Non renseigné' },
+    { label: 'Victoires récentes', value: winRate === null ? 'Aucun match' : `${winRate} % · ${wins}/${matches.length}` },
+    { label: 'KDA moyen', value: displayValue(playerData?.avg_kda) },
+    { label: 'Parties enregistrées', value: displayValue(playerData?.total_games) },
+  ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/80 backdrop-blur-md transition-opacity"
-        onClick={onClose}
-      />
-
-      {/* Modal Window */}
-      <div className="relative w-full max-w-3xl max-h-[85vh] bg-[#070b14] border border-cyan-500/50 rounded-2xl shadow-[0_0_50px_rgba(0,240,255,0.2)] flex flex-col overflow-hidden z-10 animate-in fade-in zoom-in-95 duration-200">
-        {/* Header Strip */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-[#050811]">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/10 border border-cyan-500/40 flex items-center justify-center">
-              <Trophy className="w-5 h-5 text-cyan-400" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-black font-mono text-slate-100 tracking-wide">
-                  {summonerName}
-                </h2>
-                <span className="text-xs font-mono text-slate-400">#{tagLine}</span>
-                {playerData?.is_pro && (
-                  <span className="text-[10px] font-mono px-1.5 py-0.5 bg-cyan-500/20 text-cyan-300 border border-cyan-500/40 rounded font-bold">
-                    PRO PLAYER
-                  </span>
-                )}
-              </div>
-              <p className="text-xs font-mono text-slate-400">
-                Historique des Matchs Récents & Performance SoloQ / Match-V5
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => loadHistory(true)}
-              disabled={isSyncingRiot || isLoading}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-cyan-950/40 hover:bg-cyan-900/60 border border-cyan-500/40 hover:border-cyan-400 text-cyan-300 rounded-lg text-xs font-mono transition-all disabled:opacity-50"
-              title="Télécharger les derniers matchs depuis Riot API"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${isSyncingRiot ? 'animate-spin' : ''}`} />
-              {isSyncingRiot ? 'SYNCHRONISATION...' : 'SYNCHRO RIOT API'}
-            </button>
-
-            <button
-              onClick={onClose}
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
+    <AccessibleDialog isOpen={isOpen} onClose={onClose} labelledBy={headingId} initialFocusRef={closeRef} className="max-w-3xl">
+      <header className="flex items-start justify-between gap-3 border-b border-slate-700/70 px-5 py-4">
+        <div className="min-w-0">
+          <h2 id={headingId} className="text-lg font-semibold tracking-tight">Historique de {summonerName}</h2>
+          <p className="mt-1 text-sm text-slate-400">{tagLine ? `#${tagLine} · ` : ''}Matchs récents</p>
         </div>
-
-        {/* Quick Stats Overview Banner */}
-        <div className="grid grid-cols-4 gap-3 p-4 bg-[#080e1d] border-b border-slate-800/80 font-mono text-xs">
-          <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-2.5 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase">TIER & RANG</span>
-            <span className="text-amber-400 font-bold mt-0.5">
-              {playerData?.tier || 'CHALLENGER'} {playerData?.lp ? `${playerData.lp} LP` : ''}
-            </span>
-          </div>
-
-          <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-2.5 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase">WINRATE (10 MATCHS)</span>
-            <span className={`font-bold mt-0.5 ${winRate >= 50 ? 'text-emerald-400' : 'text-rose-400'}`}>
-              {winRate}% ({winsCount}V - {matches.length - winsCount}D)
-            </span>
-          </div>
-
-          <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-2.5 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase">KDA MOYEN</span>
-            <span className="text-cyan-400 font-bold mt-0.5">
-              {playerData?.avg_kda || '4.1'}
-            </span>
-          </div>
-
-          <div className="bg-slate-900/70 border border-slate-800 rounded-lg p-2.5 flex flex-col">
-            <span className="text-[10px] text-slate-400 uppercase">TOTAL PARTIES</span>
-            <span className="text-slate-200 font-bold mt-0.5">
-              {playerData?.total_games || 340} Games
-            </span>
-          </div>
-        </div>
-
-        {/* Matches List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-2.5">
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center py-16 text-slate-500 font-mono gap-3">
-              <RefreshCw className="w-8 h-8 animate-spin text-cyan-400" />
-              <span>Chargement des données Match-V5...</span>
-            </div>
-          ) : matches.length === 0 ? (
-            <div className="text-center py-12 text-slate-500 font-mono text-xs">
-              Aucun match enregistré pour ce profil. Cliquez sur "SYNCHRO RIOT API" pour ingérer les matchs.
-            </div>
-          ) : (
-            matches.map((match) => (
-              <div
-                key={match.match_id}
-                className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                  match.win
-                    ? 'bg-cyan-950/15 border-cyan-500/30 hover:border-cyan-500/60 shadow-[0_0_15px_rgba(0,240,255,0.05)]'
-                    : 'bg-rose-950/15 border-rose-500/30 hover:border-rose-500/60 shadow-[0_0_15px_rgba(244,63,94,0.05)]'
-                }`}
-              >
-                {/* Result Tag & Champion */}
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`w-2 h-12 rounded-full ${
-                      match.win ? 'bg-cyan-400 shadow-[0_0_8px_rgba(0,240,255,0.8)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.8)]'
-                    }`}
-                  />
-
-                  {/* Champion Icon */}
-                  <div className="relative w-11 h-11 rounded-lg overflow-hidden border border-slate-700 shrink-0">
-                    <img
-                      src={`https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/${match.champion}.png`}
-                      alt={match.champion}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://ddragon.leagueoflegends.com/cdn/14.24.1/img/champion/Aatrox.png';
-                      }}
-                    />
-                  </div>
-
-                  <div className="flex flex-col min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`text-xs font-mono font-bold ${match.win ? 'text-cyan-300' : 'text-rose-400'}`}>
-                        {match.win ? 'VICTOIRE' : 'DÉFAITE'}
-                      </span>
-                      <span className="text-xs font-bold text-slate-100">{match.champion}</span>
-                      <span className="text-[10px] font-mono text-slate-500">{match.game_mode}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 mt-0.5 text-[11px] font-mono text-slate-400">
-                      <Clock className="w-3 h-3 text-slate-500" />
-                      <span>{match.duration}</span>
-                      <span className="text-slate-600">•</span>
-                      <span>{match.time_ago}</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Performance KDA & CS */}
-                <div className="flex items-center gap-6 font-mono">
-                  <div className="flex flex-col items-center">
-                    <span className="text-xs font-bold text-slate-100">
-                      {match.kills} / <span className="text-rose-400">{match.deaths}</span> / {match.assists}
-                    </span>
-                    <span className="text-[10px] text-cyan-400 font-semibold mt-0.5">
-                      {match.kda} KDA
-                    </span>
-                  </div>
-
-                  <div className="hidden sm:flex flex-col items-end text-right">
-                    <span className="text-xs text-slate-300 font-medium">
-                      {match.cs} CS ({match.cs_per_min}/m)
-                    </span>
-                    <span className="text-[10px] text-amber-400 flex items-center gap-1 mt-0.5">
-                      <Coins className="w-3 h-3" />
-                      {match.gold.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* Footer info */}
-        <div className="p-3 border-t border-slate-800 bg-[#050811] flex items-center justify-between text-[11px] font-mono text-slate-400">
-          <span>Source: Base locale NNriot & Riot Games Match-V5</span>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded transition-colors"
-          >
-            Fermer
+        <button ref={closeRef} type="button" onClick={onClose} aria-label="Fermer l’historique" className="icon-button shrink-0"><X aria-hidden="true" className="h-5 w-5" /></button>
+      </header>
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm text-slate-400">Les données proviennent du service d’historique.</p>
+          <button type="button" onClick={() => void loadHistory(true)} disabled={isLoading || isSyncingRiot || !summonerName} className="tool-button min-h-11 gap-2 disabled:opacity-50">
+            <RefreshCw aria-hidden="true" className="h-4 w-4" />
+            {isSyncingRiot ? 'Synchronisation…' : 'Synchroniser avec Riot'}
           </button>
         </div>
+        {error && <div role="alert" className="rounded-xl border border-amber-700/50 bg-amber-950/20 p-4 text-sm text-amber-200"><p>{error}</p><button type="button" onClick={() => void loadHistory()} disabled={isLoading || isSyncingRiot} className="tool-button mt-3 min-h-11">Réessayer</button></div>}
+        {isLoading ? <p role="status" className="py-10 text-center text-sm text-slate-400">Chargement de l’historique…</p> : (
+          <>
+            {matches.length > 0 || playerData ? <dl className="grid grid-cols-2 gap-2 sm:grid-cols-4">{summary.map(stat => <div key={stat.label} className="rounded-xl border border-slate-700/70 bg-slate-900/30 p-3"><dt className="text-xs text-slate-400">{stat.label}</dt><dd className="mt-2 text-sm font-medium">{stat.value}</dd></div>)}</dl> : null}
+            {matches.length === 0 && !error ? <p role="status" className="py-10 text-center text-sm text-slate-400">Aucun match enregistré pour ce profil.</p> : null}
+            <ul className="space-y-2" aria-label="Matchs récents">
+              {matches.map(match => (
+                <li key={match.match_id} className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-700/70 bg-slate-900/30 p-3">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      <span className="rounded bg-slate-700/50 px-2 py-1 font-medium">{match.win ? 'Victoire' : 'Défaite'}</span>
+                      <strong className="font-semibold">{match.champion}</strong>
+                      <RoleIcon role={match.role} className="h-4 w-4" />
+                    </div>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-slate-400"><Clock aria-hidden="true" className="h-3.5 w-3.5" /><span>{displayValue(match.duration)}</span><span>{match.time_ago}</span></div>
+                  </div>
+                  <div className="text-right text-sm">
+                    <p>{displayValue(match.kills)} / {displayValue(match.deaths)} / {displayValue(match.assists)}</p>
+                    <p className="mt-1 text-xs text-slate-400">KDA {displayValue(match.kda)} · CS {displayValue(match.cs)}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
-    </div>
+      <footer className="flex justify-end border-t border-slate-700/70 px-5 py-3"><button type="button" onClick={onClose} className="tool-button min-h-11">Fermer</button></footer>
+    </AccessibleDialog>
   );
 };

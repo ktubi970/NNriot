@@ -1,0 +1,249 @@
+{
+  "ArchivedOn": "2026-10-09",
+  "Scope": "React/Vite frontend and browser test tooling; Flask/Jinja and backend retained",
+  "Head": "3bb93c7ccb4e5e201f953d2686b468ff1413b825",
+  "Entries": [
+    "frontend",
+    "e2e",
+    "package.json",
+    "package-lock.json",
+    "vite.config.ts",
+    "postcss.config.cjs",
+    "tailwind.config.cjs",
+    "tsconfig.json",
+    "playwright.config.ts",
+    ".github/workflows/playwright.yml",
+    "static/dist",
+    "node_modules",
+    "playwright-report",
+    "test-results"
+  ],
+  "Files": [
+    {
+      "Path": "frontend/index.html",
+      "Sha256": "7EAAED600DE221D364FEF5A8A23519CC0D39E1C0EF9B2009A60FD6ECA1502E05",
+      "Bytes": 844
+    },
+    {
+      "Path": "frontend/tsconfig.json",
+      "Sha256": "473538D2985FB8B6F5E21156399A4E6B67BA2F2605AB0D32AFA02FDFB44934EA",
+      "Bytes": 575
+    },
+    {
+      "Path": "frontend/src/App.tsx",
+      "Sha256": "79AAF4E4AEF0A69B2103DADF86D570806B2106F1020F9EAF24E7334AA97E8D52",
+      "Bytes": 5069
+    },
+    {
+      "Path": "frontend/src/index.css",
+      "Sha256": "C3313898F52025D5FA7C715E85472F2DC64E2BBE3E8AD00B51B07CCC6BD5D860",
+      "Bytes": 1054
+    },
+    {
+      "Path": "frontend/src/main.tsx",
+      "Sha256": "04BC6C664005D207F6C9A42CAC1A11810F6257A77604ECC9A2DFA1F0A68959BA",
+      "Bytes": 246
+    },
+    {
+      "Path": "frontend/src/components/atoms/CyberBadge.tsx",
+      "Sha256": "092DE6D47D152A441B2B2770AEA189CF7A4AECD95D7EDF7CDF1A740409F4A46C",
+      "Bytes": 1793
+    },
+    {
+      "Path": "frontend/src/components/atoms/GlowButton.tsx",
+      "Sha256": "61FFB986A996A90E3210F2EB0277EE4DBEF859A454F2B897CF919890DAFEE289",
+      "Bytes": 1713
+    },
+    {
+      "Path": "frontend/src/components/atoms/RoleIcon.tsx",
+      "Sha256": "FE80DCB3D0E41A5F4A1E6487CA8D74B8E94F9BB9E0CD71C2F461F76A1C2D719C",
+      "Bytes": 980
+    },
+    {
+      "Path": "frontend/src/components/molecules/ChampionSlot.tsx",
+      "Sha256": "E64FA861A12281FDC951E6D16460CCC4F2B1E78743584F5D390613D33448E7AF",
+      "Bytes": 7649
+    },
+    {
+      "Path": "frontend/src/components/molecules/PlayerAutocomplete.tsx",
+      "Sha256": "185C99546368B98D8407FABEF63023E021F445C9CC85C792600E7AD3C003A9F3",
+      "Bytes": 8507
+    },
+    {
+      "Path": "frontend/src/components/organisms/AnalyticsChatTab.tsx",
+      "Sha256": "CD672B87C750849AB967B97A8663A1B01EDD4ED68EF5365D39384E6AE94E6D96",
+      "Bytes": 7551
+    },
+    {
+      "Path": "frontend/src/components/organisms/ChampionPickerModal.tsx",
+      "Sha256": "7A9163DA413526EABE79D157F2D813C197139DE98E7E2D44E19E1A21A697E1D5",
+      "Bytes": 7319
+    },
+    {
+      "Path": "frontend/src/components/organisms/CyberDrawer.tsx",
+      "Sha256": "B75E472DA9A8D9BE68D26922CA1F300639F2F349793B77B7CD252DBBDE7483C7",
+      "Bytes": 3858
+    },
+    {
+      "Path": "frontend/src/components/organisms/FeatureMatrixSHAP.tsx",
+      "Sha256": "EA9595203E7745E81F3F90321783BE9DFD4F76C4C7F69E5E4FDA0A00DABC7CDA",
+      "Bytes": 4385
+    },
+    {
+      "Path": "frontend/src/components/organisms/LiveSpectatorTab.tsx",
+      "Sha256": "D8CD6512D206570B054CA61CC15CD63454BA1707CF6B4F09F70BCEC8078E06E4",
+      "Bytes": 6967
+    },
+    {
+      "Path": "frontend/src/components/organisms/MatchHistoryModal.tsx",
+      "Sha256": "1FC6EE0066F870B1893683142D6C8FB3BDDDC032CCDBF085F6B51E27D7414EE1",
+      "Bytes": 11284
+    },
+    {
+      "Path": "frontend/src/components/organisms/ModelTrainerTab.tsx",
+      "Sha256": "40DA347AF49BA11F1EB41E95499A792BE6D848BF7323DDE90E7B2CEBC74F0B75",
+      "Bytes": 4835
+    },
+    {
+      "Path": "frontend/src/components/organisms/NeuralWinrateGauge.tsx",
+      "Sha256": "B0296DBDB3B3230233A80FF35BB1381472245C5A05ECD4DB728DE0659EDE1C62",
+      "Bytes": 7131
+    },
+    {
+      "Path": "frontend/src/components/organisms/TeamLineup.tsx",
+      "Sha256": "3ADB771DEA8B431B91686E91A50035CBA85BC5645ABFE91DE49A4EC2F9779B3B",
+      "Bytes": 4819
+    },
+    {
+      "Path": "frontend/src/components/organisms/TelemetryHeader.tsx",
+      "Sha256": "EA589931D5EF6460855DBC4DA4CA37997EF9DF734462690D5774E9D78646BABD",
+      "Bytes": 5422
+    },
+    {
+      "Path": "frontend/src/hooks/usePrediction.ts",
+      "Sha256": "6880044186F95F5702E0AC4C42EAC21B6F91AE0F950B0AD6FE6190CEC01611AF",
+      "Bytes": 6715
+    },
+    {
+      "Path": "frontend/src/services/api.ts",
+      "Sha256": "A8DCD238F74DF0ED01E9890F331334ED983CBC467C6F75395B283395BCA18CAB",
+      "Bytes": 21582
+    },
+    {
+      "Path": "frontend/src/services/championData.ts",
+      "Sha256": "E66A8E6C92F1828032DB7E0D738E040ECDA1D0213E55AD9C4EDEB676FBFE0D17",
+      "Bytes": 7422
+    },
+    {
+      "Path": "frontend/src/types/index.ts",
+      "Sha256": "7EC1D87F212A605716FD53B50FCA282B484C33CDB94E0A93F3B7E28BD4B689FE",
+      "Bytes": 2934
+    },
+    {
+      "Path": "frontend/src/types/meta.ts",
+      "Sha256": "7EF1AF0E2BF3896D437C1A19FAE8FD2AE88D7B9BEB3F657EE6192B10EF6592F5",
+      "Bytes": 998
+    },
+    {
+      "Path": "e2e/api.spec.ts",
+      "Sha256": "6BFDD2473493F38F673B95E1FBC9E724F33CAF5EBF1EA7B4D645535FA84131C6",
+      "Bytes": 850
+    },
+    {
+      "Path": "e2e/capture_screenshots.spec.ts",
+      "Sha256": "7DCD63E47989D2B1B25DB34BEB9555F45DC0AA18EA76F3F8DEE4660B0DD9915B",
+      "Bytes": 2563
+    },
+    {
+      "Path": "e2e/cyber_cockpit.spec.ts",
+      "Sha256": "FCE7DCF19FAF1F07F846A176F4D731A456387BC1EDC3F6A2B22939B0EB923CB3",
+      "Bytes": 9149
+    },
+    {
+      "Path": "e2e/dashboard.spec.ts",
+      "Sha256": "0321B75041A754D5EBE84AAB21450B123A0242B27690FEAEF95064160FDEFEF3",
+      "Bytes": 1808
+    },
+    {
+      "Path": "e2e/predictor.spec.ts",
+      "Sha256": "C719D258835A779A627F0702F7D4DC67C6F508C277D761805DBCCABBDF2C59EF",
+      "Bytes": 3515
+    },
+    {
+      "Path": "e2e/fixtures/test-fixtures.ts",
+      "Sha256": "E3E9D8AE6D3ED96D56066A25F25DB864FC9868120E8E2DB9E811ABF10EE195D2",
+      "Bytes": 641
+    },
+    {
+      "Path": "e2e/pages/dashboard.page.ts",
+      "Sha256": "8E2FCB3C1551C514487B724E5981EF5A3DE6CF6FC7E83C5ADA92CAFF3C4ED6CB",
+      "Bytes": 1916
+    },
+    {
+      "Path": "e2e/pages/predictor.page.ts",
+      "Sha256": "67464D354970DB1433BCAFC748D37BB3873B2B832A28E6D93B0E942871BAF954",
+      "Bytes": 4551
+    },
+    {
+      "Path": "package.json",
+      "Sha256": "FF7794C281FA64064D9032569C22A61EBA4DE6EA913471CFF334FF978DF807EC",
+      "Bytes": 1002
+    },
+    {
+      "Path": "package-lock.json",
+      "Sha256": "0C26A5AA0893C1C1FDE11A1A16DF15919465BB112713A4C8C848CE00480E6EFE",
+      "Bytes": 57269
+    },
+    {
+      "Path": "vite.config.ts",
+      "Sha256": "856C9EF5FAC943DC691C2A94F913A107E68AB3C6647CBC7F8343E912C3B69AB2",
+      "Bytes": 909
+    },
+    {
+      "Path": "postcss.config.cjs",
+      "Sha256": "56F1BD2187CD1F6BAB041DFBC2F2E3C193197C5F260CC82AFF0C3C8B2AAE8129",
+      "Bytes": 178
+    },
+    {
+      "Path": "tailwind.config.cjs",
+      "Sha256": "489B0582465490568911C4272B6F7EEE5C1BAEF8B8D95D82D92FE319AB2E96FF",
+      "Bytes": 1731
+    },
+    {
+      "Path": "tsconfig.json",
+      "Sha256": "9ADE9E8B61F937FE3C2C328B77F6AFEF1B0944D96755726C045DB9CFCB466B7E",
+      "Bytes": 425
+    },
+    {
+      "Path": "playwright.config.ts",
+      "Sha256": "ADC3659273BE372008D7067CF239863FB0D9F3069D71E58D599BA23D1A2D71F3",
+      "Bytes": 2771
+    },
+    {
+      "Path": ".github/workflows/playwright.yml",
+      "Sha256": "22AFF1ABF1E67846A8BA6BD654C210B3B90794BF9EA7A936B21A499C311E6B79",
+      "Bytes": 1349
+    },
+    {
+      "Path": "static/dist/index.html",
+      "Sha256": "0F6E2B577519D5812FD01F0369950AA5EE4C3EA5A3D1377977A392B401905004",
+      "Bytes": 942
+    },
+    {
+      "Path": "static/dist/assets/index-C0NUer-V.js",
+      "Sha256": "440158EB37BD63538A678BFD790493F4820779A4147A3229DCC82B2C4D720718",
+      "Bytes": 237751
+    },
+    {
+      "Path": "static/dist/assets/index-wSHNNccH.css",
+      "Sha256": "881DBC41B041C81EFD417B0B5BC396D9D1682EFCFC890BB9A67B932B0D45D746",
+      "Bytes": 38898
+    }
+  ],
+  "UnhashedLocalCaches": [
+    "node_modules",
+    "playwright-report",
+    "test-results"
+  ],
+  "Status": "verified"
+}

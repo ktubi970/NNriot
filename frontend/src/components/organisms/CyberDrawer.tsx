@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useId, useRef } from 'react';
 import { AnalyticsChatTab } from './AnalyticsChatTab';
 import { LiveSpectatorTab } from './LiveSpectatorTab';
 import { ModelTrainerTab } from './ModelTrainerTab';
-import { X, MessageSquareCode, Eye, Sliders } from 'lucide-react';
-import { CyberBadge } from '../atoms/CyberBadge';
+import { X, MessageSquare, Eye, Sliders, History } from 'lucide-react';
+import { AccessibleDialog } from '../atoms/AccessibleDialog';
 
 interface CyberDrawerProps {
   isOpen: boolean;
@@ -13,82 +13,52 @@ interface CyberDrawerProps {
   onImportLineup?: (blueChampions: string[], redChampions: string[]) => void;
 }
 
+const tabs = [
+  { id: 'analytics', label: 'Analyse', icon: MessageSquare },
+  { id: 'spectator', label: 'Partie en direct', icon: Eye },
+  { id: 'trainer', label: 'Modèle', icon: Sliders },
+  { id: 'history', label: 'Historique', icon: History },
+] as const;
+
 export const CyberDrawer: React.FC<CyberDrawerProps> = ({
-  isOpen,
-  activeTab,
-  onClose,
-  onSelectTab,
-  onImportLineup,
+  isOpen, activeTab, onClose, onSelectTab, onImportLineup,
 }) => {
-  if (!isOpen || !activeTab) return null;
+  const headingId = useId();
+  const closeRef = useRef<HTMLButtonElement>(null);
+  const selectedTabRef = useRef<HTMLButtonElement>(null);
 
   return (
-    <div className="fixed inset-0 z-50 overflow-hidden">
-      {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity"
-        onClick={onClose}
-      />
-
-      <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
-        <div className="w-screen max-w-xl bg-[#070b14] border-l border-cyan-500/40 shadow-[-10px_0_40px_rgba(0,240,255,0.15)] flex flex-col">
-          {/* Top Bar with Navigation Tabs */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800 bg-[#050811]">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => onSelectTab('analytics')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  activeTab === 'analytics'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <MessageSquareCode className="w-3.5 h-3.5" />
-                CHAT IA
-              </button>
-
-              <button
-                onClick={() => onSelectTab('spectator')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  activeTab === 'spectator'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Eye className="w-3.5 h-3.5" />
-                SPECTATOR
-              </button>
-
-              <button
-                onClick={() => onSelectTab('trainer')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs font-mono transition-all ${
-                  activeTab === 'trainer'
-                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/50 shadow-[0_0_10px_rgba(0,240,255,0.2)]'
-                    : 'text-slate-400 hover:text-slate-200'
-                }`}
-              >
-                <Sliders className="w-3.5 h-3.5" />
-                TRAINER
-              </button>
-            </div>
-
-            <button
-              onClick={onClose}
-              aria-label="Close drawer"
-              className="p-1.5 text-slate-400 hover:text-white hover:bg-slate-800 rounded transition-colors"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Active Tab View */}
-          <div className="flex-1 overflow-hidden">
-            {activeTab === 'analytics' && <AnalyticsChatTab />}
-            {activeTab === 'spectator' && <LiveSpectatorTab onImportLineup={onImportLineup} />}
-            {activeTab === 'trainer' && <ModelTrainerTab />}
-          </div>
+    <AccessibleDialog isOpen={isOpen && activeTab !== null} onClose={onClose} labelledBy={headingId} initialFocusRef={closeRef} variant="drawer">
+      <header className="border-b border-slate-700/70 px-4 py-4">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <h2 id={headingId} className="text-lg font-semibold tracking-tight">Outils de la draft</h2>
+          <button ref={closeRef} type="button" onClick={onClose} aria-label="Fermer les outils" className="icon-button shrink-0">
+            <X aria-hidden="true" className="h-5 w-5" />
+          </button>
         </div>
+        <div role="tablist" aria-label="Outils" className="flex flex-wrap gap-1.5" onKeyDown={event => {
+          if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const current = tabs.findIndex(tab => tab.id === activeTab);
+          const next = event.key === 'Home' ? 0 : event.key === 'End' ? tabs.length - 1
+            : (current + (event.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length;
+          onSelectTab(tabs[next].id);
+          requestAnimationFrame(() => selectedTabRef.current?.focus());
+        }}>
+          {tabs.map(({ id, label, icon: Icon }) => (
+            <button key={id} ref={activeTab === id ? selectedTabRef : undefined} id={`${headingId}-${id}-tab`} type="button" role="tab" aria-selected={activeTab === id} aria-controls={`${headingId}-${id}-panel`} tabIndex={activeTab === id ? 0 : -1} onClick={() => onSelectTab(id)} className={`tool-button min-h-11 gap-2 ${activeTab === id ? 'bg-slate-600/60 text-white' : 'text-slate-300'}`}>
+              <Icon aria-hidden="true" className="h-4 w-4" />
+              {label}
+            </button>
+          ))}
+        </div>
+      </header>
+      <div id={`${headingId}-${activeTab}-panel`} role="tabpanel" aria-labelledby={`${headingId}-${activeTab}-tab`} className="min-h-0 flex-1 overflow-hidden">
+        {activeTab === 'analytics' && <AnalyticsChatTab />}
+        {activeTab === 'spectator' && <LiveSpectatorTab onImportLineup={onImportLineup} />}
+        {activeTab === 'trainer' && <ModelTrainerTab />}
+        {activeTab === 'history' && <p className="p-5 text-sm text-slate-400">Sélectionnez un joueur pour consulter son historique.</p>}
       </div>
-    </div>
+    </AccessibleDialog>
   );
 };

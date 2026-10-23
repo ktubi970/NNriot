@@ -1,0 +1,5 @@
+# Preserve local caches and generated artifacts without versioning them.
+node_modules/
+playwright-report/
+test-results/
+static/dist/

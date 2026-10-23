@@ -80,7 +80,7 @@ call npm.cmd run dev
 goto :after
 
 :run_test
-call npx.cmd playwright test e2e/cyber_cockpit.spec.ts --project=chromium
+call npm.cmd run test:e2e
 goto :after
 
 :usage
