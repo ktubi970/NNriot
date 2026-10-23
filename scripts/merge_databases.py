@@ -1,9 +1,14 @@
-"""Offline schema-v12 merge. Inputs are read-only; outputs are never overwritten.
+"""Offline schema-v14 merge. Inputs are read-only; outputs are never overwritten.
 
 The gzip JSONL archive is also the classification manifest. ``kind=source_row``
 preserves exact SQLite values discarded by canonical precedence or regeneration;
 BLOBs use {"__sqlite_blob_base64__": "..."}. ``kind=classification`` accounts
 for every source match. A successful report is the publication readiness marker.
+
+Crawl queue entries match on PUUID (legacy rows without one: Riot ID and region);
+the target wins and imported entries receive fresh ids. Source spatial embeddings
+are archived, never imported: each encoder run starts from random weights, so two
+databases' embeddings are not comparable.
 """
 from __future__ import annotations
 
@@ -18,6 +23,7 @@ import logging
 from pathlib import Path
 import sqlite3
 
+from core.collection.regions import TAG_TO_REGION
 from core.feature_labels import extract_labels, extract_timeline_labels
 from core.json_utils import extract_match_features
 from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _valid_timestamp
@@ -26,12 +32,15 @@ from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _val
 logger = logging.getLogger(__name__)
 
 
+SCHEMA_VERSION = 14
 TABLES = ("schema_version", "matches", "training_dataset", "match_participants",
-          "match_timelines", "players", "player_aliases", "champions", "crawl_queue")
+          "match_timelines", "players", "player_aliases", "champions", "crawl_queue",
+          "player_spatial_embeddings")
 KEYS = {"matches": ("match_id",), "training_dataset": ("match_id",),
         "match_participants": ("match_id", "puuid"), "match_timelines": ("match_id",),
         "players": ("puuid",), "player_aliases": ("alias_puuid",),
-        "champions": ("name",), "crawl_queue": ("game_name", "tag_line")}
+        "champions": ("name",), "crawl_queue": ("id",),
+        "player_spatial_embeddings": ("match_id", "puuid")}
 REQUIRED = {
     "schema_version": {"version"},
     "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id"},
@@ -43,8 +52,11 @@ REQUIRED = {
     "match_timelines": {"match_id", "timeline_json"},
     "players": {"puuid", "game_name", "tag_line", "last_updated", "avg_kda", "avg_gold", "total_matches"},
     "player_aliases": {"alias_puuid", "canonical_puuid"}, "champions": {"name"},
-    "crawl_queue": {"game_name", "tag_line", "priority", "is_processed", "added_at"},
+    "crawl_queue": {"id", "puuid", "region", "game_name", "tag_line", "priority", "is_processed",
+        "created_at", "processed_at"},
+    "player_spatial_embeddings": {"match_id", "puuid", "game_creation_time", "embedding_blob"},
 }
+REGIONS = frozenset(TAG_TO_REGION.values())
 
 
 def _json(value):
@@ -65,8 +77,9 @@ def _read_only(path):
 def _schema(conn):
     try:
         versions = [r[0] for r in conn.execute("SELECT version FROM schema_version")]
-        if versions != [12]:
-            raise ValueError("only schema version 12 is supported")
+        if versions != [SCHEMA_VERSION]:
+            raise ValueError(f"only schema version {SCHEMA_VERSION} is supported; "
+                             "migrate a copy of older databases with core.database.init_db first")
         for table, fields in REQUIRED.items():
             actual = {r[1] for r in conn.execute(f'PRAGMA table_info("{table}")')}
             if actual != fields:
@@ -181,8 +194,8 @@ def _validate(row):
 
 def _insert(conn, table, row):
     cols = list(row)
-    conn.execute(f'INSERT INTO "{table}" ({",".join(cols)}) VALUES ({",".join("?" for _ in cols)})',
-                 tuple(row[c] for c in cols))
+    return conn.execute(f'INSERT INTO "{table}" ({",".join(cols)}) VALUES ({",".join("?" for _ in cols)})',
+                        tuple(row[c] for c in cols))
 
 
 def _lookup(conn, table, row):
@@ -289,7 +302,7 @@ def _merge_matches(source, target, out, archive):
 
 def _merge_relationships(source, out, archive):
     logger.info("Merging and archiving source relationships")
-    for table in ("match_timelines", "training_dataset", "match_participants"):
+    for table in ("match_timelines", "training_dataset", "match_participants", "player_spatial_embeddings"):
         for item in source.execute(f'SELECT * FROM "{table}"'):
             row = dict(item)
             status = out.execute("SELECT category,same_raw FROM merge_status WHERE match_id=?", (row["match_id"],)).fetchone()
@@ -309,7 +322,8 @@ def _merge_relationships(source, out, archive):
                         labels.update(extract_timeline_labels(_decode(row["timeline_json"])))
                         out.execute("UPDATE training_dataset SET labels_json=? WHERE match_id=?", (_json(labels), row["match_id"]))
                     continue
-            reason = "orphan_relationship" if status is None else "excluded_or_regenerated_relationship"
+            reason = ("derived_embedding_not_merged" if table == "player_spatial_embeddings"
+                      else "excluded_or_regenerated_relationship")
             archive.row(table, row, reason)
 
 
@@ -407,6 +421,25 @@ def _merge_identities(source, out, archive):
             edges[alias] = canonical
 
 
+def _queue_entry(conn, row):
+    if row["puuid"] is not None:
+        found = conn.execute("SELECT * FROM crawl_queue WHERE puuid IS ?", (row["puuid"],)).fetchone()
+    else:
+        found = conn.execute("SELECT * FROM crawl_queue WHERE puuid IS NULL AND game_name IS ? "
+                             "AND tag_line IS ? AND region IS ? ORDER BY id LIMIT 1",
+                             (row["game_name"], row["tag_line"], row["region"])).fetchone()
+    return dict(found) if found else None
+
+
+def _valid_queue_entry(row):
+    if row["puuid"] is not None:
+        identified = _puuid(row["puuid"])
+    else:
+        identified = _text(row["game_name"]) and _text(row["tag_line"])
+    return (identified and row["region"] in REGIONS
+            and type(row["priority"]) is int and row["is_processed"] in (0, 1))
+
+
 def _merge_registries(source, out, archive):
     for item in source.execute("SELECT * FROM champions"):
         row = dict(item)
@@ -417,17 +450,20 @@ def _merge_registries(source, out, archive):
     for row in out.execute("SELECT DISTINCT champion_name FROM match_participants"):
         if _text(row[0]):
             out.execute("INSERT OR IGNORE INTO champions VALUES (?)", (row[0],))
-    for item in source.execute("SELECT * FROM crawl_queue"):
+    for item in source.execute("SELECT * FROM crawl_queue ORDER BY id"):
         row = dict(item)
-        existing = _lookup(out, "crawl_queue", row)
-        valid = (_text(row["game_name"]) and _text(row["tag_line"])
-                 and type(row["priority"]) is int and row["is_processed"] in (0, 1))
+        existing = _queue_entry(out, row)
         if existing == row:
             continue
-        if existing is None and valid:
-            _insert(out, "crawl_queue", row)
+        if not _valid_queue_entry(row):
+            archive.row("crawl_queue", row, "invalid_queue_entry")
+        elif existing is not None:
+            archive.row("crawl_queue", row, "canonical_queue_precedence")
         else:
-            archive.row("crawl_queue", row, "invalid_or_conflicting_queue_entry")
+            # Source ids collide with the target's; AUTOINCREMENT assigns fresh ones.
+            inserted = _insert(out, "crawl_queue", {k: v for k, v in row.items() if k != "id"})
+            if inserted.lastrowid != row["id"]:
+                archive.row("crawl_queue", row, "regenerated_queue_id")
 
 
 def _preservation(out, target_path):
@@ -479,7 +515,7 @@ def merge_databases(*, source, target, output, report, dry_run=False):
         initial_states = {p: _file_state(p) for p in (source, target)}
         _schema(src)
         _schema(dst)
-        result = {"schema_version": 12, "dry_run": bool(dry_run), "output": str(output),
+        result = {"schema_version": SCHEMA_VERSION, "dry_run": bool(dry_run), "output": str(output),
             "inputs": {"source": _fingerprint(src, source), "target": _fingerprint(dst, target)},
             "before": {"source": _counts(src), "target": _counts(dst)},
             "sqlite_cache_kib": {"input": 65536, "output": 262144, "temp": 65536},

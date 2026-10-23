@@ -13,9 +13,7 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-# The merger's contract is schema v12; later application migrations are not
-# supported yet, so fixtures stop at v12 instead of following the latest schema.
-MERGE_SCHEMA_VERSION = 12
+MERGE_SCHEMA_VERSION = 14
 
 
 def database(path, schema_version=MERGE_SCHEMA_VERSION):
@@ -28,6 +26,19 @@ def database(path, schema_version=MERGE_SCHEMA_VERSION):
             for sql in statements:
                 conn.execute(sql)
     return path
+
+
+def enqueue(path, *entries):
+    with sqlite3.connect(path) as conn:
+        for entry in entries:
+            row = {"region": "EUW", "priority": 0, "is_processed": 0, **entry}
+            conn.execute(f'INSERT INTO crawl_queue ({",".join(row)}) VALUES ({",".join("?" for _ in row)})',
+                         tuple(row.values()))
+
+
+def embed(path, match_id, puuid, blob=b"\x01" * 128, created=1000):
+    with sqlite3.connect(path) as conn:
+        conn.execute("INSERT INTO player_spatial_embeddings VALUES (?,?,?,?)", (match_id, puuid, created, blob))
 
 
 def raw(match_id="EUW1_1", date=1000):
@@ -81,14 +92,126 @@ def archived(report):
         return [json.loads(line) for line in handle]
 
 
-def test_current_application_schema_is_refused_until_merge_supports_it(tmp_path):
+def test_merge_contract_tracks_the_application_schema():
+    # A new migration must come with an explicit merge policy, not silent drift.
     from core.database import SCHEMA_VERSION
-    assert SCHEMA_VERSION > MERGE_SCHEMA_VERSION
-    source = database(tmp_path / "source.db", schema_version=SCHEMA_VERSION)
-    target = database(tmp_path / "target.db", schema_version=SCHEMA_VERSION)
-    with pytest.raises(ValueError, match="only schema version 12 is supported"):
-        run(tmp_path, source, target)
+    assert api().SCHEMA_VERSION == SCHEMA_VERSION == MERGE_SCHEMA_VERSION
+
+
+@pytest.mark.parametrize("stale", ["source", "target"])
+def test_older_schema_inputs_are_refused_with_migration_guidance(tmp_path, stale):
+    paths = {name: database(tmp_path / f"{name}.db", 12 if name == stale else MERGE_SCHEMA_VERSION)
+             for name in ("source", "target")}
+    with pytest.raises(ValueError, match="only schema version 14 is supported.*migrate a copy"):
+        run(tmp_path, paths["source"], paths["target"])
     assert not (tmp_path / "merged.db").exists()
+
+
+def test_report_declares_v14_and_counts_spatial_embeddings(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(target)
+    embed(target, "EUW1_1", "real-puuid-0")
+    report = run(tmp_path, source, target)
+    assert report["schema_version"] == 14
+    assert report["before"]["target"]["player_spatial_embeddings"] == 1
+    assert report["after"]["player_spatial_embeddings"] == 1
+    assert "player_spatial_embeddings" in report["inputs"]["target"]["tables"]
+    assert "player_spatial_embeddings" in report["target_preservation"]["changed_or_missing_rows"]
+
+
+def test_source_spatial_embeddings_are_archived_and_never_imported(tmp_path):
+    # The trajectory encoder is randomly initialised per run, so two databases'
+    # embeddings live in unrelated spaces: only the canonical target's are kept.
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(target, "EUW1_1")
+    add_match(source, "EUW1_1")
+    add_match(source, "EUW1_2")
+    canonical_blob, source_blob = b"\x01" * 128, b"\x02" * 128
+    embed(target, "EUW1_1", "real-puuid-0", canonical_blob)
+    embed(source, "EUW1_1", "real-puuid-0", canonical_blob)  # identical: nothing to preserve
+    embed(source, "EUW1_1", "real-puuid-1", source_blob)     # target lacks it: still not imported
+    embed(source, "EUW1_2", "real-puuid-0", source_blob)     # imported match
+    embed(source, "EUW1_9", "real-puuid-0", source_blob)     # orphan
+    report = run(tmp_path, source, target)
+    assert rows(tmp_path / "merged.db", "player_spatial_embeddings") == rows(target, "player_spatial_embeddings")
+    assert report["classification"] == {"existing": 1, "imported": 1, "archived": 0}
+    assert report["target_preservation"]["ok"] is True
+    reasons = {(e["row"]["match_id"], e["row"]["puuid"]): e["reason"]
+               for e in archived(report) if e.get("table") == "player_spatial_embeddings"}
+    assert reasons == {
+        ("EUW1_1", "real-puuid-1"): "derived_embedding_not_merged",
+        ("EUW1_2", "real-puuid-0"): "derived_embedding_not_merged",
+        ("EUW1_9", "real-puuid-0"): "orphan_relationship",
+    }
+
+
+def test_queue_target_wins_and_new_entries_get_fresh_ids(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    enqueue(target, {"puuid": "puuid-shared", "priority": 10, "created_at": "canonical"},
+            {"puuid": "puuid-target-only", "region": "KR"})
+    enqueue(source, {"puuid": "puuid-new", "priority": 5, "is_processed": 1,
+                     "created_at": "then", "processed_at": "later"},
+            {"puuid": "puuid-shared", "priority": 2, "is_processed": 1, "region": "NA"})
+    canonical = rows(target, "crawl_queue")
+    source_rows = {r["puuid"]: r for r in rows(source, "crawl_queue")}
+    report = run(tmp_path, source, target)
+    merged = {r["puuid"]: r for r in rows(tmp_path / "merged.db", "crawl_queue")}
+    assert [merged[r["puuid"]] for r in canonical] == canonical
+    new = merged["puuid-new"]
+    assert new["id"] > max(r["id"] for r in canonical)
+    assert {k: v for k, v in new.items() if k != "id"} == {
+        k: v for k, v in source_rows["puuid-new"].items() if k != "id"}
+    assert report["target_preservation"]["ok"] is True
+    reasons = {e["row"]["puuid"]: e["reason"] for e in archived(report) if e.get("table") == "crawl_queue"}
+    assert reasons == {"puuid-new": "regenerated_queue_id", "puuid-shared": "canonical_queue_precedence"}
+
+
+def test_identical_queue_row_is_skipped_and_merge_is_repeatable(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    enqueue(target, {"puuid": "puuid-same", "created_at": "t"}, {"puuid": "puuid-other"})
+    enqueue(source, {"puuid": "puuid-same", "created_at": "t"}, {"puuid": "puuid-new"})
+    first = run(tmp_path, source, target)
+    merged = tmp_path / "merged.db"
+    assert [e["row"]["puuid"] for e in archived(first) if e.get("table") == "crawl_queue"] == ["puuid-new"]
+    queue = rows(merged, "crawl_queue")
+    second = run(tmp_path, source, merged, "2")
+    assert rows(tmp_path / "merged2.db", "crawl_queue") == queue
+    assert second["target_preservation"]["ok"] is True
+
+
+def test_legacy_queue_entries_without_puuid_match_on_riot_id_and_region(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    enqueue(target, {"game_name": "Legacy", "tag_line": "EUW", "priority": 9})
+    enqueue(source, {"game_name": "Legacy", "tag_line": "EUW", "priority": 1},
+            {"game_name": "Legacy", "tag_line": "EUW", "region": "KR"},
+            {"game_name": "Fresh", "tag_line": "EUW"})
+    report = run(tmp_path, source, target)
+    merged = {(r["game_name"], r["region"]): r for r in rows(tmp_path / "merged.db", "crawl_queue")}
+    assert set(merged) == {("Legacy", "EUW"), ("Legacy", "KR"), ("Fresh", "EUW")}
+    assert merged[("Legacy", "EUW")]["priority"] == 9
+    assert all(r["puuid"] is None for r in merged.values())
+    conflicts = [(e["row"]["game_name"], e["row"]["region"], e["reason"]) for e in archived(report)
+                 if e.get("table") == "crawl_queue" and e["reason"] != "regenerated_queue_id"]
+    assert conflicts == [("Legacy", "EUW", "canonical_queue_precedence")]
+
+
+@pytest.mark.parametrize("entry", [
+    {"puuid": "UNKNOWN"},
+    {"puuid": "__TOMBSTONE__"},
+    {"puuid": "puuid-x", "region": ""},
+    {"puuid": "puuid-x", "region": "MARS"},
+    {"puuid": "puuid-x", "priority": "high"},
+    {"puuid": "puuid-x", "is_processed": 2},
+    {"game_name": "OnlyName"},
+    {},
+])
+def test_invalid_queue_entries_are_archived(tmp_path, entry):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    enqueue(source, entry)
+    report = run(tmp_path, source, target)
+    assert rows(tmp_path / "merged.db", "crawl_queue") == []
+    assert [e["reason"] for e in archived(report) if e.get("table") == "crawl_queue"] == [
+        "invalid_queue_entry"]
 
 
 def test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable(tmp_path):
@@ -285,18 +408,18 @@ def test_alias_target_wins_queue_conflicts_and_full_archive_manifest(tmp_path):
             conn.executemany("INSERT INTO players (puuid) VALUES (?)", [("player-a",), ("player-b",), ("player-c",)])
     with sqlite3.connect(target) as conn:
         conn.execute("INSERT INTO player_aliases VALUES ('player-a','player-b')")
-        conn.execute("INSERT INTO crawl_queue VALUES ('Queue','EUW',10,0,'today')")
+    enqueue(target, {'puuid': 'queue-puuid', 'priority': 10})
     with sqlite3.connect(source) as conn:
         conn.execute("INSERT INTO player_aliases VALUES ('player-a','player-c')")
-        conn.executemany("INSERT INTO crawl_queue VALUES (?,?,?,?,?)", [
-            ('Queue', 'EUW', 2, 1, 'old'), ('New', 'EUW', 3, 0, 'today'), ('', 'EUW', 1, 0, 'today')])
+    enqueue(source, {'puuid': 'queue-puuid', 'priority': 2, 'is_processed': 1},
+            {'puuid': 'new-puuid', 'priority': 3}, {'puuid': 'UNKNOWN', 'priority': 1})
     add_match(source, 'EUW1_1', payload='bad')
     add_match(source, 'EUW1_2')
     result = run(tmp_path, source, target)
     assert rows(tmp_path / 'merged.db', 'player_aliases') == [{'alias_puuid': 'player-a', 'canonical_puuid': 'player-b'}]
-    queue = {r['game_name']: r for r in rows(tmp_path / 'merged.db', 'crawl_queue')}
-    assert set(queue) == {'Queue', 'New'}
-    assert queue['Queue']['priority'] == 10
+    queue = {r['puuid']: r for r in rows(tmp_path / 'merged.db', 'crawl_queue')}
+    assert set(queue) == {'queue-puuid', 'new-puuid'}
+    assert queue['queue-puuid']['priority'] == 10
     entries = archived(result)
     classifications = {e['match_id']: e['classification'] for e in entries if e['kind'] == 'classification'}
     assert classifications == {'EUW1_1': 'archived', 'EUW1_2': 'imported'}

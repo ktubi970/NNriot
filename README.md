@@ -234,7 +234,7 @@ python scripts/backfill_timelines.py --db runs/active.db --duration-hours 4
 - **WAL Mode**: Write-Ahead Logging enabled for concurrent reader performance.
 - **Point-in-Time Bayesian Priors**: Streaming loader prevents lookahead data leakage by accumulating player history chronologically up to match time.
 - **Participant Indexing**: Fast indexed queries over `match_participants` and compressed timeline blobs.
-- **Database Merges**: Use `python scripts/merge_databases.py` to consolidate databases safely without duplicate rows or index corruption (see [`docs/database_merge.md`](docs/database_merge.md)). The merger currently accepts schema v12 inputs only and refuses v13/v14 databases.
+- **Database Merges**: Use `python scripts/merge_databases.py` to consolidate databases safely without duplicate rows or index corruption (see [`docs/database_merge.md`](docs/database_merge.md)). The merger accepts schema v14 inputs only (migrate a copy of older databases first); the target wins crawl-queue conflicts and source spatial embeddings are archived, never imported.
 
 ### Retrospective Analytics Evidence Mart
 The analytics mart extracts post-match associations, meta snapshots, and champion performance profiles into an isolated database:
