@@ -12,3 +12,6 @@ beautifulsoup4>=4.12.0
 
 # Standalone common-cohort risk/coverage and calibration plots
 plotly>=5.0.0
+
+# DeepSets + LightGBM ensemble evaluation (scripts/evaluate_ensemble.py)
+lightgbm>=4.0.0
