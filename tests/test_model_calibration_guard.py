@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import tensorflow as tf
+import numpy as np
 import pytest
 from core.model_factory import ModelFactory
 from core.feature_labels import LABEL_KEYS, TIMELINE_LABEL_KEYS
@@ -107,21 +108,18 @@ def test_model_factory_valid_model_with_sidecar_is_calibrated(tmp_path, monkeypa
     assert loaded.calibration_metadata["fit"]["count"] == 25
 
 
-def test_final_predict_rejects_uncalibrated_model(monkeypatch):
-    class FakeUncalibratedModel:
-        is_calibrated = False
-        def predict(self, x):
-            return {}
+def test_final_predict_abstains_without_verified_calibration(monkeypatch, tmp_path):
+    from tests.serving_fixture import full_match, install_serving_fixture
 
-    class FakeTrainer:
-        model = FakeUncalibratedModel()
-        def predict(self, x):
-            return self.model.predict(x)
-
-    monkeypatch.setattr(app_core, "global_trainer", FakeTrainer())
-    monkeypatch.setattr(app_core, "tf_available", True)
-
-    res = app_core.final_predict_match_outcome({"participants": [], "teams": []})
-    assert "error" in res
-    assert "calibrated" in res["error"].lower()
-    assert res.get("uncalibrated") is True
+    install_serving_fixture(
+        monkeypatch, {'winner': np.array([[.2, .8]])}, tmp_path, calibrated=False,
+    )
+    result = app_core.final_predict_match_outcome(full_match())
+    assert result['success'] is True
+    assert result['probabilities_raw'] == {'team_a': pytest.approx(.2), 'team_b': .8}
+    assert result['probabilities_calibrated'] is None
+    assert result['calibration']['status'] == 'unavailable'
+    assert result['winner']['predicted'] == 'abstain'
+    assert result['selective_decision']['tier'] == 'UNCALIBRATED'
+    assert result['selective_decision']['is_actionable'] is False
+    assert result['selective_decision']['abstained'] is True

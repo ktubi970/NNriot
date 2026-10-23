@@ -9,9 +9,11 @@ Categorizes predictions into three actionable conviction tiers:
 Boundaries use six-decimal conviction and a 1e-9 comparison tolerance.
 Tier names alone provide no guarantee of predictive accuracy.
 
-Strictly guarantees anti-symmetry under team swap:
-Swapping team A and team B (P -> 1 - P) flips prediction ("team_a" <-> "team_b")
-while preserving conviction, tier, and is_actionable identically.
+Changing perspective on the same match (P -> 1 - P) exchanges an actionable
+prediction ("team_a" <-> "team_b") while preserving conviction, tier, and
+is_actionable. Abstention remains abstention. Swapping compositions at fixed
+Blue/Red sides is different: the winner head retains its side bias, so that
+transformation need not preserve conviction or the resulting tier.
 """
 from __future__ import annotations
 
@@ -63,8 +65,9 @@ def classify_match_conviction(
 ) -> SelectiveInferenceResult:
     """Classify match probability into actionable conviction tiers.
 
-    Conviction metric C = |P(team_b) - 0.5|. Under team swap,
-    P(team_a) = 1 - P(team_b), so |P(team_a) - 0.5| = |0.5 - P(team_b)| = C.
+    Conviction C = |P(team_b) - 0.5| is unchanged when considering the other
+    team's win probability for the same match: P(team_a) = 1 - P(team_b).
+    This is a change of perspective, not a swap of compositions at fixed sides.
 
     Args:
         prob_team_b: Predicted probability of team B winning in [0.0, 1.0].
@@ -94,7 +97,7 @@ def classify_match_conviction(
     p_team_b = float(np.clip(p_val, 0.0, 1.0))
     p_team_a = float(np.clip(1.0 - p_team_b, 0.0, 1.0))
 
-    # Canonicalize before rounding so half-unit boundaries also survive team swap.
+    # Canonicalize before rounding so half-unit boundaries survive a perspective change.
     conviction = round(float(compute_conviction(p_team_b)), 6)
 
     if conviction_at_least(conviction, high_threshold):

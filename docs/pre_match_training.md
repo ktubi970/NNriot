@@ -1,6 +1,9 @@
 # Premier entraînement pré-match
 
-Le parcours recommandé est `scripts/train_pre_match_model.py`. Il charge une
+Pour les nouveaux entraînements DeepSets v3/v4, utiliser le dataset aligné au
+service décrit dans la section « Dataset aligné 14D/18D » ci-dessous.
+
+Le parcours général est `scripts/train_pre_match_model.py`. Il charge une
 base explicitement choisie en lecture seule et produit un modèle candidat,
 un manifeste des partitions et un rapport d'évaluation. Il ne remplace pas
 le modèle chargé par l'application.
@@ -212,3 +215,77 @@ La calibration du script général reste optionnelle. L'évaluation d'ensemble
 indique explicitement si elle a été appliquée ; un fichier de calibration présent
 mais lié à un autre contrat est refusé. Une absence de calibration ne transforme
 pas les probabilités brutes en probabilités calibrées.
+
+
+## Dataset aligné 14D/18D
+
+Le service demande une lecture `history_only` des faits Riot : il ne consulte
+pas les données ML pour calculer les priors. Les autres lecteurs conservent
+leurs labels habituels. La fenêtre globale est sélectionnée via les index de
+mode/création et les ex æquo par ID, dans une transaction unique en lecture
+seule ; temporaires SQLite en mémoire et cache de pages plafonné à 64 MiB
+par connexion.
+
+Le contrat `nnriot.serving_aligned_dataset.v1` fige une seule source SQLite
+ouverte en lecture seule. Les cibles sont les queues 420/440, avec cinq rôles
+canoniques par équipe, labels multitâches valides et vainqueur cohérent avec
+Riot. Les 10 000 premières créations du snapshot servent au contexte ; les
+créations ex æquo à sa frontière ne deviennent pas des cibles. Pour chaque
+cible, le replay utilise exactement les 10 000 créations CLASSIC strictement
+antérieures, puis uniquement les résultats terminés avant sa création.
+Les résultats historiques sans label ML restent utilisables.
+
+```powershell
+.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset inventory --db training_data.db --db runs/training_data_23h_20260922_191434.db --db runs/db_merge_20260924/consolidated.db
+.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset freeze --db runs/db_merge_20260924/consolidated.db --after-cohort runs/served_model_comparison_20261009_complete/cohort.jsonl --output-dir runs/aligned_dataset_20261009_reviewed --source-limit 61000
+.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset verify --dataset-dir runs/aligned_dataset_20261009_reviewed
+```
+
+Les sorties exigent un répertoire neuf. Le test compte au moins 3 000 cibles
+créées après le cohort exploratoire antérieur ; la validation en compte au
+moins 3 000. Les créations ex æquo restent ensemble. Un résultat train dont
+la fin atteint le début de validation est purgé ; la même règle s'applique
+entre validation et test. Les IDs du test exploratoire antérieur sont exclus
+des nouvelles cibles. Les exclusions et les purges sont enregistrées.
+
+`dataset.json` lie les hashes de code, les règles, la disponibilité par contrat
+et les SHA-256 de chaque fichier. `source_rows.json.gz` conserve les faits
+compactés ; `model.split.json` conserve les IDs et créations ; `train.json`
+et `validation.json` portent leurs labels. `sealed_test.json` et
+`sealed_test14.npz` réservent le test pour la prochaine expérience. Les
+fichiers `train14.npz`/`validation14.npz` contiennent les équipes float32
+`(N,5,14)` et le macro float32 `(N,15)`. Les fichiers 18D n'existent que si
+leur disponibilité est complète sur les mêmes partitions. Les causes
+individuelles figurent dans `availability.json`.
+
+Les deux bases récentes inventoriées ne contiennent pas de timelines.
+Le dataset récent peut être disponible en 14D tout en étant bloqué en 18D.
+Le trainer v4 refuse ce statut ; les anciennes timelines d'une autre base
+ne sont pas ajoutées implicitement. Leur acquisition récente est un chantier
+séparé. Ni les defaults de cold start ni un padding ne remplacent une source
+18D absente.
+
+Après fixation du protocole de la prochaine expérience, commandes de pilot :
+
+```powershell
+.\.venv312\Scripts\python.exe -m scripts.train_deepsets_v3 --dataset-dir runs/aligned_dataset_20261009_reviewed --output-dir runs/aligned_v3_pilot --epochs 1 --batch-size 64 --seed 42
+.\.venv312\Scripts\python.exe -m scripts.train_deepsets_v4_timeline --dataset-dir runs/aligned_dataset_20261009_reviewed --output-dir runs/aligned_v4_pilot --epochs 1 --batch-size 64 --seed 42
+```
+
+La commande v4 exige `availability["nnriot.players18.v1"].status == "ready"`.
+Dans ce mode, les trainers rejettent les caches/manifests legacy explicites,
+construisent des poids neufs, utilisent uniquement train/validation et
+retournent avant toute métrique test. La calibration stricte est ajustée sur
+validation avec au moins 20 observations et les deux classes ; une validation
+insuffisante ne produit aucun faux sidecar calibré. `model.metrics.json`
+lie le checkpoint au manifeste du dataset et conserve `test_status=reserved`
+et `validation_status=unverified`.
+
+Le replay d'audit peut vérifier les features et hashes du test, sans mesurer
+accuracy/log-loss ou distribuer les labels. Cette réservation est une
+discipline d'expérience : les faits Riot archivés contiennent les résultats.
+L'absence de timestamps d'acquisition impose l'hypothèse rétrospective
+« résultats observables à la fin de partie ». Les profils statiques de
+champions conservent leurs limites de provenance historique. La parité de
+features ne démontre ni gain prédictif ni éligibilité à la production.
+Voir [l'audit de réception](model_serving/aligned_dataset_verification.md).

@@ -1,8 +1,7 @@
 """Flask test client tests for the main API surface.
 
-Replaces the previous live-server tests at localhost:5000. Uses
-monkeypatched MagicMock trainer to avoid loading TF at test time
-(other than via the initial app package import).
+Replaces the previous live-server tests at localhost:5000. The serving
+facade loads verified synthetic artifacts with neural inference mocked.
 """
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -46,36 +45,24 @@ def _fake_preds():
 
 
 @pytest.fixture
-def client(monkeypatch):
-    """Flask test client with the trainer mocked out (no TF predict cost)."""
+def client(monkeypatch, tmp_path):
+    """Real serving facade; the separate trainer is mocked for training routes."""
     fake_trainer = MagicMock()
-    fake_trainer.predict.return_value = _fake_preds()
-    fake_trainer.model.is_calibrated = True
-    fake_trainer.model.calibration_temperature = 1.0
-    fake_trainer.is_calibrated = True
     # JSON-serializable return for /api/train/manual.
     fake_trainer.run_training_step.return_value = 0
 
     monkeypatch.setattr(app_core, "global_trainer", fake_trainer)
     monkeypatch.setattr(app_core, "tf_available", True)
+    from tests.serving_fixture import install_serving_fixture
+    install_serving_fixture(monkeypatch, _fake_preds(), tmp_path)
     flask_app.config["TESTING"] = True
     return flask_app.test_client()
 
 
 def _sample_match():
-    """Minimal /api/predict payload."""
-    return {
-        "participants": [
-            {"teamId": 100, "championName": "Aatrox", "kills": 10, "deaths": 5,
-             "assists": 7, "goldEarned": 14000, "teamPosition": "TOP"},
-            {"teamId": 200, "championName": "Lux", "kills": 8, "deaths": 7,
-             "assists": 4, "goldEarned": 12000, "teamPosition": "MID"},
-        ],
-        "teams": [
-            {"teamId": 100, "win": True},
-            {"teamId": 200, "win": False},
-        ],
-    }
+    from tests.serving_fixture import full_match
+    return full_match()
+
 
 
 # ============================================================================
@@ -110,8 +97,43 @@ def test_api_status(client):
     data = resp.get_json()
     assert data["model_loaded"] is True
     assert "tensorflow_version" in data
-    # New VECTOR_DIM (was 100000 before Sprint 2)
-    assert data["input_dimension"] == 20000
+    assert data["input_dimension"] == 14
+    assert data["feature_contract"] == "nnriot.players14.v1"
+    assert data["trainer_loaded"] is True
+    assert data["serving_validation"]["status"] == "validated"
+    assert data["calibration_available"] is True
+    assert data["status"] == "Loaded; independently validated"
+
+
+@pytest.mark.parametrize("change, calibrated", [
+    ("in_memory_without_evidence", False),
+    ("temperature", False),
+    ("action_threshold", True),
+])
+def test_api_status_rechecks_loaded_evidence(client, monkeypatch, tmp_path, change, calibrated):
+    from app.routes import api
+    from core.prediction_service import PredictionService
+    from tests.serving_fixture import install_serving_fixture
+
+    service = install_serving_fixture(monkeypatch, _fake_preds(), tmp_path / "status-evidence")
+    if change == "in_memory_without_evidence":
+        unverified = PredictionService()
+        unverified._model = service._model
+        unverified._is_calibrated = True
+        service = unverified
+        monkeypatch.setattr(api, "get_prediction_service", lambda **kwargs: service)
+    elif change == "temperature":
+        service._temperature = 2.0
+    else:
+        service.action_threshold = .06
+
+    response = client.get("/api/status")
+    assert response.status_code == 200
+    data = response.get_json()
+    assert data["model_loaded"] is True
+    assert data["calibration_available"] is calibrated
+    assert data["serving_validation"]["status"] != "validated"
+    assert data["status"] == "Loaded; abstention required"
 
 
 def test_db_health(client):
@@ -161,24 +183,14 @@ def test_sample_match(client):
 
 
 def test_predict_returns_multi_output(client):
-    resp = client.post("/api/predict",
-                       data=json.dumps(_sample_match()),
-                       content_type="application/json")
-    assert resp.status_code == 200
-    data = resp.get_json()
-    assert data["success"] is True
-    # New shape
-    assert "winner" in data
-    assert "team_b_kill_lead" in data
-    assert "kills" in data
-    assert "first" in data
-    assert "totals" in data
-    assert "both_teams" in data
-    assert "elder_dragon" in data
-    # Legacy shim removed in 7840e87 — must NOT be present
-    assert "predicted_outcome" not in data
-    assert "win_probability" not in data
-    assert "lose_probability" not in data
+    res=client.post('/api/predict',json=_sample_match())
+    assert res.status_code==200
+    data=res.get_json()
+    assert data['success']
+    assert set(data['heads_raw'])==set(_fake_preds())
+    assert data['probabilities_calibrated'] is not None
+    assert 'model' in data and 'selective_decision' in data
+
 
 
 def test_predict_missing_fields(client):

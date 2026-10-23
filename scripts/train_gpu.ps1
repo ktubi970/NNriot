@@ -19,5 +19,7 @@ if ($Check) {
     $runnerArgs += $TrainingArgs
 }
 
-& wsl.exe --distribution $Distribution --user root --cd $repoRoot --exec bash scripts/run_with_cuda.sh $LinuxPython @runnerArgs
+$wslInputPath = $repoRoot -replace '\\', '/'
+$linuxRepoRoot = (& wsl.exe --distribution $Distribution wslpath -u $wslInputPath).Trim()
+& wsl.exe --distribution $Distribution --user root --cd $linuxRepoRoot --exec bash scripts/run_with_cuda.sh $LinuxPython @runnerArgs
 exit $LASTEXITCODE

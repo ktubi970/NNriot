@@ -41,65 +41,22 @@ def test_format_multi_output_response_with_single_head_winner():
 
 
 def test_final_predict_dynamically_handles_dense_draft_shape(monkeypatch):
-    fake_trainer = MagicMock()
-    fake_model = MagicMock()
-    fake_model.input_shape = (None, DENSE_FEATURE_DIM)
-    fake_model.is_calibrated = True
-    fake_model.calibration_temperature = 1.0
-
-    fake_trainer.model = fake_model
-    fake_trainer.is_calibrated = True
-    fake_trainer.predict.return_value = {
-        "winner": np.array([[0.35, 0.65]], dtype=np.float32),
-    }
-
-    monkeypatch.setattr(app_core, "global_trainer", fake_trainer)
-    monkeypatch.setattr(app_core, "tf_available", True)
-
-    sample_match = {
-        "participants": [
-            {"champion": "Ahri", "role": "MIDDLE", "team_id": 100},
-            {"champion": "Zed", "role": "MIDDLE", "team_id": 200},
-        ],
-        "teams": [{"team_id": 100}, {"team_id": 200}],
-    }
-    result = final_predict_match_outcome(sample_match)
-    assert "error" not in result
-    assert result["success"] is True
-    assert result["winner"]["predicted"] == "B"
-    # Ensure predict was called with a dense vector of shape (1, DENSE_FEATURE_DIM)
-    call_arg = fake_trainer.predict.call_args[0][0]
-    assert call_arg.shape == (1, DENSE_FEATURE_DIM)
+    from core.serving_contract import ContractError
+    import core.prediction_service as serving
+    def failed(**kwargs):raise ContractError('Unsupported legacy dense feature contract')
+    monkeypatch.setattr(serving,'get_prediction_service',failed)
+    legacy=MagicMock();monkeypatch.setattr(app_core,'global_trainer',legacy)
+    result=final_predict_match_outcome({'participants':[],'teams':[]})
+    assert result['error_code']=='model_contract'
+    legacy.predict.assert_not_called()
 
 
-def test_final_predict_dynamically_handles_enriched_shape(monkeypatch):
-    from core.enriched_features import ENRICHED_DENSE_DIM
-    fake_trainer = MagicMock()
-    fake_model = MagicMock()
-    fake_model.input_shape = (None, ENRICHED_DENSE_DIM)
-    fake_model.is_calibrated = True
-    fake_model.calibration_temperature = 1.0
 
-    fake_trainer.model = fake_model
-    fake_trainer.is_calibrated = True
-    fake_trainer.predict.return_value = {
-        "winner": np.array([[0.70, 0.30]], dtype=np.float32),
-    }
-
-    monkeypatch.setattr(app_core, "global_trainer", fake_trainer)
-    monkeypatch.setattr(app_core, "tf_available", True)
-
-    sample_match = {
-        "participants": [
-            {"champion": "Shen", "role": "TOP", "team_id": 100},
-            {"champion": "Zed", "role": "MIDDLE", "team_id": 200},
-        ],
-        "teams": [{"team_id": 100}, {"team_id": 200}],
-    }
-    result = final_predict_match_outcome(sample_match)
-    assert "error" not in result
-    assert result["success"] is True
-    assert result["winner"]["predicted"] == "A"
-    call_arg = fake_trainer.predict.call_args[0][0]
-    assert call_arg.shape == (1, ENRICHED_DENSE_DIM)
-
+def test_final_predict_uses_verified_serving_contract(monkeypatch, tmp_path):
+    from tests.serving_fixture import install_serving_fixture,full_match
+    install_serving_fixture(monkeypatch,{'winner':np.array([[.7,.3]])}, tmp_path)
+    result=final_predict_match_outcome(full_match())
+    assert result['success']
+    assert result['winner']['predicted']=='team_a'
+    assert result['model']['feature_contract']=='nnriot.players14.v1'
+    assert result['heads_raw']['winner']==[.7,.3]

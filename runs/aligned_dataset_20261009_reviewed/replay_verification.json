@@ -1,0 +1,1 @@
+{"status": "verified", "tensor_comparisons": 148458, "test_metrics_computed": false, "availability": {"nnriot.players14.v1": {"status": "ready", "eligible": 49486, "total": 49486, "coverage": 1.0}, "nnriot.players18.v1": {"status": "blocked", "eligible": 0, "total": 49486, "coverage": 0.0}}}

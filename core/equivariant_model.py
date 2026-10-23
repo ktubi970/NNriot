@@ -1,12 +1,17 @@
 """Equivariant Siamese DeepSets multi-task architecture for League of Legends match predictions.
 
-Guarantees exact mathematical team-swap anti-symmetry and permutation invariance:
-- P(winner=1 | Team B, Team A) == 1 - P(winner=1 | Team A, Team B)
-- kill_handicap(Team B, Team A) == -kill_handicap(Team A, Team B)
+At inference, permutations within either team preserve the predictions. Swapping
+compositions keeps Team A on Blue and Team B on Red. For that transformation:
+- draft_advantage(B, A) exchanges the two draft_advantage(A, B) probabilities
+- draft_advantage(A, A) is [0.5, 0.5], to floating-point precision
 - team_a_kills(Team B, Team A) == team_b_kills(Team A, Team B)
 - total_kills(Team B, Team A) == total_kills(Team A, Team B)
 - first_*(Team B, Team A) swaps Team A (class 0) and Team B (class 1) probabilities
-- winner_uncertainty(Team B, Team A) == winner_uncertainty(Team A, Team B)
+
+With enable_side_bias=False, winner probabilities also exchange, kill_handicap
+changes sign and winner_uncertainty is unchanged. With side bias enabled, the
+fixed Blue/Red bias is retained, so these three extra properties are not required.
+Changing perspective on the same match, P -> 1 - P, is a separate operation.
 """
 from __future__ import annotations
 
@@ -118,21 +123,24 @@ class SkewSymmetricBilinearDense(tf.keras.layers.Layer):
 
 @tf.keras.utils.register_keras_serializable(package="nnriot")
 class EvidentialDirichletSoftmax(tf.keras.layers.Layer):
-    """Dirichlet evidential uncertainty head for anti-symmetric 2-class predictions.
+    """Dirichlet uncertainty head whose classes exchange when its logit changes sign.
 
     Based on Sensoy et al. (NeurIPS 2018) "Evidential Deep Learning to Quantify Classification Uncertainty".
 
-    Given scalar anti-symmetric logit s (where +s favors Team B, -s favors Team A):
+    Given scalar logit s (where +s favors Team B, -s favors Team A):
     - Evidence: e_a = softplus(-s), e_b = softplus(+s) >= 0
     - Dirichlet concentration: alpha_a = e_a + 1, alpha_b = e_b + 1
     - Dirichlet strength (precision): S = alpha_a + alpha_b = e_a + e_b + 2 >= 2
     - Expected probabilities: p_a = alpha_a / S, p_b = alpha_b / S
     - Epistemic uncertainty (vacuity): u = 2 / S in (0, 1]
 
-    Mathematical Invariants:
+    Mathematical invariants under sign reversal of the complete input logit:
     - P(Team B | -s) == P(Team A | s) == 1 - P(Team B | s) (exact anti-symmetry)
-    - u(-s) == u(s) (exact symmetry / invariance under team swap)
+    - u(-s) == u(s) (exact symmetry)
     - 0 < u <= 1
+
+    A composition swap with a fixed side bias changes s_draft + b_side into
+    -s_draft + b_side, not -s. It need not exchange probabilities or preserve u.
     """
 
     def __init__(
@@ -305,7 +313,7 @@ def build_equivariant_deepsets_model(
 
     outputs: dict[str, tf.Tensor] = {}
 
-    # 1. Winner head (Directional anti-symmetric probability + optional Dirichlet epistemic uncertainty)
+    # 1. Winner: antisymmetric draft score, optional fixed side bias and epistemic uncertainty.
     if use_bilinear:
         winner_bilinear = SkewSymmetricBilinearDense(
             kernel_regularizer=reg, name="winner_bilinear"
@@ -346,7 +354,7 @@ def build_equivariant_deepsets_model(
     else:
         outputs["winner"] = AntiSymmetricSoftmax(name="winner")(s_winner)
 
-    # 2. Team B kill lead (Directional anti-symmetric 2-class softmax + side bias)
+    # 2. Team B kill lead: antisymmetric draft score plus optional fixed side bias.
     s_lead_draft = tf.keras.layers.Dense(
         1, use_bias=False, kernel_regularizer=reg, name="team_b_kill_lead_draft_logit"
     )(t_diff_in)
@@ -356,7 +364,7 @@ def build_equivariant_deepsets_model(
         s_lead = s_lead_draft
     outputs["team_b_kill_lead"] = AntiSymmetricSoftmax(name="team_b_kill_lead")(s_lead)
 
-    # 3. Directional anti-symmetric linear regression: kill_handicap (Team A kills - Team B kills)
+    # 3. Kill handicap: antisymmetric draft regression plus optional fixed side bias (A kills - B kills).
     if use_bilinear:
         handicap_bilinear = SkewSymmetricBilinearDense(
             kernel_regularizer=reg, name="kill_handicap_bilinear"

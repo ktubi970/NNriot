@@ -1,0 +1,8 @@
+{
+  "status": "passed",
+  "aggregate_counts_reconcile": true,
+  "artifact_hashes_match": true,
+  "report_links_exist": true,
+  "source_membership_overlap": 0,
+  "report_sha256": "7fd027327080bd6c0dc91f6c415fdf92adcf03a9c00ab3a15bf07a1df2edcc30"
+}

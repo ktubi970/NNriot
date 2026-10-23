@@ -1,7 +1,7 @@
 """Selective classification engine and Wilson score calibration.
 
 Implements Chow's (1970) optimal rule for classification with a rejection option,
-computing anti-symmetric conviction C = |P - 0.5|, Wilson score binomial confidence
+computing perspective-invariant conviction C = |P - 0.5|, Wilson score binomial confidence
 intervals for selective accuracy, adaptive threshold optimization, and multi-tier
 conviction stratification.
 
@@ -32,10 +32,10 @@ DEFAULT_CONVICTION_THRESHOLDS: Tuple[float, ...] = (
 def compute_conviction(probabilities: np.ndarray | Sequence[float] | float) -> np.ndarray:
     """Compute conviction metric C = |P - 0.5|.
 
-    In League of Legends outcome prediction, team-swap symmetry dictates that
-    P(winner=1 | B, A) = 1 - P(winner=1 | A, B).
-    Therefore, C(A, B) = |P - 0.5| is strictly invariant under team swap:
-    C(B, A) = |(1 - P) - 0.5| = |0.5 - P| = |P - 0.5| = C(A, B).
+    Changing perspective on the same match replaces P with 1 - P and leaves
+    conviction unchanged: |(1 - P) - 0.5| = |P - 0.5|. This does not require
+    equal conviction after swapping compositions between fixed Blue/Red sides:
+    the winner head retains its side bias under that different transformation.
 
     Args:
         probabilities: Predicted probabilities in [0, 1].
@@ -55,6 +55,16 @@ def compute_conviction(probabilities: np.ndarray | Sequence[float] | float) -> n
     return np.maximum(prob_arr, 1.0 - prob_arr) - 0.5
 
 
+def _rounded_conviction(conviction: np.ndarray | Sequence[float] | float) -> np.ndarray:
+    """Quantize canonical scores exactly as the serving decision does."""
+    values = np.asarray(conviction, dtype=float)
+    return np.fromiter(
+        (round(float(value), 6) for value in values.flat),
+        dtype=float,
+        count=values.size,
+    ).reshape(values.shape)
+
+
 def conviction_at_least(
     conviction: np.ndarray | Sequence[float] | float,
     threshold: float,
@@ -66,13 +76,7 @@ def conviction_at_least(
     is intentional: NumPy rounding can differ at half-unit boundaries.
     The input score is not modified or used to recalibrate probabilities.
     """
-    values = np.asarray(conviction, dtype=float)
-    rounded = np.fromiter(
-        (round(float(value), 6) for value in values.flat),
-        dtype=float,
-        count=values.size,
-    ).reshape(values.shape)
-    return rounded >= threshold - 1e-9
+    return _rounded_conviction(conviction) >= threshold - 1e-9
 
 
 def wilson_score_interval(
@@ -211,11 +215,18 @@ def find_threshold_for_accuracy(
     candidate_thresholds: Sequence[float] | None = None,
     confidence_level: float = 0.95,
 ) -> Dict[str, Any]:
-    """Find the minimum conviction threshold tau* satisfying target accuracy.
+    """Maximize empirical coverage subject to a target empirical accuracy.
 
-    Chow's optimal rejection rule states that to maximize coverage while
-    meeting an error constraint, one selects the smallest rejection threshold
-    that satisfies the accuracy target.
+    By default, search every distinct nonempty mask realizable by the serving
+    rule, keeping rounded score ties together. Return a canonical threshold
+    (zero for full coverage, otherwise an observed rounded conviction).
+    Accuracy need not be monotone in the threshold. Sorting and cumulative
+    counts take O(n log n) time and O(n) memory.
+
+    If no eligible mask meets the target, return the eligible mask with highest
+    accuracy, breaking ties by coverage. If none is eligible, return the full
+    sample with target_met=False. Wilson intervals describe the selected sample;
+    neither they nor target_met certify future accuracy after threshold search.
 
     Args:
         y_true: Ground truth binary labels {0, 1}.
@@ -223,7 +234,7 @@ def find_threshold_for_accuracy(
         target_accuracy: Minimum acceptable accuracy (e.g. 0.61 for 61%).
         min_coverage: Minimum coverage ratio required.
         min_count: Minimum number of samples required for evaluation.
-        candidate_thresholds: Optional explicit list of candidate thresholds.
+        candidate_thresholds: Optional explicit list restricting the search.
         confidence_level: Confidence level for Wilson intervals.
 
     Returns:
@@ -232,6 +243,11 @@ def find_threshold_for_accuracy(
     """
     y_true_arr = np.asarray(y_true, dtype=int).ravel()
     y_prob_arr = np.asarray(y_prob, dtype=float).ravel()
+
+    if len(y_true_arr) != len(y_prob_arr):
+        raise ValueError(
+            f"Length mismatch: y_true has {len(y_true_arr)} items but y_prob has {len(y_prob_arr)}"
+        )
 
     if len(y_true_arr) == 0:
         return {
@@ -248,14 +264,36 @@ def find_threshold_for_accuracy(
     conviction = compute_conviction(y_prob_arr)
 
     if candidate_thresholds is None:
-        # Search over empirical quantiles + uniform grid up to max conviction
-        max_c = float(np.max(conviction)) if len(conviction) > 0 else 0.5
-        quantiles = np.quantile(conviction, np.linspace(0.0, 0.99, 100))
-        grid = np.linspace(0.0, min(0.5, max_c), 101)
-        candidates = np.unique(np.concatenate([[0.0], quantiles, grid]))
-        candidates = np.sort(candidates[candidates >= 0.0])
-    else:
-        candidates = np.sort(np.asarray(candidate_thresholds, dtype=float))
+        rounded = _rounded_conviction(conviction)
+        order = np.argsort(rounded)
+        scores = rounded[order]
+        # A threshold cannot split observations with the same served score.
+        starts = np.r_[0, np.flatnonzero(scores[1:] != scores[:-1]) + 1]
+        counts = len(scores) - starts
+        correct = ((y_prob_arr >= 0.5) == y_true_arr)[order]
+        successes = np.cumsum(correct[::-1], dtype=np.int64)[::-1][starts]
+        accuracies = successes / counts
+        eligible = (counts >= min_count) & (counts / len(scores) >= min_coverage)
+        feasible = np.flatnonzero(eligible & (accuracies >= target_accuracy))
+
+        chosen = 0
+        if feasible.size:
+            chosen = int(feasible[0])
+        elif np.any(eligible):
+            eligible_indices = np.flatnonzero(eligible)
+            chosen = int(eligible_indices[np.argmax(accuracies[eligible_indices])])
+
+        # Consecutive rounded scores differ by at least 1e-6, so the serving
+        # tolerance of 1e-9 cannot merge two distinct groups at these thresholds.
+        threshold = 0.0 if chosen == 0 else float(scores[starts[chosen]])
+        output = evaluate_selective_coverage(
+            y_true_arr, y_prob_arr, threshold, confidence_level=confidence_level,
+        )
+        output["target_met"] = bool(feasible.size)
+        output["target_accuracy"] = float(target_accuracy)
+        return output
+
+    candidates = np.sort(np.asarray(candidate_thresholds, dtype=float))
 
     best_candidate: Dict[str, Any] | None = None
     best_acc = -1.0

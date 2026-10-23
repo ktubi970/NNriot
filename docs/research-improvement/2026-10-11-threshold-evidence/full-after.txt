@@ -1,0 +1,490 @@
+W0000 00:00:1791711080.978609   12180 cpu_allocator_impl.cc:82] Allocation of 81920000 exceeds 10% of free system memory.
+W0000 00:00:1791711080.980084   37696 cpu_allocator_impl.cc:82] Allocation of 81920000 exceeds 10% of free system memory.
+.......................................................FFFFFFF.......... [  6%]
+........................................................................ [ 13%]
+........................................................................ [ 20%]
+.......................................F................................ [ 27%]
+................................................F....................... [ 34%]
+........................................................................ [ 41%]
+........................................................................ [ 48%]
+....FFFFFFFFFFF.FFFFFF.FFFFFFF.F...........................F............ [ 55%]
+........................................................................ [ 62%]
+........................................................................ [ 68%]
+............................................................F........... [ 75%]
+........................................................................ [ 82%]
+........................................................................ [ 89%]
+........................................................................ [ 96%]
+.....................................                                    [100%]
+================================== FAILURES ===================================
+_________ test_snapshot_matches_original_aggregate_exactly[samples0] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples1] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples2] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples3] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '-1'} == {'source_sche...ion_ms': '-1'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples4] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '20'} == {'source_sche...ion_ms': '20'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples5] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '10'} == {'source_sche...ion_ms': '10'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples6] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '10'} == {'source_sche...ion_ms': '10'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+________________ test_endpoint_feature_parity_and_calibration _________________
+tests\test_calibrated_serving.py:337: in test_endpoint_feature_parity_and_calibration
+    assert resp1.status_code == 200
+E   assert 503 == 200
+E    +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+_____________________ test_schema_version_is_at_least_12 ______________________
+tests\test_database_v11_migration.py:61: in test_schema_version_is_at_least_12
+    assert database.SCHEMA_VERSION == 12
+E   assert 14 == 12
+E    +  where 14 = database.SCHEMA_VERSION
+___ test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable ___
+tests\test_merge_databases.py:84: in test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[json] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[mode] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_invalid_matches_and_all_their_relationships_are_archived[match_id] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[date] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_invalid_matches_and_all_their_relationships_are_archived[duplicate] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_invalid_matches_and_all_their_relationships_are_archived[synthetic] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_invalid_matches_and_all_their_relationships_are_archived[teams] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_invalid_matches_and_all_their_relationships_are_archived[winner] ____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+________ test_identity_precedence_alias_conflicts_and_aggregate_stats _________
+tests\test_merge_databases.py:151: in test_identity_precedence_alias_conflicts_and_aggregate_stats
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____________ test_dry_run_and_invalid_paths_never_create_artifacts ____________
+tests\test_merge_databases.py:170: in test_dry_run_and_invalid_paths_never_create_artifacts
+    report = run(tmp_path, source, target, dry_run=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them ____
+tests\test_merge_databases.py:201: in test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them
+    run(tmp_path, source, target)
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_nested_malformed_values_are_archived_without_aborting[teamId] ______
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_nested_malformed_values_are_archived_without_aborting[championName] ___
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_nested_malformed_values_are_archived_without_aborting[gameDuration] ___
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+________ test_compatible_timeline_is_retained_and_adds_training_labels ________
+tests\test_merge_databases.py:229: in test_compatible_timeline_is_retained_and_adds_training_labels
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_________ test_committed_wal_is_included_without_checkpointing_inputs _________
+tests\test_merge_databases.py:247: in test_committed_wal_is_included_without_checkpointing_inputs
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+______ test_alias_target_wins_queue_conflicts_and_full_archive_manifest _______
+tests\test_merge_databases.py:271: in test_alias_target_wins_queue_conflicts_and_full_archive_manifest
+    conn.execute("INSERT INTO crawl_queue VALUES ('Queue','EUW',10,0,'today')")
+E   sqlite3.OperationalError: table crawl_queue has 9 columns but 5 values were supplied
+__ test_orphan_relationship_is_archived_even_if_canonical_has_identical_row ___
+tests\test_merge_databases.py:298: in test_orphan_relationship_is_archived_even_if_canonical_has_identical_row
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__TOMBSTONE__] _
+tests\test_merge_databases.py:310: in test_repository_synthetic_puuids_are_rejected_and_not_created_as_players
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__UNKNOWN_EUW1_1_1] _
+tests\test_merge_databases.py:310: in test_repository_synthetic_puuids_are_rejected_and_not_created_as_players
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_canonical_unknown_identity_is_filled_without_preservation_failure ____
+tests\test_merge_databases.py:321: in test_canonical_unknown_identity_is_filled_without_preservation_failure
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts _
+tests\test_merge_databases.py:340: in test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts
+    with pytest.raises(ValueError, match='changed'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'changed'
+E     Actual message: 'only schema version 12 is supported'
+________ test_null_canonical_alias_is_archived_instead_of_disappearing ________
+tests\test_merge_databases.py:354: in test_null_canonical_alias_is_archived_instead_of_disappearing
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic ___
+tests\test_merge_databases.py:405: in test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+________________ test_final_predict_rejects_uncalibrated_model ________________
+tests\test_model_calibration_guard.py:126: in test_final_predict_rejects_uncalibrated_model
+    assert "calibrated" in res["error"].lower()
+E   AssertionError: assert 'calibrated' in 'checkpoint file does not exist: d:\\projet\\nnriot\\scratch\\research-threshold-temp\\nnriot-pytest-kt2vfimp\\model.keras'
+E    +  where 'checkpoint file does not exist: d:\\projet\\nnriot\\scratch\\research-threshold-temp\\nnriot-pytest-kt2vfimp\\model.keras' = <built-in method lower of str object at 0x000001E2A5EC8350>()
+E    +    where <built-in method lower of str object at 0x000001E2A5EC8350> = 'Checkpoint file does not exist: D:\\projet\\NNriot\\scratch\\research-threshold-temp\\nnriot-pytest-kt2vfimp\\model.keras'.lower
+___________________ test_equivariant_deepsets_training_run ____________________
+tests\test_pre_match_training.py:82: in test_equivariant_deepsets_training_run
+    assert report["symmetry_diagnostics"]["anti_symmetry_guarantee"] is True
+E   assert False is True
+---------------------------- Captured stderr call -----------------------------
+INFO:train_pre_match_model:Dataset splits: {'train': 17, 'validation': 4, 'test': 4}
+INFO:train_pre_match_model:Epoch 1/1: train_loss=31.9685 validation winner log_loss=0.7243 accuracy=0.500
+INFO:train_pre_match_model:Equivariant anti-symmetry check: max_violation=4.549214e-02 guaranteed=False
+INFO:train_pre_match_model:Candidate checkpoint: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-2\test_equivariant_deepsets_trai0\model.keras
+INFO:train_pre_match_model:Held-out test: {"model": {"accuracy": 0.5, "log_loss": 0.7242954772329546, "brier": 0.26509895872090805, "roc_auc": 0.75, "calibration_error": 0.12287788093090057, "diagnostics": {"quantile_ece": 0.3114389181137085, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 2}, "brier_decomposition": {"reliability": 0.09843229205424137, "resolution": 0.08333333333333333, "uncertainty": 0.25, "binned_brier": 0.26509895872090805, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "estimated", "slope": 0.0, "intercept": 0.0, "reason": null}, "selective_metrics": {"conviction_ge_0pct": {"threshold": 0.0, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_2pct": {"threshold": 0.02, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_4pct": {"threshold": 0.04, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_6pct": {"threshold": 0.06, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_8pct": {"threshold": 0.08, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_10pct": {"threshold": 0.1, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_12pct": {"threshold": 0.12, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_15pct": {"threshold": 0.15, "coverage": 0.0, "accuracy": 0.0, "count": 0, "wilson_lower": 0.0, "wilson_upper": 0.0}}}}, "baseline": {"accuracy": 0.5, "log_loss": 0.6948802845481884, "brier": 0.2508650519031142, "roc_auc": 0.5, "calibration_error": 0.02941176470588236, "diagnostics": {"quantile_ece": 0.02941176470588236, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 1}, "brier_decomposition": {"reliability": 0.0008650519031141872, "resolution": 0.0, "uncertainty": 0.25, "binned_brier": 0.2508650519031142, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "unavailable", "slope": null, "intercept": null, "reason": "constant_predictions"}}}, "accuracy_lift": 0.0, "log_loss_improvement": -0.029415192684766223}
+INFO:train_pre_match_model:Evaluation report: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-2\test_equivariant_deepsets_trai0\model.metrics.json
+INFO:train_pre_match_model:Selective Evaluation [VALIDATION] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO:train_pre_match_model:  * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+INFO:train_pre_match_model:Selective Evaluation [TEST] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO:train_pre_match_model:  * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+------------------------------ Captured log call ------------------------------
+INFO     train_pre_match_model:train_pre_match_model.py:273 Dataset splits: {'train': 17, 'validation': 4, 'test': 4}
+INFO     train_pre_match_model:train_pre_match_model.py:368 Epoch 1/1: train_loss=31.9685 validation winner log_loss=0.7243 accuracy=0.500
+INFO     train_pre_match_model:train_pre_match_model.py:445 Equivariant anti-symmetry check: max_violation=4.549214e-02 guaranteed=False
+INFO     train_pre_match_model:train_pre_match_model.py:485 Candidate checkpoint: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-2\test_equivariant_deepsets_trai0\model.keras
+INFO     train_pre_match_model:train_pre_match_model.py:486 Held-out test: {"model": {"accuracy": 0.5, "log_loss": 0.7242954772329546, "brier": 0.26509895872090805, "roc_auc": 0.75, "calibration_error": 0.12287788093090057, "diagnostics": {"quantile_ece": 0.3114389181137085, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 2}, "brier_decomposition": {"reliability": 0.09843229205424137, "resolution": 0.08333333333333333, "uncertainty": 0.25, "binned_brier": 0.26509895872090805, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "estimated", "slope": 0.0, "intercept": 0.0, "reason": null}, "selective_metrics": {"conviction_ge_0pct": {"threshold": 0.0, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_2pct": {"threshold": 0.02, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_4pct": {"threshold": 0.04, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_6pct": {"threshold": 0.06, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_8pct": {"threshold": 0.08, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_10pct": {"threshold": 0.1, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_12pct": {"threshold": 0.12, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_15pct": {"threshold": 0.15, "coverage": 0.0, "accuracy": 0.0, "count": 0, "wilson_lower": 0.0, "wilson_upper": 0.0}}}}, "baseline": {"accuracy": 0.5, "log_loss": 0.6948802845481884, "brier": 0.2508650519031142, "roc_auc": 0.5, "calibration_error": 0.02941176470588236, "diagnostics": {"quantile_ece": 0.02941176470588236, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 1}, "brier_decomposition": {"reliability": 0.0008650519031141872, "resolution": 0.0, "uncertainty": 0.25, "binned_brier": 0.2508650519031142, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "unavailable", "slope": null, "intercept": null, "reason": "constant_predictions"}}}, "accuracy_lift": 0.0, "log_loss_improvement": -0.029415192684766223}
+INFO     train_pre_match_model:train_pre_match_model.py:487 Evaluation report: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-2\test_equivariant_deepsets_trai0\model.metrics.json
+INFO     train_pre_match_model:train_pre_match_model.py:145 Selective Evaluation [VALIDATION] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO     train_pre_match_model:train_pre_match_model.py:151   * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+INFO     train_pre_match_model:train_pre_match_model.py:145 Selective Evaluation [TEST] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO     train_pre_match_model:train_pre_match_model.py:151   * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+============================== warnings summary ===============================
+tests/analytics/test_interpretable.py: 10 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\sklearn\linear_model\_logistic.py:1403: FutureWarning: 'penalty' was deprecated in version 1.8 and will be removed in 1.10. To avoid this warning, leave 'penalty' set to its default value and use 'l1_ratio' or 'C' instead. Use l1_ratio=0 instead of penalty='l2', l1_ratio=1 instead of penalty='l1', l1_ratio set to a float between 0 and 1 instead of penalty='elasticnet', and C=np.inf instead of penalty=None.
+    warnings.warn(
+
+tests/test_draft_pre_match_training.py: 8 warnings
+tests/test_model_calibration_guard.py: 88 warnings
+tests/test_multi_output_trainer.py: 204 warnings
+tests/test_ordered_ensemble_integration.py: 65 warnings
+tests/test_ordered_training_integration.py: 260 warnings
+tests/test_p5_smoke.py: 102 warnings
+tests/test_periodic_embeddings.py: 3 warnings
+tests/test_pre_match_run.py: 220 warnings
+tests/test_pre_match_training.py: 65 warnings
+tests/test_shapley_credit.py: 65 warnings
+tests/test_train_deepsets_v4_timeline.py: 65 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\backend\tensorflow\core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+tests/test_model_calibration_guard.py::test_model_factory_valid_model_without_sidecar_stays_uncalibrated
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_12', because it has 90 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_model_calibration_guard.py::test_model_factory_valid_model_with_sidecar_is_calibrated
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_13', because it has 90 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_multi_output_trainer.py::test_validate_checkpoint_input_dim_mismatch
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_20', because it has 206 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_multi_output_trainer.py::test_validate_checkpoint_correct_arch_passes
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_22', because it has 206 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_tree_baseline.py: 367 warnings
+tests/test_tree_baseline_structured.py: 517 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\joblib\numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples0]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples1]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples2]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples3]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples4]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples5]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples6]
+FAILED tests/test_calibrated_serving.py::test_endpoint_feature_parity_and_calibration
+FAILED tests/test_database_v11_migration.py::test_schema_version_is_at_least_12
+FAILED tests/test_merge_databases.py::test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[json]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[mode]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[match_id]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[date]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[duplicate]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[synthetic]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[teams]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[winner]
+FAILED tests/test_merge_databases.py::test_identity_precedence_alias_conflicts_and_aggregate_stats
+FAILED tests/test_merge_databases.py::test_dry_run_and_invalid_paths_never_create_artifacts
+FAILED tests/test_merge_databases.py::test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[teamId]
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[championName]
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[gameDuration]
+FAILED tests/test_merge_databases.py::test_compatible_timeline_is_retained_and_adds_training_labels
+FAILED tests/test_merge_databases.py::test_committed_wal_is_included_without_checkpointing_inputs
+FAILED tests/test_merge_databases.py::test_alias_target_wins_queue_conflicts_and_full_archive_manifest
+FAILED tests/test_merge_databases.py::test_orphan_relationship_is_archived_even_if_canonical_has_identical_row
+FAILED tests/test_merge_databases.py::test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__TOMBSTONE__]
+FAILED tests/test_merge_databases.py::test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__UNKNOWN_EUW1_1_1]
+FAILED tests/test_merge_databases.py::test_canonical_unknown_identity_is_filled_without_preservation_failure
+FAILED tests/test_merge_databases.py::test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts
+FAILED tests/test_merge_databases.py::test_null_canonical_alias_is_archived_instead_of_disappearing
+FAILED tests/test_merge_databases.py::test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic
+FAILED tests/test_model_calibration_guard.py::test_final_predict_rejects_uncalibrated_model
+FAILED tests/test_pre_match_training.py::test_equivariant_deepsets_training_run
+36 failed, 1009 passed, 2043 warnings in 842.60s (0:14:02)

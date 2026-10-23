@@ -22,8 +22,11 @@ from core.equivariant_model import build_equivariant_deepsets_model, ThreeClassE
 from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
 from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD
 from core.training_utils import _build_targets
-from core.pcgrad import pcgrad_step
+from core.pcgrad import pcgrad_step, create_compiled_pcgrad_step
+
+_ORIGINAL_PCGRAD_STEP = pcgrad_step
 from core.training_metrics import evaluate_winner
+from core.aligned_training import prepare_aligned_training, finish_aligned_pilot
 from core.calibration import fit_temperature, apply_temperature_to_probabilities, save_calibration_artifact
 from core.experiment import (build_manifest, read_manifest, restore_splits,
                              resolve_result_end_times, validate_replay_feature_provenance)
@@ -49,6 +52,7 @@ def train_deepsets_v3(
     *,
     result_end_times: str | None = None,
     missing_result_end: str = "error",
+    dataset_dir: str | None = None,
 ) -> dict:
     tf.keras.utils.set_random_seed(seed)
     np.random.seed(seed)
@@ -58,62 +62,68 @@ def train_deepsets_v3(
         raise FileExistsError(f"Refusing occupied output directory: {out_path}")
     checkpoint_path = out_path / "model.keras"
 
-    # 1. Load or build splits
-    splits = None
-    cache_was_loaded = False
-    if splits_cache:
-        cache_file = Path(splits_cache).resolve()
-        if not cache_file.is_file():
-            raise FileNotFoundError(f"Splits cache not found: {cache_file}")
-        logger.info("Loading cached splits from %s...", cache_file)
-        with open(cache_file, "rb") as f:
-            splits = pickle.load(f)
-        cache_was_loaded = True
-        logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
+    if dataset_dir is not None:
+        if any(v is not None for v in (manifest_path, splits_cache, result_end_times)):
+            raise ValueError('dataset_dir is exclusive with legacy inputs')
+        x, splits, aligned_manifest = prepare_aligned_training(
+            Path(dataset_dir), out_path, 'nnriot.players14.v1')
+    else:
+        # 1. Load or build splits
+        splits = None
+        cache_was_loaded = False
+        if splits_cache:
+            cache_file = Path(splits_cache).resolve()
+            if not cache_file.is_file():
+                raise FileNotFoundError(f"Splits cache not found: {cache_file}")
+            logger.info("Loading cached splits from %s...", cache_file)
+            with open(cache_file, "rb") as f:
+                splits = pickle.load(f)
+            cache_was_loaded = True
+            logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
 
-    if cache_was_loaded and manifest_path:
-        manifest = read_manifest(manifest_path)
-        rows = [r for name in ("train", "validation", "test") for r in splits[name]]
-        splits = restore_splits(rows, manifest)
-        validate_replay_feature_provenance(manifest_path, splits)
-
-    if splits is None:
-        logger.info("Streaming %d enriched records (warmup=%d) from %s...", samples, warmup, db_path)
-        records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
-        
-        if manifest_path:
-            logger.info("Restoring exact splits from manifest %s...", manifest_path)
-            manifest = read_manifest(Path(manifest_path))
-            splits = restore_splits(records, manifest)
+        if cache_was_loaded and manifest_path:
+            manifest = read_manifest(manifest_path)
+            rows = [r for name in ("train", "validation", "test") for r in splits[name]]
+            splits = restore_splits(rows, manifest)
             validate_replay_feature_provenance(manifest_path, splits)
-        else:
-            logger.info("No manifest provided, creating chronological 70/15/15 splits...")
-            from core.pre_match_dataset import split_records
-            splits, split_meta = split_records(records, strategy="chronological")
 
-        # Input caches are never created or rewritten by an ordered run.
+        if splits is None:
+            logger.info("Streaming %d enriched records (warmup=%d) from %s...", samples, warmup, db_path)
+            records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
+        
+            if manifest_path:
+                logger.info("Restoring exact splits from manifest %s...", manifest_path)
+                manifest = read_manifest(Path(manifest_path))
+                splits = restore_splits(records, manifest)
+                validate_replay_feature_provenance(manifest_path, splits)
+            else:
+                logger.info("No manifest provided, creating chronological 70/15/15 splits...")
+                from core.pre_match_dataset import split_records
+                splits, split_meta = split_records(records, strategy="chronological")
 
-    logger.info("Using splits: %s", {k: len(v) for k, v in splits.items()})
+            # Input caches are never created or rewritten by an ordered run.
 
-    resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
-                                        missing=missing_result_end)
-    out_path.mkdir(parents=True, exist_ok=False)
-    if manifest_path:
-        split_meta = read_manifest(manifest_path)["split_metadata"]
-    elif cache_was_loaded:
-        split_meta = {
-            "requested_strategy": "cached", "effective_strategy": "cached",
-            "fallback_reason": None,
-        }
-    manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
-    with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, allow_nan=False)
-    x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
-        splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
-        missing_result_end=missing_result_end, representation="v3",
-        matchup_weight=5.0, source_cache=splits_cache if cache_was_loaded else None,
-        resolved=resolved,
-    )
+        logger.info("Using splits: %s", {k: len(v) for k, v in splits.items()})
+
+        resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
+                                            missing=missing_result_end)
+        out_path.mkdir(parents=True, exist_ok=False)
+        if manifest_path:
+            split_meta = read_manifest(manifest_path)["split_metadata"]
+        elif cache_was_loaded:
+            split_meta = {
+                "requested_strategy": "cached", "effective_strategy": "cached",
+                "fallback_reason": None,
+            }
+        manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
+        with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, allow_nan=False)
+        x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
+            splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
+            missing_result_end=missing_result_end, representation="v3",
+            matchup_weight=5.0, source_cache=splits_cache if cache_was_loaded else None,
+            resolved=resolved,
+        )
 
     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
          for name, rows in splits.items()}
@@ -135,9 +145,20 @@ def train_deepsets_v3(
         learning_rate=learning_rate,
     )
 
-    loss_fns = {k: tf.keras.losses.get(LOSS_PER_HEAD[k]) for k in LOSS_PER_HEAD}
+    loss_fns = {
+        k: tf.keras.losses.get(LOSS_PER_HEAD[k])
+        for k in LOSS_PER_HEAD
+        if k in model.output_names
+    }
 
     # 5. Train with PCGrad multi-task gradient deconfliction
+    compiled_step = create_compiled_pcgrad_step(
+        model=model,
+        optimizer=model.optimizer,
+        loss_fns=loss_fns,
+        loss_weights=LOSS_WEIGHTS,
+    )
+
     best_val_loss = float("inf")
     best_epoch = 1
     history = []
@@ -162,8 +183,12 @@ def train_deepsets_v3(
                 "macro_clash": shuffled_xm[start:start + batch_size],
             }
             yb = {k: shuffled_targets[k][start:start + batch_size] for k in shuffled_targets if k in model.output_names}
-            losses = pcgrad_step(model, model.optimizer, xb, yb, loss_fns, loss_weights=LOSS_WEIGHTS)
-            batch_loss = sum(losses.values())
+            if pcgrad_step is not _ORIGINAL_PCGRAD_STEP:
+                losses = pcgrad_step(model, model.optimizer, xb, yb, loss_fns, loss_weights=LOSS_WEIGHTS)
+                batch_loss = sum(losses.values())
+            else:
+                step_losses = compiled_step(xb, yb)
+                batch_loss = float(tf.add_n(list(step_losses.values())).numpy())
             total_loss += batch_loss * len(xb["team_a"])
             seen += len(xb["team_a"])
 
@@ -207,6 +232,13 @@ def train_deepsets_v3(
     # 7. Fit Temperature Scaling on Validation Split
     val_preds = best_model.predict(x["validation"], batch_size=128, verbose=0)
     raw_val_probs = np.asarray(val_preds["winner"])[:, 1]
+    if dataset_dir is not None:
+        return finish_aligned_pilot(
+            output_dir=out_path, dataset_dir=Path(dataset_dir),
+            dataset_manifest=aligned_manifest, input_dim=14,
+            validation_probabilities=raw_val_probs,
+            validation_labels=y['validation'], history=history,
+            best_epoch=best_epoch, best_val_loss=best_val_loss)
     fit_res = fit_temperature(raw_val_probs, y["validation"])
     fitted_temp = float(fit_res["temperature"]) if isinstance(fit_res, dict) else float(fit_res)
     logger.info("Fitted temperature scaling: T = %.4f", fitted_temp)
@@ -276,8 +308,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--db-path", default="runs/db_merge_20260924/consolidated.db")
     parser.add_argument("--output-dir", default="runs/candidate_deepsets_v3")
-    parser.add_argument("--manifest-path", default="runs/candidate_selective_prod/model.split.json")
-    parser.add_argument("--splits-cache", default="runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl")
+    parser.add_argument("--manifest-path", default=None)
+    parser.add_argument("--splits-cache", default=None)
+    parser.add_argument("--dataset-dir", default=None)
     parser.add_argument("--samples", type=int, default=45000)
     parser.add_argument("--warmup", type=int, default=3000)
     parser.add_argument("--epochs", type=int, default=5)
@@ -290,9 +323,10 @@ if __name__ == "__main__":
 
     train_deepsets_v3(
         db_path=args.db_path,
+        dataset_dir=args.dataset_dir,
         output_dir=args.output_dir,
-        manifest_path=args.manifest_path,
-        splits_cache=args.splits_cache,
+        manifest_path=args.manifest_path if args.dataset_dir else (args.manifest_path or "runs/candidate_selective_prod/model.split.json"),
+        splits_cache=args.splits_cache if args.dataset_dir else (args.splits_cache or "runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl"),
         samples=args.samples,
         warmup=args.warmup,
         epochs=args.epochs,

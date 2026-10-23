@@ -1,6 +1,5 @@
 """Tests for calibrated serving, lock serialization, and mutation invalidation."""
 
-import json
 from pathlib import Path
 import threading
 from types import SimpleNamespace
@@ -268,104 +267,85 @@ def test_trainer_lock_deterministic_with_event(tmp_path):
             t_predict.join(timeout=1.0)
 
 
-def test_endpoint_feature_parity_and_calibration(monkeypatch):
+def test_endpoint_feature_parity_and_calibration(monkeypatch, tmp_path):
+    from copy import deepcopy
     from app import app as flask_app
-    from app import core as app_core
-    from core import json_utils
+    import core.prediction_service as serving
+    from tests.serving_fixture import custom_match, full_match, install_serving_fixture
 
-    captured_vectors = []
-    original_json_to_vector = json_utils.json_to_vector
+    captured_features = []
+    captured_inputs = []
+    original_extract = serving.extract_aligned_inputs
 
-    def _spy_json_to_vector(features_list, dim):
-        captured_vectors.append(features_list)
-        return original_json_to_vector(features_list, dim)
+    def capture_inputs(match, *args, **kwargs):
+        captured_features.append(deepcopy(match))
+        tensors = original_extract(match, *args, **kwargs)
+        captured_inputs.append({key: value.copy() for key, value in tensors.items()})
+        return tensors
 
-    monkeypatch.setattr(json_utils, "json_to_vector", _spy_json_to_vector)
-
-    raw_preds = {
-        "winner": np.array([[0.8, 0.2]], dtype=np.float32),
-        "team_b_kill_lead": np.array([[0.5, 0.5]], dtype=np.float32),
-        "first_blood": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_baron": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_inhibitor": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_tower": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "kills_odd": np.array([[0.5]], dtype=np.float32),
-        "both_baron": np.array([[0.1]], dtype=np.float32),
-        "both_inhibitor": np.array([[0.1]], dtype=np.float32),
-        "both_dragon": np.array([[0.1]], dtype=np.float32),
-        "elder_dragon": np.array([[0.1]], dtype=np.float32),
-        "kill_handicap": np.array([[0.0]], dtype=np.float32),
-        "total_kills": np.array([[30.0]], dtype=np.float32),
-        "team_a_kills": np.array([[15.0]], dtype=np.float32),
-        "team_b_kills": np.array([[15.0]], dtype=np.float32),
-        "total_barons": np.array([[1.0]], dtype=np.float32),
-        "total_dragons": np.array([[2.0]], dtype=np.float32),
-        "total_towers": np.array([[10.0]], dtype=np.float32),
-        "first_to_5_kills": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_to_10_kills": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_to_15_kills": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
-        "first_to_20_kills": np.array([[0.33, 0.33, 0.34]], dtype=np.float32),
+    monkeypatch.setattr(serving, 'extract_aligned_inputs', capture_inputs)
+    raw = {
+        'winner': np.array([[.8, .2]], dtype=np.float32),
+        'total_kills': np.array([[30.0]], dtype=np.float32),
     }
-
-    class FakeModel:
-        is_calibrated = True
-        calibration_temperature = 2.0
-        calibration_metadata = {"temperature": 2.0}
-
-        def predict(self, x, verbose=0):
-            return raw_preds
-
-    trainer = ContinuousTrainer.__new__(ContinuousTrainer)
-    trainer._model_lock = threading.RLock()
-    trainer.model = FakeModel()
-
-    monkeypatch.setattr(app_core, "global_trainer", trainer)
-    monkeypatch.setattr(app_core, "tf_available", True)
-
-    flask_app.config["TESTING"] = True
+    install_serving_fixture(monkeypatch, raw, tmp_path, temperature=2.0)
+    flask_app.config['TESTING'] = True
     client = flask_app.test_client()
 
-    # 1. Test legacy match endpoint /api/predict with extra post-match stats
-    legacy_payload = {
-        "participants": [
-            {"teamId": 100, "championName": "Ahri", "teamPosition": "MIDDLE", "kills": 10, "deaths": 2, "goldEarned": 15000},
-            {"teamId": 200, "championName": "Zed", "teamPosition": "MIDDLE", "kills": 2, "deaths": 10, "goldEarned": 8000},
-        ],
-        "teams": [{"teamId": 100, "win": True}, {"teamId": 200, "win": False}],
+    legacy_payload = full_match()
+    for participant in legacy_payload['participants']:
+        participant.update(deaths=4444, assists=5555, win=True)
+    legacy_payload['teams'][0]['win'] = True
+    legacy_payload['teams'][1]['win'] = False
+    legacy_payload['winner'] = 100
+
+    custom_payload = custom_match()
+    for key in ('blue_team', 'red_team'):
+        for participant in custom_payload[key]:
+            participant.update(
+                career_win_rate=.9, career_matches=100, avg_kda=3.5,
+                kills=7777, goldEarned=88888, win=True,
+            )
+
+    legacy_response = client.post('/api/predict', json=legacy_payload)
+    custom_response = client.post('/api/predict/custom', json=custom_payload)
+    assert legacy_response.status_code == 200
+    assert custom_response.status_code == 200
+    legacy = legacy_response.get_json()
+    custom = custom_response.get_json()
+
+    # Both routes reach the real aligned encoder with only pre-match facts.
+    assert len(captured_features) == len(captured_inputs) == 2
+    assert captured_features[0] == captured_features[1]
+    for features in captured_features:
+        assert set(features) <= {
+            'game_mode', 'game_version', 'season_id', 'region',
+            'team_a', 'team_b', 'prediction_time_ms',
+        }
+        for key in ('team_a', 'team_b'):
+            assert len(features[key]) == 5
+            assert {p['role'] for p in features[key]} == {
+                'TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY',
+            }
+            for player in features[key]:
+                assert set(player) == {'champion', 'role', 'puuid'}
+    assert set(captured_inputs[0]) == set(captured_inputs[1])
+    for key in captured_inputs[0]:
+        np.testing.assert_array_equal(captured_inputs[0][key], captured_inputs[1][key])
+    assert captured_inputs[0]['team_a'].shape == (1, 5, 14)
+    assert captured_inputs[0]['team_b'].shape == (1, 5, 14)
+
+    assert legacy['probabilities_raw'] == custom['probabilities_raw']
+    assert legacy['probabilities_raw']['team_b'] == pytest.approx(.2)
+    assert legacy['probabilities_calibrated'] == custom['probabilities_calibrated']
+    # T=2 scales the raw odds 1:4 to 1:2, so calibrated P(B) is 1/3.
+    assert legacy['probabilities_calibrated']['team_b'] == pytest.approx(1 / 3)
+    assert legacy['winner']['team_a'] == custom['nn_results']['blue_win_probability'] == .6667
+    assert legacy['winner']['team_b'] == custom['nn_results']['red_win_probability'] == .3333
+    assert legacy['heads_raw']['total_kills'] == [30.0]
+    assert legacy['calibration'] == custom['calibration'] == {
+        'status': 'artifact_verified', 'temperature': 2.0,
     }
-    resp1 = client.post("/api/predict", json=legacy_payload)
-    assert resp1.status_code == 200
-    data1 = resp1.get_json()
-
-    # 2. Test custom predictor endpoint /api/predict/custom with career stats
-    custom_payload = {
-        "blue_team": [{"champion_name": "Ahri", "role": "MIDDLE", "career_win_rate": 0.8, "career_matches": 100, "avg_kda": 3.5}] * 5,
-        "red_team": [{"champion_name": "Zed", "role": "MIDDLE", "career_win_rate": 0.2, "career_matches": 50, "avg_kda": 1.0}] * 5,
-    }
-    resp2 = client.post("/api/predict/custom", json=custom_payload)
-    assert resp2.status_code == 200
-    data2 = resp2.get_json()
-
-    # Check feature parity: verify that both vectorizations received ONLY clean pre-match draft features
-    assert len(captured_vectors) == 2
-    for call_features in captured_vectors:
-        feat = call_features[0]
-        # Only context and draft keys allowed
-        assert set(feat.keys()).issubset({"game_mode", "game_version", "season_id", "region", "team_a", "team_b"})
-        for p in feat["team_a"] + feat["team_b"]:
-            assert set(p.keys()) == {"champion", "role"}
-
-    # Both routes should receive the same calibrated winner probabilities:
-    # raw is [0.8, 0.2], with T=2.0 -> scaled P(B) is ~0.332, so [0.668, 0.332]
-    # Check that both endpoints match within 0.001
-    p_a1, p_b1 = data1["winner"]["team_a"], data1["winner"]["team_b"]
-    p_a2, p_b2 = data2["nn_results"]["blue_win_probability"], data2["nn_results"]["red_win_probability"]
-    assert abs(p_a1 - p_a2) <= 0.001
-    assert abs(p_b1 - p_b2) <= 0.001
-    assert abs(p_a1 - 0.668) <= 0.002
-
-    # Check uncalibrated model yields 503 on custom route
-    trainer.model.is_calibrated = False
-    resp_uncal = client.post("/api/predict/custom", json=custom_payload)
-    assert resp_uncal.status_code == 503
-    assert resp_uncal.get_json().get("uncalibrated") is True
+    assert legacy['model']['serving_validation']['status'] == 'validated'
+    assert legacy['selective_decision'] == custom['selective_decision']
+    assert legacy['selective_decision']['abstained'] is False

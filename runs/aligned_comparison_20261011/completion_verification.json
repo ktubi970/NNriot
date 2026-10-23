@@ -1,0 +1,16 @@
+{
+  "status": "verified",
+  "checked_utc": "2026-10-11T13:29:20.558942+00:00",
+  "locked_files_rechecked": 54,
+  "comparison_sha256": "a9ef0a21a797e3e5dd0935141b2f73978adc79c608260166757b04744f3423c0",
+  "predictions_sha256": "13d526269e4b5669d78ea31ae79044ca74cff42e48f6fe1135203cd8cb9f2a65",
+  "test_usage_sha256": "72b0a68525b8926b1a50817aaa7d94b5395fe1ad25817f8137f8c130af7c23b1",
+  "report_sha256": "e17790d678ae19e55d4b9ba7002eaed1356a3aebc77627be03fd9789d46c13c2",
+  "served_checkpoint_sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f",
+  "served_checkpoint_unchanged": true,
+  "test_count": 1344,
+  "dropped_test_rows": 0,
+  "post_training_invariants": "verified",
+  "production_promotion": false,
+  "inference_repeated": false
+}

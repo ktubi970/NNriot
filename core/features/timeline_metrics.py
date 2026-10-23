@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from typing import Any
+import math
 
 FIRST_BLOOD_CUTOFF_MS: int = 600_000  # 10 minutes in milliseconds
 TARGET_FRAME_MINUTE: int = 15
@@ -31,12 +32,16 @@ def _normalize_role(role_raw: str) -> str:
 def extract_timeline_lane_metrics(
     timeline_data: dict[str, Any] | None,
     participants: list[dict[str, Any]] | None = None,
+    *,
+    require_observations: bool = False,
 ) -> dict[str, dict[str, float]]:
     """Extract GD@15, CSD@15, XPD@15, and FBI@10 for all 10 participants.
 
     Args:
         timeline_data: Parsed Match-V5 timeline payload containing info.frames and info.participants.
         participants: Optional fallback list of participant metadata dictionaries from Match-V5.
+        require_observations: Reject absent or invalid measurements/events for
+            serving-aligned priors. False retains the legacy exploratory fallback.
 
     Returns:
         Mapping of puuid -> {"gd15": float, "csd15": float, "xpd15": float, "fbi10": float}.
@@ -99,6 +104,25 @@ def extract_timeline_lane_metrics(
         return {}
 
     p_frames = target_frame.get("participantFrames")
+    if require_observations:
+        # A numeric zero is an observation; a missing field cannot become one.
+        # FBI@10 also needs an observed event list, even when it is empty.
+        if (not isinstance(p_frames, dict) or any(
+                not isinstance(frame, dict) or not isinstance(frame.get('events'), list)
+                for frame in raw_frames)):
+            return {}
+        for pid in range(1, 11):
+            observed = p_frames.get(str(pid))
+            if not isinstance(observed, dict):
+                return {}
+            for key in ('totalGold', 'minionsKilled', 'jungleMinionsKilled', 'xp'):
+                value = observed.get(key)
+                try:
+                    valid = type(value) in (int, float) and math.isfinite(value)
+                except OverflowError:
+                    valid = False
+                if not valid:
+                    return {}
     if not isinstance(p_frames, dict):
         p_frames = {}
 

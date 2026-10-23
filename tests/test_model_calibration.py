@@ -93,7 +93,8 @@ def test_fit_rejects_mismatched_lengths_and_nonbinary_labels():
         fit_temperature(np.full(20, 0.5), np.array([0, 2] * 10))
 
 
-def test_save_and_load_calibration_artifact_roundtrip_and_tampering(tmp_path):
+@pytest.fixture
+def calibration_inputs(tmp_path):
     rows = _records(140)  # gives 21 validation rows
     splits = chronological_split(rows)
     assert len(splits['validation']) >= 20
@@ -112,6 +113,11 @@ def test_save_and_load_calibration_artifact_roundtrip_and_tampering(tmp_path):
     val_y = np.array([r['labels_json']['winner'] for r in splits['validation']])
     val_p = np.full(len(val_y), 0.5)
     fit = fit_temperature(val_p, val_y)
+    return ckpt_path, manifest_path, fit
+
+
+def test_save_and_load_calibration_artifact_roundtrip_and_tampering(tmp_path, calibration_inputs):
+    ckpt_path, manifest_path, fit = calibration_inputs
 
     # Save
     sidecar_path = save_calibration_artifact(ckpt_path, manifest_path, fit, input_dim=16)
@@ -127,6 +133,7 @@ def test_save_and_load_calibration_artifact_roundtrip_and_tampering(tmp_path):
     assert loaded['temperature'] == fit['temperature']
     assert loaded['fit']['count'] == fit['count']
     assert loaded['fit']['class_counts'] == fit['class_counts']
+    assert loaded['fit']['optimizer_success'] is True
 
     # Missing sidecar returns None
     assert load_calibration_artifact(tmp_path / "missing.keras", input_dim=16) is None
@@ -161,6 +168,28 @@ def test_save_and_load_calibration_artifact_roundtrip_and_tampering(tmp_path):
     assert_tampered_sidecar_fails(lambda d: d['fit'].update(count=15))
     assert_tampered_sidecar_fails(lambda d: d['fit'].update(class_counts=[10, 5]))
     assert_tampered_sidecar_fails(lambda d: d['fit'].update(log_loss_after=d['fit']['log_loss_before'] + 1.0))
+
+
+@pytest.mark.parametrize('optimizer_success_field', [
+    pytest.param({}, id='missing'),
+    pytest.param({'optimizer_success': False}, id='failed'),
+    pytest.param({'optimizer_success': None}, id='null'),
+    pytest.param({'optimizer_success': 1}, id='integer-one'),
+    pytest.param({'optimizer_success': 1.0}, id='float-one'),
+    pytest.param({'optimizer_success': 'true'}, id='string-true'),
+])
+def test_load_rejects_unverified_optimizer_success(calibration_inputs, optimizer_success_field):
+    ckpt_path, manifest_path, fit = calibration_inputs
+    sidecar_path = save_calibration_artifact(ckpt_path, manifest_path, fit, input_dim=16)
+    artifact = load_calibration_artifact(ckpt_path, input_dim=16)
+    assert artifact is not None
+    assert artifact['fit']['optimizer_success'] is True
+
+    artifact['fit'].pop('optimizer_success')
+    artifact['fit'].update(optimizer_success_field)
+    sidecar_path.write_text(json.dumps(artifact), encoding='utf-8')
+
+    assert load_calibration_artifact(ckpt_path, input_dim=16) is None
 
 
 def test_invalidate_calibration(tmp_path):

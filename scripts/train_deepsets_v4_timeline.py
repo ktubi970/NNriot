@@ -22,8 +22,9 @@ from core.features.draft_composition import MACRO_CLASH_FEATURE_DIM
 from core.equivariant_model import build_equivariant_deepsets_model, NNRIOT_CUSTOM_OBJECTS
 from core.generate_graph import LOSS_WEIGHTS, LOSS_PER_HEAD
 from core.training_utils import _build_targets
-from core.pcgrad import pcgrad_step
+from core.pcgrad import pcgrad_step, create_compiled_pcgrad_step
 from core.training_metrics import evaluate_winner
+from core.aligned_training import prepare_aligned_training, finish_aligned_pilot
 from core.calibration import (
     fit_temperature,
     apply_temperature_to_probabilities,
@@ -33,6 +34,8 @@ from core.experiment import build_manifest, read_manifest, restore_splits
 from core.point_in_time_dataset import load_enriched_records
 from core.pre_match_dataset import split_records
 from core.selective_classification import evaluate_selective_coverage, DEFAULT_CONVICTION_THRESHOLDS
+
+_ORIGINAL_PCGRAD_STEP = pcgrad_step
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("train_deepsets_v4_timeline")
@@ -47,8 +50,10 @@ def train_deepsets_v4_timeline(
     batch_size: int = 64,
     seed: int = 42,
     learning_rate: float = 0.0008,
+    patience: int | None = 2,
     *,
     manifest_path: str | None = None,
+    dataset_dir: str | None = None,
 ) -> dict[str, Any]:
     """Train Equivariant DeepSets v4 with timeline player priors and evaluate artifacts."""
     tf.keras.utils.set_random_seed(seed)
@@ -57,70 +62,76 @@ def train_deepsets_v4_timeline(
     out_path = Path(output_dir).resolve()
     if out_path.exists() and any(out_path.iterdir()):
         raise FileExistsError(f"Refusing non-empty output directory: {out_path}")
-    out_path.mkdir(parents=True, exist_ok=True)
     checkpoint_path = out_path / "model.keras"
     split_manifest_path = out_path / "model.split.json"
 
-    # 1. Load chronologically streaming enriched records with timeline priors enabled
-    logger.info(
-        "Loading enriched records with include_timeline=True (limit=%d, warmup=%d) from %s...",
-        samples, warmup, db_path,
-    )
-    records = load_enriched_records(
-        db_path=db_path,
-        limit=samples,
-        warmup_matches=warmup,
-        include_timeline=True,
-    )
-    if not records:
-        raise ValueError(f"No valid records loaded from database: {db_path}")
-
-    # 2. Build or restore splits
-    if manifest_path:
-        logger.info("Restoring exact splits from manifest %s...", manifest_path)
-        manifest = read_manifest(Path(manifest_path))
-        splits = restore_splits(records, manifest)
+    if dataset_dir is not None:
+        if manifest_path is not None:
+            raise ValueError('dataset_dir is exclusive with legacy manifest')
+        x, splits, aligned_manifest = prepare_aligned_training(
+            Path(dataset_dir), out_path, 'nnriot.players18.v1')
     else:
-        logger.info("Creating chronological 70/15/15 splits...")
-        splits, split_meta = split_records(records, strategy="chronological")
-        manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
+        out_path.mkdir(parents=True, exist_ok=True)
+        # 1. Load chronologically streaming enriched records with timeline priors enabled
+        logger.info(
+            "Loading enriched records with include_timeline=True (limit=%d, warmup=%d) from %s...",
+            samples, warmup, db_path,
+        )
+        records = load_enriched_records(
+            db_path=db_path,
+            limit=samples,
+            warmup_matches=warmup,
+            include_timeline=True,
+        )
+        if not records:
+            raise ValueError(f"No valid records loaded from database: {db_path}")
 
-    with split_manifest_path.open("w", encoding="utf-8") as f:
-        json.dump(manifest, f, indent=2, allow_nan=False)
+        # 2. Build or restore splits
+        if manifest_path:
+            logger.info("Restoring exact splits from manifest %s...", manifest_path)
+            manifest = read_manifest(Path(manifest_path))
+            splits = restore_splits(records, manifest)
+        else:
+            logger.info("Creating chronological 70/15/15 splits...")
+            splits, split_meta = split_records(records, strategy="chronological")
+            manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
 
-    logger.info("Split record counts: %s", {k: len(v) for k, v in splits.items()})
+        with split_manifest_path.open("w", encoding="utf-8") as f:
+            json.dump(manifest, f, indent=2, allow_nan=False)
 
-    # 3. Extract 18-dim player tensors and 15-dim macro clash features
-    pipeline = DraftFeaturePipeline()
-    x: dict[str, dict[str, np.ndarray]] = {}
+        logger.info("Split record counts: %s", {k: len(v) for k, v in splits.items()})
 
-    for split_name in ("train", "validation", "test"):
-        rows = splits[split_name]
-        n_rows = len(rows)
-        ta_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
-        tb_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
-        mc_arr = np.zeros((n_rows, MACRO_CLASH_FEATURE_DIM), dtype=np.float32)
+        # 3. Extract 18-dim player tensors and 15-dim macro clash features
+        pipeline = DraftFeaturePipeline()
+        x: dict[str, dict[str, np.ndarray]] = {}
 
-        for i, r in enumerate(rows):
-            feat = r.get("feature_json") or {}
-            ta, tb = pipeline.extract_tensors(feat, include_timeline=True)
-            mc = pipeline.extract_macro_clash(feat)
-            ta_arr[i] = ta
-            tb_arr[i] = tb
-            mc_arr[i] = mc
+        for split_name in ("train", "validation", "test"):
+            rows = splits[split_name]
+            n_rows = len(rows)
+            ta_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
+            tb_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
+            mc_arr = np.zeros((n_rows, MACRO_CLASH_FEATURE_DIM), dtype=np.float32)
 
-        x[split_name] = {
-            "team_a": ta_arr,
-            "team_b": tb_arr,
-            "macro_clash": mc_arr,
-        }
+            for i, r in enumerate(rows):
+                feat = r.get("feature_json") or {}
+                ta, tb = pipeline.extract_tensors(feat, include_timeline=True)
+                mc = pipeline.extract_macro_clash(feat)
+                ta_arr[i] = ta
+                tb_arr[i] = tb
+                mc_arr[i] = mc
+
+            x[split_name] = {
+                "team_a": ta_arr,
+                "team_b": tb_arr,
+                "macro_clash": mc_arr,
+            }
 
     y = {
         name: np.asarray([r["labels_json"].get("winner", 0) for r in rows], dtype=int)
         for name, rows in splits.items()
     }
     train_rate = float(y["train"].mean()) if len(y["train"]) > 0 else 0.5
-    targets = {name: _build_targets(splits[name]) for name in ("train", "validation", "test")}
+    targets = {name: _build_targets(splits[name]) for name in splits}
 
     # 4. Build Equivariant DeepSets Model with 18-dim player tensors and 15-dim macro clash
     logger.info(
@@ -142,7 +153,14 @@ def train_deepsets_v4_timeline(
         if k in model.output_names
     }
 
-    # 5. Multi-task PCGrad training loop
+    # 5. Compiled Multi-task PCGrad training step
+    compiled_step = create_compiled_pcgrad_step(
+        model=model,
+        optimizer=model.optimizer,
+        loss_fns=loss_fns,
+        loss_weights=LOSS_WEIGHTS,
+    )
+
     best_val_loss = float("inf")
     best_epoch = 1
     history = []
@@ -167,8 +185,15 @@ def train_deepsets_v4_timeline(
                 "macro_clash": shuffled_xm[start:start + batch_size],
             }
             yb = {k: shuffled_targets[k][start:start + batch_size] for k in shuffled_targets}
-            losses = pcgrad_step(model, model.optimizer, xb, yb, loss_fns, loss_weights=LOSS_WEIGHTS)
-            batch_loss = sum(losses.values())
+
+            # Honor external monkeypatching if tested with a mock step
+            if pcgrad_step is not _ORIGINAL_PCGRAD_STEP:
+                losses = pcgrad_step(model, model.optimizer, xb, yb, loss_fns, loss_weights=LOSS_WEIGHTS)
+                batch_loss = sum(losses.values())
+            else:
+                step_losses = compiled_step(xb, yb)
+                batch_loss = float(tf.add_n(list(step_losses.values())).numpy())
+
             total_loss += batch_loss * len(xb["team_a"])
             seen += len(xb["team_a"])
 
@@ -182,9 +207,25 @@ def train_deepsets_v4_timeline(
         val_log_loss = float(val_eval["model"]["log_loss"])
         val_acc = float(val_eval["model"]["accuracy"])
 
+        bias_info = ""
+        try:
+            side_bias_layer = model.get_layer("winner_side_bias")
+            if side_bias_layer is not None:
+                b_val = float(side_bias_layer.bias.numpy()[0])
+                # Check if evidential Dirichlet head is present
+                if "winner_evidential" in [l.name for l in model.layers]:
+                    e_a = float(np.log1p(np.exp(-b_val)))
+                    e_b = float(np.log1p(np.exp(b_val)))
+                    implied_blue = (e_a + 1.0) / (e_a + e_b + 2.0)
+                else:
+                    implied_blue = 1.0 / (1.0 + np.exp(2.0 * b_val))
+                bias_info = f", blue_bias={b_val:+.4f} (implied_blue_wr={implied_blue*100:.1f}%)"
+        except (ValueError, KeyError, AttributeError):
+            pass
+
         logger.info(
-            "Epoch %d/%d (%.1fs): train_loss=%.4f, val_winner_loss=%.4f, val_acc=%.4f",
-            epoch, epochs, epoch_time, avg_train_loss, val_log_loss, val_acc,
+            "Epoch %d/%d (%.1fs): train_loss=%.4f, val_winner_loss=%.4f, val_acc=%.4f%s",
+            epoch, epochs, epoch_time, avg_train_loss, val_log_loss, val_acc, bias_info,
         )
 
         history.append({
@@ -199,6 +240,12 @@ def train_deepsets_v4_timeline(
             best_epoch = epoch
             logger.info("  * New best validation log loss (%.4f) -> saving checkpoint to %s", val_log_loss, checkpoint_path)
             model.save(checkpoint_path)
+        elif patience is not None and (epoch - best_epoch) >= patience:
+            logger.info(
+                "Early stopping triggered at epoch %d (patience=%d exceeded, best epoch %d with val_loss %.4f)",
+                epoch, patience, best_epoch, best_val_loss,
+            )
+            break
 
     # Ensure checkpoint is saved if not already
     if not checkpoint_path.exists():
@@ -211,6 +258,13 @@ def train_deepsets_v4_timeline(
     # 7. Temperature calibration on Validation Split
     val_preds = best_model.predict(x["validation"], batch_size=128, verbose=0)
     raw_val_probs = np.asarray(val_preds["winner"])[:, 1]
+    if dataset_dir is not None:
+        return finish_aligned_pilot(
+            output_dir=out_path, dataset_dir=Path(dataset_dir),
+            dataset_manifest=aligned_manifest, input_dim=18,
+            validation_probabilities=raw_val_probs,
+            validation_labels=y['validation'], history=history,
+            best_epoch=best_epoch, best_val_loss=best_val_loss)
 
     fitted_temp = 1.0
     calib_sidecar = checkpoint_path.with_suffix(".calibration.json")
@@ -299,19 +353,22 @@ def train_deepsets_v4_timeline(
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train Equivariant DeepSets v4 with timeline player priors")
-    parser.add_argument("--db-path", default="runs/db_merge_20260924/consolidated.db")
+    parser.add_argument("--db-path", default="training_data.db")
     parser.add_argument("--output-dir", default="runs/candidate_deepsets_v4_timeline")
     parser.add_argument("--manifest-path", default=None)
+    parser.add_argument("--dataset-dir", default=None)
     parser.add_argument("--samples", type=int, default=45000)
     parser.add_argument("--warmup", type=int, default=3000)
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=64)
     parser.add_argument("--learning-rate", type=float, default=0.0008)
+    parser.add_argument("--patience", type=int, default=2, help="Patience for early stopping on val_log_loss")
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
 
     train_deepsets_v4_timeline(
         db_path=args.db_path,
+        dataset_dir=args.dataset_dir,
         output_dir=args.output_dir,
         samples=args.samples,
         warmup=args.warmup,
@@ -319,5 +376,6 @@ if __name__ == "__main__":
         batch_size=args.batch_size,
         seed=args.seed,
         learning_rate=args.learning_rate,
+        patience=None if args.patience <= 0 else args.patience,
         manifest_path=args.manifest_path,
     )

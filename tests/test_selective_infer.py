@@ -299,7 +299,9 @@ def test_predict_selective_with_real_equivariant_deepsets_model():
     from core.equivariant_model import build_equivariant_deepsets_model
     from core.selective_infer import SelectiveInferWrapper
 
-    model = build_equivariant_deepsets_model(player_feature_dim=8)
+    # 1. Pure equivariant model (enable_side_bias=False) strictly guarantees anti-symmetry:
+    # P(winner=1 | B, A) == 1 - P(winner=1 | A, B)
+    model = build_equivariant_deepsets_model(player_feature_dim=8, enable_side_bias=False)
     wrapper = SelectiveInferWrapper(model)
 
     match_dict = {
@@ -342,4 +344,11 @@ def test_predict_selective_with_real_equivariant_deepsets_model():
     else:
         assert res.prediction == "abstain"
         assert res_swapped.prediction == "abstain"
+
+    # 2. Side-aware model (enable_side_bias=True) reflects Summoner's Rift Blue side advantage:
+    model_side = build_equivariant_deepsets_model(player_feature_dim=8, enable_side_bias=True)
+    wrapper_side = SelectiveInferWrapper(model_side)
+    res_side = wrapper_side.predict(match_dict)
+    res_side_swapped = wrapper_side.predict(swapped_match)
+    assert res_side.p_team_a > res_side_swapped.p_team_b
 

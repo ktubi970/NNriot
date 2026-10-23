@@ -113,63 +113,16 @@ def _format_multi_output_response(preds: dict) -> dict:
     }
     return response
 
-def final_predict_match_outcome(match_data: dict) -> dict:
-    # 1. Check if a modern candidate/active model is available via PredictionService Facade
+def final_predict_match_outcome(match_data: dict, *, db_path=None, checkpoint_path=None, manifest_path=None) -> dict:
+    """All match inference goes through the declared serving facade."""
+    from core.prediction_service import get_prediction_service
+    from core.pre_match_history import to_serving_features
+    from core.serving_contract import ContractError
     try:
-        from core import config
-        from core.prediction_service import get_prediction_service
-        chk_path = config.get_checkpoint_path(require_exists=False)
-        if chk_path and Path(chk_path).exists():
-            service = get_prediction_service(checkpoint_path=chk_path)
-            if service.is_ready():
-                feature_dict = to_pre_match_features(match_data)
-                return service.predict_match(feature_dict)
-    except Exception as e:
-        logger.warning("PredictionService attempt encountered error, falling back to legacy trainer: %s", e)
-
-    # 2. Legacy trainer fallback
-    if global_trainer is None:
-        if trainer_loading:
-            return {"error": "TensorFlow model is still loading... Please wait a minute and try again."}
-        return {"error": "TensorFlow model is not loaded or available"}
-
-    trainer_model = getattr(global_trainer, "model", None)
-    is_calibrated = False
-    if trainer_model is not None:
-        is_calibrated = getattr(trainer_model, "is_calibrated", False) is True
-    elif getattr(global_trainer, "is_calibrated", False) is True:
-        is_calibrated = True
-
-    if not is_calibrated:
-        return {
-            "error": "No calibrated active model is available. Candidate training does not automatically activate a model; validate and promote a checkpoint before requesting predictions.",
-            "uncalibrated": True,
-        }
-
+        service = get_prediction_service(checkpoint_path=checkpoint_path, db_path=db_path, manifest_path=manifest_path)
+    except (ContractError, ValueError, OSError) as exc:
+        return {"success": False, "error": str(exc), "error_code": "model_contract", "is_actionable": False}
     try:
-        feature_dict = to_pre_match_features(match_data)
-        raw_shape = getattr(trainer_model, "input_shape", None)
-        if isinstance(raw_shape, (tuple, list)) and len(raw_shape) > 0 and isinstance(raw_shape[-1], int):
-            expected_dim = raw_shape[-1]
-        else:
-            expected_dim = VECTOR_DIM
-
-        from core.draft_features import DENSE_FEATURE_DIM, extract_dense_draft_features
-        from core.enriched_features import ENRICHED_DENSE_DIM, extract_enriched_features
-
-        if expected_dim == ENRICHED_DENSE_DIM:
-            dense_vec = extract_enriched_features(feature_dict, mode="dense").reshape(1, -1)
-        elif expected_dim == DENSE_FEATURE_DIM:
-            dense_vec = extract_dense_draft_features(feature_dict).reshape(1, -1)
-        else:
-            sparse_vec = json_utils.json_to_vector([feature_dict], dim=expected_dim)
-            dense_vec = sparse_vec.toarray()
-
-        with predict_lock:
-            preds = global_trainer.predict(dense_vec)
-        return _format_multi_output_response(preds)
-    except UncalibratedModelError as exc:
-        return {"error": str(exc), "uncalibrated": True}
-    except Exception as e:
-        logger.error(f"Prediction error: {e}", exc_info=True)
-        return {"error": str(e)}
+        return service.predict_match(to_serving_features(match_data))
+    except ContractError as exc:
+        return {"success": False, "error": str(exc), "error_code": "feature_contract", "is_actionable": False}

@@ -1,0 +1,16 @@
+{
+  "exit_code": 0,
+  "started_utc": "2026-10-11T12:34:29.5789012Z",
+  "completed_utc": "2026-10-11T12:36:48.2799949Z",
+  "summary": "51 passed, 65 warnings in 129.58s (0:02:09)",
+  "device": "Windows CPU",
+  "tf_intraop_threads": 2,
+  "tf_interop_threads": 2,
+  "files": [
+    "tests/test_aligned_partitions.py",
+    "tests/test_aligned_parity.py",
+    "tests/test_deepsets_layers.py",
+    "tests/test_equivariant_model.py",
+    "tests/test_train_deepsets_v4_timeline.py"
+  ]
+}

@@ -39,7 +39,12 @@ def _system_service():
 from core.feature_labels import VECTOR_DIM
 from core.calibration import UncalibratedModelError
 from core.pre_match_dataset import to_pre_match_features
-from core.prediction_service import get_prediction_service
+
+
+def get_prediction_service(**kwargs):
+    """Load TensorFlow only when the serving facade is actually requested."""
+    from core.prediction_service import get_prediction_service as get_service
+    return get_service(**kwargs)
 
 from .. import core
 
@@ -60,19 +65,36 @@ def api_status():
     tf_mod = sys.modules.get("tensorflow")
     tf_version = getattr(tf_mod, "__version__", "N/A") if tf_mod else "N/A"
 
-    return jsonify(
-        {
-            "model_loaded": bool(core.tf_available and core.global_trainer is not None),
-            "tensorflow_version": tf_version,
-            "input_dimension": VECTOR_DIM if core.tf_available else "N/A",
-            "output_classes": 2,
-            "status": (
-                "Model ready"
-                if (core.tf_available and core.global_trainer is not None)
-                else "Model unavailable"
-            ),
-        }
-    )
+    result = {
+        "tensorflow_version": tf_version,
+        "trainer_loaded": bool(core.tf_available and core.global_trainer is not None),
+        "output_classes": 2,
+    }
+    try:
+        service = get_prediction_service(
+            db_path=current_app.config["NNRIOT_DB_PATH"],
+            checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
+            manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+        )
+        manifest = service.manifest or {}
+        verification = service.verification_status()
+        result.update({
+            "model_loaded": service.is_ready(),
+            "input_dimension": service.contract.dim,
+            "feature_contract": service.contract.version,
+            "checkpoint": manifest.get("checkpoint"),
+            "model_id": manifest.get("model_id", "in_memory_unverified"),
+            "calibration_available": verification["calibrated"],
+            "serving_validation": verification["serving_validation"],
+            "decision_policy": verification["decision_policy"],
+            "status": "Loaded; abstention required" if (
+                not verification["calibrated"] or not verification["validated"]
+            ) else "Loaded; independently validated",
+        })
+    except Exception as exc:
+        result.update({"model_loaded": False, "input_dimension": None,
+                       "status": "Model unavailable", "error_code": "model_contract", "error": str(exc)})
+    return jsonify(result)
 
 
 @api_bp.route("/api/db-health", methods=["GET"])
@@ -391,10 +413,10 @@ def api_predict():
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
         # Make final prediction
-        result = core.final_predict_match_outcome(match_data)
+        result = core.final_predict_match_outcome(match_data, db_path=current_app.config["NNRIOT_DB_PATH"], checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"), manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"))
 
         if "error" in result:
-            return jsonify(result), 500
+            return jsonify(result), (400 if result.get("error_code") == "feature_contract" else 503)
 
         return jsonify(result)
 
@@ -466,46 +488,22 @@ def api_predict_custom():
         except Exception:
             logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
 
-        # Fetch stats for all players
-        blue_stats = [database.get_player_stats(p, db_path=current_app.config["NNRIOT_DB_PATH"]) for p in blue_team_puuids]
-        red_stats = [database.get_player_stats(p, db_path=current_app.config["NNRIOT_DB_PATH"]) for p in red_team_puuids]
-
-        if not core.tf_available or core.global_trainer is None:
-            return jsonify({"error": "TensorFlow model is not loaded"}), 503
-
-        trainer_model = getattr(core.global_trainer, "model", None)
-        is_calibrated = False
-        if trainer_model is not None:
-            is_calibrated = getattr(trainer_model, "is_calibrated", False) is True
-        elif getattr(core.global_trainer, "is_calibrated", False) is True:
-            is_calibrated = True
-
-        if not is_calibrated:
-            return jsonify({
-                "error": "Active model checkpoint is uncalibrated. A 'cli.py train' run writes only a candidate checkpoint and does not activate it.",
-                "uncalibrated": True,
-            }), 503
-
         # Construct a synthetic match structure for pre-match feature extraction
         participants = []
         for i, p in enumerate(blue_team_data):
-            stats = blue_stats[i]
             participants.append({
                 "teamId": 100,
-                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "championName": p.get("champion_name") or p.get("championName"),
                 "teamPosition": p.get("role") or "UNKNOWN",
-                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
-                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+                "puuid": p.get("puuid"),
             })
 
         for i, p in enumerate(red_team_data):
-            stats = red_stats[i]
             participants.append({
                 "teamId": 200,
-                "championName": p.get("champion_name") or p.get("championName") or "Aatrox",
+                "championName": p.get("champion_name") or p.get("championName"),
                 "teamPosition": p.get("role") or "UNKNOWN",
-                "career_win_rate": float(stats.get("avg_kda", 1.0) > 1.5) if stats else 0.5,
-                "career_matches": int(stats.get("total_matches", 0)) if stats else 0,
+                "puuid": p.get("puuid"),
             })
 
         match_data = {
@@ -515,18 +513,23 @@ def api_predict_custom():
             }
         }
 
-        # Use centralized pre-match feature extraction
-        feature_dict = to_pre_match_features(match_data)
-
-        # ── Primary path: route through PredictionService Facade (AGENTS.md §2) ──
-        chk_path = current_app.config.get("NNRIOT_CHECKPOINT_PATH")
-        service = get_prediction_service(checkpoint_path=chk_path) if chk_path else None
-
-        if service is not None and service.is_ready():
-            result = service.predict_match(feature_dict)
-            if not result.get("success"):
-                return jsonify(result), 503
-
+        from core.pre_match_history import to_serving_features
+        from core.serving_contract import ContractError, FeatureUnavailableError
+        try:
+            service = get_prediction_service(
+                checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
+                manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+                db_path=current_app.config["NNRIOT_DB_PATH"],
+            )
+        except (ContractError, ValueError, OSError) as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "model_contract"}), 503
+        try:
+            result = service.predict_match(to_serving_features(match_data))
+        except FeatureUnavailableError as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "feature_unavailable", "is_actionable": False}), 503
+        except ContractError as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "feature_contract"}), 400
+        if result.get("success"):
             blue_prob_nn = result["winner"]["team_a"]
             red_prob_nn = result["winner"]["team_b"]
 
@@ -546,6 +549,12 @@ def api_predict_custom():
                 "explanation": "Multi-head NN analysis complete (PredictionService).",
                 "llm_active": False,
                 # Structured outputs from PredictionService
+                "model": result.get("model"),
+                "probabilities_raw": result.get("probabilities_raw"),
+                "probabilities_calibrated": result.get("probabilities_calibrated"),
+                "calibration": result.get("calibration"),
+                "draft_advantage": result.get("draft_advantage"),
+                "priors_provenance": result.get("priors_provenance"),
                 "selective_decision": result.get("selective_decision"),
                 "shapley_credits": result.get("shapley_credits"),
                 "draft_composition": result.get("draft_composition"),
@@ -557,42 +566,7 @@ def api_predict_custom():
                 },
             }
         else:
-            # ── Legacy fallback path (pre-PredictionService) ──────────────────
-            sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
-            dense_vec = sparse_vec.toarray()
-
-            with core.predict_lock:
-                preds = core.global_trainer.predict(dense_vec)
-
-            formatted = core._format_multi_output_response(preds)
-            blue_prob_nn = formatted["winner"]["team_a"]
-            red_prob_nn = formatted["winner"]["team_b"]
-
-            response_data = {
-                "success": True,
-                "nn_results": {
-                    "blue_win_probability": blue_prob_nn,
-                    "red_win_probability": red_prob_nn,
-                },
-                "predicted_winner": "BLUE" if blue_prob_nn > red_prob_nn else "RED",
-                "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
-                "blue_win_probability": blue_prob_nn,
-                "red_win_probability": red_prob_nn,
-                "blue_win_prob": blue_prob_nn,
-                "red_win_prob": red_prob_nn,
-                "explanation": "Multi-head NN analysis complete.",
-                "llm_active": False,
-                "multi_output": {
-                    k: v for k, v in formatted.items()
-                    if k not in (
-                        "success",
-                        "predicted_outcome",
-                        "win_probability",
-                        "lose_probability",
-                        "confidence",
-                    )
-                },
-            }
+            return jsonify(result), 503
 
         return jsonify(response_data)
 

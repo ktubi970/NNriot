@@ -60,15 +60,31 @@ def get_analytics_db_path(value=None, *, require_exists=False):
 
 def get_checkpoint_path(value=None, *, require_exists=False):
     """Return the active model checkpoint path, anchored to the project directory."""
-    candidate_v3 = PROJECT_ROOT / "runs" / "candidate_deepsets_v3" / "model.keras"
-    default = "runs/candidate_deepsets_v3/model.keras" if candidate_v3.exists() else "runs/candidate_selective_prod/model.keras"
-    return _absolute_db_path(
+    default = "runs/candidate_deepsets_v3/model.keras"
+    path = _absolute_db_path(
         value,
         ("NNRIOT_CHECKPOINT_PATH", "MODEL_CHECKPOINT_PATH"),
         default,
-        require_exists,
+        False,
     )
+    if require_exists and not Path(path).is_file():
+        raise FileNotFoundError(f"Checkpoint file does not exist: {path}")
+    return path
 
+
+def get_model_manifest_path(value=None, *, checkpoint_path=None):
+    """Explicit override, otherwise an adjacent manifest; default reference is fixed."""
+    configured = value or os.environ.get("NNRIOT_MODEL_MANIFEST_PATH")
+    if configured:
+        p = Path(configured).expanduser()
+        return str((p if p.is_absolute() else PROJECT_ROOT / p).resolve())
+    checkpoint = Path(checkpoint_path or get_checkpoint_path())
+    sidecar = checkpoint.with_suffix('.manifest.json')
+    if sidecar.is_file():
+        return str(sidecar.resolve())
+    if checkpoint.resolve() == (PROJECT_ROOT / 'runs/candidate_deepsets_v3/model.keras').resolve():
+        return str(PROJECT_ROOT / 'docs/model_serving/reference.manifest.json')
+    raise ValueError(f'No model manifest for checkpoint: {checkpoint}; set NNRIOT_MODEL_MANIFEST_PATH')
 
 
 # App Configuration
@@ -86,7 +102,7 @@ MAX_DB_SIZE = int(os.environ.get("NNRIOT_MAX_DB_SIZE_GB", "50")) * 1024 * 1024 *
 
 # Riot API Configuration
 RIOT_API_KEY = os.getenv("RIOT_API_KEY")
-FETCH_TIMELINES = os.environ.get("NNRIOT_FETCH_TIMELINES", "0") == "1"
+FETCH_TIMELINES = os.environ.get("NNRIOT_FETCH_TIMELINES", "1") == "1"
 
 # Training Configuration
 BATCH_SIZE = int(os.environ.get("NNRIOT_BATCH_SIZE", "3000"))

@@ -16,14 +16,16 @@ import tensorflow as tf
 
 def project_conflicting_gradients(
     task_gradients: list[list[tf.Tensor | None]],
-    variables: list[tf.Variable] | None = None,
+    variables: Sequence[tf.Variable] | None = None,
 ) -> list[tf.Tensor]:
     """Project conflicting gradients across tasks.
+    
+    Branchless and graph-compilable implementation of PCGrad projection.
     
     Args:
         task_gradients: list of T lists, where each sublist contains gradients
                         corresponding to the model's trainable variables.
-        variables: Optional list of trainable variables to determine shapes
+        variables: Optional sequence of trainable variables to determine shapes
                    for variables where gradient is None.
                    
     Returns:
@@ -31,34 +33,39 @@ def project_conflicting_gradients(
     """
     if not task_gradients:
         return []
-        
+
     num_vars = len(task_gradients[0])
 
-    # Build reference shapes and sizes
     shapes = []
     sizes = []
     for var_idx in range(num_vars):
         if variables is not None:
             v = variables[var_idx]
-            shapes.append(tf.shape(v))
-            sizes.append(tf.size(v))
+            shapes.append(v.shape)
+            if v.shape.is_fully_defined():
+                sizes.append(v.shape.num_elements())
+            else:
+                sizes.append(tf.size(v))
         else:
-            # Find first non-None gradient for this variable
             sample_g = next((t_grads[var_idx] for t_grads in task_gradients if t_grads[var_idx] is not None), None)
             if sample_g is not None:
-                shapes.append(tf.shape(sample_g))
-                sizes.append(tf.size(sample_g))
+                if sample_g.shape.is_fully_defined():
+                    shapes.append(sample_g.shape)
+                    sizes.append(sample_g.shape.num_elements())
+                else:
+                    shapes.append(tf.shape(sample_g))
+                    sizes.append(tf.size(sample_g))
             else:
-                shapes.append(tf.constant([1]))
-                sizes.append(tf.constant(1))
+                shapes.append(tf.TensorShape([1]))
+                sizes.append(1)
 
-    # Flatten each task's gradients, replacing None with zeros
     flat_grads = []
     for g_list in task_gradients:
         flat_parts = []
         for var_idx, g in enumerate(g_list):
             if g is None:
-                flat_parts.append(tf.zeros([sizes[var_idx]], dtype=tf.float32))
+                sz = sizes[var_idx]
+                flat_parts.append(tf.zeros([sz], dtype=tf.float32))
             else:
                 flat_parts.append(tf.reshape(tf.cast(g, tf.float32), [-1]))
         flat_grads.append(tf.concat(flat_parts, axis=0))
@@ -66,33 +73,78 @@ def project_conflicting_gradients(
     num_tasks = len(flat_grads)
     deconflicted = [tf.identity(g) for g in flat_grads]
 
-    indices = list(range(num_tasks))
-    for i in indices:
-        shuffled_j = [j for j in indices if j != i]
-        random.shuffle(shuffled_j)
-        for j in shuffled_j:
-            g_i = deconflicted[i]
-            g_j = flat_grads[j]
-
-            dot = tf.reduce_sum(g_i * g_j)
-            if dot < 0.0:
+    for i in range(num_tasks):
+        for j in range(num_tasks):
+            if i != j:
+                g_i = deconflicted[i]
+                g_j = flat_grads[j]
+                dot = tf.reduce_sum(g_i * g_j)
                 norm_sq = tf.reduce_sum(g_j * g_j) + 1e-8
-                proj = (dot / norm_sq) * g_j
-                deconflicted[i] = g_i - proj
+                scale = tf.minimum(0.0, dot) / norm_sq
+                deconflicted[i] = g_i - scale * g_j
 
-    # Sum all deconflicted gradients
     final_flat = tf.add_n(deconflicted)
+    splits = tf.split(final_flat, sizes)
+    return [tf.reshape(s, shape) for s, shape in zip(splits, shapes)]
 
-    # Reconstruct original variable shapes
-    final_unflattened = []
-    offset = 0
-    for var_idx in range(num_vars):
-        numel = sizes[var_idx]
-        chunk = final_flat[offset:offset + numel]
-        final_unflattened.append(tf.reshape(chunk, shapes[var_idx]))
-        offset += numel
 
-    return final_unflattened
+def create_compiled_pcgrad_step(
+    model: tf.keras.Model,
+    optimizer: tf.keras.optimizers.Optimizer,
+    loss_fns: dict[str, Callable[[Any, Any], tf.Tensor]],
+    loss_weights: dict[str, float] | None = None,
+    active_heads: Sequence[str] | None = None,
+    jit_compile: bool = False,
+) -> Callable[[dict[str, Any], dict[str, Any]], dict[str, tf.Tensor]]:
+    """Create a compiled @tf.function multi-task training step using PCGrad.
+    
+    Encapsulates the persistent forward/backward pass, gradient deconfliction,
+    and optimizer update inside a single compiled TensorFlow execution graph.
+    
+    Args:
+        model: Multi-output Keras model.
+        optimizer: Keras optimizer.
+        loss_fns: Mapping of head name to loss function.
+        loss_weights: Optional mapping of head name to scalar weight (default 1.0).
+        active_heads: Optional sequence of active heads to optimize. If None,
+                      derived from loss_fns where weight > 0.
+        jit_compile: Whether to request XLA compilation.
+        
+    Returns:
+        Callable step_fn(x_batch, target_dict) returning a dict of scalar loss Tensors.
+    """
+    if loss_weights is None:
+        loss_weights = {k: 1.0 for k in loss_fns}
+
+    if active_heads is None:
+        heads_tuple = tuple(k for k in loss_fns if loss_weights.get(k, 1.0) > 0.0)
+    else:
+        heads_tuple = tuple(active_heads)
+
+    variables = list(model.trainable_variables)
+    static_weights = {k: tf.constant(float(loss_weights.get(k, 1.0)), dtype=tf.float32) for k in heads_tuple}
+
+    @tf.function(jit_compile=jit_compile)
+    def train_step(x_batch: dict[str, tf.Tensor], target_dict: dict[str, tf.Tensor]) -> dict[str, tf.Tensor]:
+        with tf.GradientTape(persistent=True) as tape:
+            preds = model(x_batch, training=True)
+            head_losses = {}
+            for head in heads_tuple:
+                loss_fn = loss_fns[head]
+                raw_loss = loss_fn(target_dict[head], preds[head])
+                head_losses[head] = tf.reduce_mean(raw_loss) * static_weights[head]
+
+        task_gradients = []
+        for head in heads_tuple:
+            grads = tape.gradient(head_losses[head], variables)
+            task_gradients.append(grads)
+        del tape
+
+        deconflicted_grads = project_conflicting_gradients(task_gradients, variables=variables)
+        optimizer.apply_gradients(zip(deconflicted_grads, variables))
+        return head_losses
+
+    return train_step
 
 
 def pcgrad_step(
@@ -157,8 +209,8 @@ from core.cagrad import cagrad_step, project_conflict_averse_gradients
 
 __all__ = [
     "project_conflicting_gradients",
+    "create_compiled_pcgrad_step",
     "pcgrad_step",
     "cagrad_step",
     "project_conflict_averse_gradients",
 ]
-

@@ -198,7 +198,9 @@ def backfill_timelines(
                     )
                     break
                 except riot_api.RiotAuthError:
+                    pause_t0 = time.monotonic()
                     _wait_for_new_key(api, api_by_region)
+                    start_time += (time.monotonic() - pause_t0)
                 except Exception:
                     stats["errors"] += len(mids)
                     logger.error(

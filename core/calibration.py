@@ -5,6 +5,8 @@ import hashlib
 import json
 import logging
 from pathlib import Path
+from typing import Any
+
 import numpy as np
 from scipy.optimize import minimize_scalar
 from scipy.special import expit
@@ -304,6 +306,9 @@ def load_calibration_artifact(checkpoint_path: str | Path, *, input_dim: int) ->
             return None
         if fit.get("status") != "fitted" or fit.get("partition") != "validation":
             logger.warning("Invalid fit status or partition: %s", fit)
+            return None
+        if fit.get("optimizer_success") is not True:
+            logger.warning("Fit optimizer_success must be True in calibration artifact")
             return None
 
         count = fit.get("count")

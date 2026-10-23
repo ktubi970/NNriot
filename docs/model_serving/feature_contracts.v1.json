@@ -1,0 +1,389 @@
+{
+  "schema_version": 1,
+  "contracts": {
+    "nnriot.players14.v1": {
+      "dtype": "float32",
+      "team_shape": [
+        "batch",
+        5,
+        "D"
+      ],
+      "role_order": [
+        "TOP",
+        "JUNGLE",
+        "MIDDLE",
+        "BOTTOM",
+        "UTILITY"
+      ],
+      "team_perspective": {
+        "team_a": "Blue, Riot teamId=100",
+        "team_b": "Red, Riot teamId=200"
+      },
+      "missing_policy": "Cold defaults only for unknown player history; wrong lengths/duplicate roles/nonfinite data are errors",
+      "availability": "Only historical results with valid explicit result_end_ms strictly before prediction_time_ms; same latest 10000 global CLASSIC creation-row window for service and evaluation; target labels do not govern historical result inclusion",
+      "cutoff": "Historical match game_creation_time; live explicit prediction_time_ms or gameCreation, otherwise request time UTC ms",
+      "duration_normalization": "Historical duration seconds / 60 clipped to 5..60 minutes; missing duration explicit fallback 25 minutes",
+      "macro_clash": {
+        "shape": [
+          "batch",
+          15
+        ],
+        "dtype": "float32",
+        "perspective": "team_b minus team_a",
+        "order": [
+          "ad_ratio",
+          "ap_ratio",
+          "true_ratio",
+          "cc_score",
+          "scaling_score",
+          "ranged_ratio",
+          "is_full_ad",
+          "poke_siege",
+          "hard_engage",
+          "pick_catch",
+          "split_push",
+          "hyper_scaling",
+          "spike_15m",
+          "spike_25m",
+          "spike_35m"
+        ],
+        "unit": "dimensionless domain trait/archetype scores; no extra normalization"
+      },
+      "D": 14,
+      "ordered_features": [
+        {
+          "name": "champion_id",
+          "unit": "registry integer ID",
+          "normalization": "none; embedded by model",
+          "missing": 0
+        },
+        {
+          "name": "role_id",
+          "unit": "integer 0..4",
+          "normalization": "none; embedded by model",
+          "missing": "error"
+        },
+        {
+          "name": "smooth_wr",
+          "unit": "probability",
+          "normalization": "(wins+10*0.5)/(games+10)",
+          "missing": 0.5
+        },
+        {
+          "name": "smooth_cwr",
+          "unit": "probability",
+          "normalization": "(champion_wins+5*0.5)/(champion_games+5)",
+          "missing": 0.5
+        },
+        {
+          "name": "champ_exp",
+          "unit": "log games",
+          "normalization": "log1p(champion_games)",
+          "missing": 0
+        },
+        {
+          "name": "rec_wr",
+          "unit": "probability",
+          "normalization": "(recent_wins+5*0.5)/(recent_games+5); last 20 results in end order",
+          "missing": 0.5
+        },
+        {
+          "name": "role_fam",
+          "unit": "fraction",
+          "normalization": "(role_games+1)/(games+5)",
+          "missing": 0.2
+        },
+        {
+          "name": "tot_exp",
+          "unit": "log games",
+          "normalization": "log1p(games)",
+          "missing": 0
+        },
+        {
+          "name": "norm_kda",
+          "unit": "ratio",
+          "normalization": "min(2,((kills+assists+5)/(deaths+2))/5)",
+          "missing": 0.5
+        },
+        {
+          "name": "norm_cspm",
+          "unit": "ratio",
+          "normalization": "min(1.5,((cs+60)/(minutes+10))/10)",
+          "missing": 0.6
+        },
+        {
+          "name": "norm_gpm",
+          "unit": "ratio",
+          "normalization": "min(1.5,((gold+3500)/(minutes+10))/500)",
+          "missing": 0.7
+        },
+        {
+          "name": "early_aggression",
+          "unit": "events/minute",
+          "normalization": "min(1.5,(kills+deaths+1)/(minutes+2))",
+          "missing": 0.35
+        },
+        {
+          "name": "lane_matchup_delta",
+          "unit": "probability difference",
+          "normalization": "neutral legacy lane tracker, exactly 0",
+          "missing": 0
+        },
+        {
+          "name": "champ_base_wr",
+          "unit": "probability",
+          "normalization": "static hand-authored profile; historical patch provenance unknown",
+          "missing": 0.5
+        }
+      ]
+    },
+    "nnriot.players18.v1": {
+      "dtype": "float32",
+      "team_shape": [
+        "batch",
+        5,
+        "D"
+      ],
+      "role_order": [
+        "TOP",
+        "JUNGLE",
+        "MIDDLE",
+        "BOTTOM",
+        "UTILITY"
+      ],
+      "team_perspective": {
+        "team_a": "Blue, Riot teamId=100",
+        "team_b": "Red, Riot teamId=200"
+      },
+      "missing_policy": "Cold defaults only for unknown player history; wrong lengths/duplicate roles/nonfinite data are errors",
+      "availability": "Only historical results with valid explicit result_end_ms strictly before prediction_time_ms; same latest 10000 global CLASSIC creation-row window for service and evaluation; target labels do not govern historical result inclusion",
+      "cutoff": "Historical match game_creation_time; live explicit prediction_time_ms or gameCreation, otherwise request time UTC ms",
+      "duration_normalization": "Historical duration seconds / 60 clipped to 5..60 minutes; missing duration explicit fallback 25 minutes",
+      "macro_clash": {
+        "shape": [
+          "batch",
+          15
+        ],
+        "dtype": "float32",
+        "perspective": "team_b minus team_a",
+        "order": [
+          "ad_ratio",
+          "ap_ratio",
+          "true_ratio",
+          "cc_score",
+          "scaling_score",
+          "ranged_ratio",
+          "is_full_ad",
+          "poke_siege",
+          "hard_engage",
+          "pick_catch",
+          "split_push",
+          "hyper_scaling",
+          "spike_15m",
+          "spike_25m",
+          "spike_35m"
+        ],
+        "unit": "dimensionless domain trait/archetype scores; no extra normalization"
+      },
+      "D": 18,
+      "ordered_features": [
+        {
+          "name": "champion_id",
+          "unit": "registry integer ID",
+          "normalization": "none; embedded by model",
+          "missing": 0
+        },
+        {
+          "name": "role_id",
+          "unit": "integer 0..4",
+          "normalization": "none; embedded by model",
+          "missing": "error"
+        },
+        {
+          "name": "smooth_wr",
+          "unit": "probability",
+          "normalization": "(wins+10*0.5)/(games+10)",
+          "missing": 0.5
+        },
+        {
+          "name": "smooth_cwr",
+          "unit": "probability",
+          "normalization": "(champion_wins+5*0.5)/(champion_games+5)",
+          "missing": 0.5
+        },
+        {
+          "name": "champ_exp",
+          "unit": "log games",
+          "normalization": "log1p(champion_games)",
+          "missing": 0
+        },
+        {
+          "name": "rec_wr",
+          "unit": "probability",
+          "normalization": "(recent_wins+5*0.5)/(recent_games+5); last 20 results in end order",
+          "missing": 0.5
+        },
+        {
+          "name": "role_fam",
+          "unit": "fraction",
+          "normalization": "(role_games+1)/(games+5)",
+          "missing": 0.2
+        },
+        {
+          "name": "tot_exp",
+          "unit": "log games",
+          "normalization": "log1p(games)",
+          "missing": 0
+        },
+        {
+          "name": "norm_kda",
+          "unit": "ratio",
+          "normalization": "min(2,((kills+assists+5)/(deaths+2))/5)",
+          "missing": 0.5
+        },
+        {
+          "name": "norm_cspm",
+          "unit": "ratio",
+          "normalization": "min(1.5,((cs+60)/(minutes+10))/10)",
+          "missing": 0.6
+        },
+        {
+          "name": "norm_gpm",
+          "unit": "ratio",
+          "normalization": "min(1.5,((gold+3500)/(minutes+10))/500)",
+          "missing": 0.7
+        },
+        {
+          "name": "early_aggression",
+          "unit": "events/minute",
+          "normalization": "min(1.5,(kills+deaths+1)/(minutes+2))",
+          "missing": 0.35
+        },
+        {
+          "name": "norm_gd15",
+          "unit": "2000 gold units",
+          "normalization": "clip((sum_gd15/(timeline_count+5))/2000,-1,1)",
+          "missing": 0
+        },
+        {
+          "name": "norm_csd15",
+          "unit": "30 CS units",
+          "normalization": "clip((sum_csd15/(timeline_count+5))/30,-1,1)",
+          "missing": 0
+        },
+        {
+          "name": "norm_xpd15",
+          "unit": "1500 XP units",
+          "normalization": "clip((sum_xpd15/(timeline_count+5))/1500,-1,1)",
+          "missing": 0
+        },
+        {
+          "name": "norm_fbi10",
+          "unit": "fraction",
+          "normalization": "clip((sum_fbi10+5*0.1)/(timeline_count+5),0,1)",
+          "missing": 0.1
+        },
+        {
+          "name": "lane_matchup_delta",
+          "unit": "probability difference",
+          "normalization": "neutral legacy lane tracker, exactly 0",
+          "missing": 0
+        },
+        {
+          "name": "champ_base_wr",
+          "unit": "probability",
+          "normalization": "static hand-authored profile; historical patch provenance unknown",
+          "missing": 0.5
+        }
+      ],
+      "additional_availability": "Requires nonempty valid completed historical timeline metrics; declared per-player defaults, combat cold-start count and usable timeline-match count; unavailable timeline source rejected"
+    },
+    "legacy.tree24.v1": {
+      "use": "exploratory evaluation only; never selected implicitly for neural serving",
+      "shape": [
+        "batch",
+        24
+      ],
+      "dtype": "categorical strings converted to float64 by the checkpoint-bound OrdinalEncoder",
+      "ordered_features": [
+        "team_a_0_champion",
+        "team_a_0_role",
+        "team_a_1_champion",
+        "team_a_1_role",
+        "team_a_2_champion",
+        "team_a_2_role",
+        "team_a_3_champion",
+        "team_a_3_role",
+        "team_a_4_champion",
+        "team_a_4_role",
+        "team_b_0_champion",
+        "team_b_0_role",
+        "team_b_1_champion",
+        "team_b_1_role",
+        "team_b_2_champion",
+        "team_b_2_role",
+        "team_b_3_champion",
+        "team_b_3_role",
+        "team_b_4_champion",
+        "team_b_4_role",
+        "game_mode",
+        "game_version",
+        "season_id",
+        "region"
+      ],
+      "role_order": [
+        "TOP",
+        "JUNGLE",
+        "MIDDLE",
+        "BOTTOM",
+        "UTILITY"
+      ],
+      "team_perspective": {
+        "team_a": "Blue, Riot teamId=100",
+        "team_b": "Red, Riot teamId=200"
+      },
+      "normalization": "Exact legacy extract_tabular_features and its saved encoder; no padding, fitting or replacement encoder",
+      "context_sources": {
+        "game_mode": "Riot gameMode",
+        "game_version": "exact Riot gameVersion string",
+        "season_id": "integer major gameVersion component as a string",
+        "region": "explicit region or canonical Riot match-ID platform prefix via core/collection/regions.py"
+      },
+      "missing_policy": "Missing context becomes literal UNKNOWN; unseen categories encode to saved unknown_value=-1. Unknown platform never defaults to EUW.",
+      "outputs": {
+        "winner": "predict_proba classes [0,1] = [Blue,Red]; raw only, no calibration"
+      }
+    }
+  },
+  "spatial46": {
+    "status": "unsupported",
+    "reason": "No checkpoint-bound spatial encoder training bounds or embedding provenance; never substitute zero vectors"
+  },
+  "outputs": {
+    "winner": {
+      "shape": [
+        "batch",
+        2
+      ],
+      "classes": [
+        "team_a_Blue",
+        "team_b_Red"
+      ],
+      "positive_class": 1,
+      "calibration": "winner only; binary temperature sigmoid(logit(p_B)/T); checkpoint/split/fit verified"
+    },
+    "draft_advantage": {
+      "shape": [
+        "batch",
+        2
+      ],
+      "classes": [
+        "team_a",
+        "team_b"
+      ],
+      "calibration": "none; raw pure composition, anti-symmetric, no DirectionalSideBias; null for legacy v3"
+    },
+    "auxiliary_heads": "heads_raw exposes checkpoint output values without calibration or fabricated defaults; class order/dimensions in output_heads.md; no validated actionability claim",
+    "decision": "conviction abs(p_B-0.5), thresholds 0.04/0.08 existing defaults, force abstention without verified calibration AND independent serving validation"
+  }
+}

@@ -320,3 +320,119 @@ def test_threshold_search_uses_served_boundary_selection():
     assert result["threshold"] == 0.04
     assert result["count"] == 2
     assert result["coverage"] == 1.0
+
+
+def test_exact_threshold_finds_narrow_nonmonotone_feasible_region():
+    # Only discarding the first two errors meets .9007. Discarding more
+    # correct predictions makes accuracy fall again, so binary search is unsafe.
+    probabilities = .600001 + np.arange(1000) * 1e-6
+    labels = np.ones(1000, dtype=int)
+    labels[:2] = 0
+    labels[-99:] = 0
+    result = find_threshold_for_accuracy(labels, probabilities, target_accuracy=.9007)
+    assert result["target_met"] is True
+    assert result["threshold"] == .100003
+    assert result["count"] == 998
+    assert result["accuracy"] == pytest.approx(899 / 998)
+
+
+@pytest.mark.parametrize("min_coverage", [0.0, 101 / 102])
+def test_exact_threshold_keeps_maximum_feasible_coverage(min_coverage):
+    probabilities = .600001 + np.arange(102) * 1e-6
+    labels = np.ones(102, dtype=int)
+    labels[0] = 0
+    result = find_threshold_for_accuracy(
+        labels, probabilities, target_accuracy=1.0, min_coverage=min_coverage,
+    )
+    assert result["target_met"] is True
+    assert result["count"] == 101
+    assert result["threshold"] == .100002
+
+
+def test_exact_threshold_uses_rounded_group_boundaries():
+    probabilities = np.r_[np.full(39, .6000005001), np.full(13, .6000024999)]
+    labels = np.r_[np.zeros(39, dtype=int), np.ones(13, dtype=int)]
+    result = find_threshold_for_accuracy(labels, probabilities, target_accuracy=1.0)
+    assert result["target_met"] is True
+    assert result["threshold"] == .100002
+    assert result["count"] == 13
+    assert result["accuracy"] == 1.0
+
+
+def test_exact_threshold_never_splits_served_ties():
+    result = find_threshold_for_accuracy([0, 1], [.6000001, .6000002], target_accuracy=1.0)
+    assert result["target_met"] is False
+    assert result["threshold"] == 0.0
+    assert result["count"] == 2
+    assert result["accuracy"] == .5
+
+
+@pytest.mark.parametrize(("min_count", "min_coverage", "count", "met"), [
+    (2, .5, 2, True),
+    (3, .5, 4, False),
+    (2, .500001, 4, False),
+    (5, 0, 4, False),
+])
+def test_exact_threshold_constraints_and_no_eligible_fallback(min_count, min_coverage, count, met):
+    result = find_threshold_for_accuracy(
+        [0, 0, 1, 1], [.51, .51, .6, .6], target_accuracy=1.0,
+        min_count=min_count, min_coverage=min_coverage,
+    )
+    assert result["count"] == count
+    assert result["target_met"] is met
+
+
+def test_exact_threshold_fallback_prefers_coverage_when_accuracy_ties():
+    result = find_threshold_for_accuracy(
+        [0, 0, 1, 0, 1, 0], [.51, .51, .6, .6, .7, .7], target_accuracy=.9,
+    )
+    assert result["target_met"] is False
+    assert result["count"] == 4
+    assert result["accuracy"] == .5
+    assert result["threshold"] == .1
+
+
+@pytest.mark.parametrize(("candidates", "threshold", "count", "met"), [
+    ([.2, .04], .04, 2, True),
+    ([.2], .2, 1, True),
+    ([], 0.0, 3, False),
+    ([.5], 0.0, 3, False),
+])
+def test_exact_threshold_preserves_explicit_candidate_contract(candidates, threshold, count, met):
+    result = find_threshold_for_accuracy(
+        [0, 1, 1], [.51, .54, .7], target_accuracy=1.0,
+        candidate_thresholds=candidates,
+    )
+    assert result["threshold"] == threshold
+    assert result["count"] == count
+    assert result["target_met"] is met
+
+
+def test_exact_threshold_matches_exhaustive_serving_masks():
+    # Deliberately small oracle: independently enumerate candidate masks via
+    # the public evaluator, without sorting/cumulative-count implementation.
+    rng = np.random.default_rng(20261011)
+    for _ in range(30):
+        p = rng.choice([.2, .3999995, .46, .4600005, .54, .6000001, .6000002, .8], size=24)
+        y = rng.integers(0, 2, size=len(p))
+        target = float(rng.choice([.5, .7, .95]))
+        minimum = int(rng.choice([1, 8, 25]))
+        coverage = float(rng.choice([0, .25, .75]))
+        thresholds = sorted({0.0, *(round(max(float(v), 1-float(v))-.5, 6) for v in p)})
+        rows = [evaluate_selective_coverage(y, p, t, confidence_level=.9) for t in thresholds]
+        eligible = [r for r in rows if r["count"] >= minimum and r["coverage"] >= coverage]
+        feasible = [r for r in eligible if r["accuracy"] >= target]
+        expected = feasible[0] if feasible else max(eligible, key=lambda r: r["accuracy"], default=rows[0])
+        kwargs = dict(target_accuracy=target, min_count=minimum, min_coverage=coverage, confidence_level=.9)
+        actual = find_threshold_for_accuracy(y, p, **kwargs)
+        assert {key: actual[key] for key in expected} == expected
+        assert actual["target_met"] is bool(feasible)
+        assert find_threshold_for_accuracy(1-y, 1-p, **kwargs) == actual
+        order = rng.permutation(len(p))
+        assert find_threshold_for_accuracy(y[order], p[order], **kwargs) == actual
+
+
+@pytest.mark.parametrize(("labels", "probabilities"), [([], [.6]), ([1], []), ([1], [.6, .7])])
+def test_exact_threshold_rejects_misaligned_observations(labels, probabilities):
+    with pytest.raises(ValueError, match="Length mismatch"):
+        find_threshold_for_accuracy(labels, probabilities)

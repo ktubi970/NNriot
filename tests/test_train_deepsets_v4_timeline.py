@@ -108,15 +108,33 @@ def test_antisymmetry_under_team_swap():
     # Swapped: Team B vs Team A with macro clash diff -(B - A) = (A - B)
     preds_ba = model({"team_a": team_b, "team_b": team_a, "macro_clash": -macro_clash})
 
+    # 1. Dedicated draft_advantage head is strictly anti-symmetric on the default side-aware model
+    draft_ab = preds_ab["draft_advantage"].numpy()
+    draft_ba = preds_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 1], draft_ba[:, 0], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 1], 1.0 - draft_ba[:, 1], atol=1e-5)
+
+    # 2. Side-aware winner head correctly reflects Blue side advantage: P(A on Blue) > P(A on Red)
     win_ab = preds_ab["winner"].numpy()
     win_ba = preds_ba["winner"].numpy()
+    assert np.all(win_ab[:, 0] > win_ba[:, 1])
 
-    # Column 0 is P(Team A wins), Column 1 is P(Team B wins)
-    # Swapping teams: P(Team B wins in AB) == P(Team A wins in BA)
-    np.testing.assert_allclose(win_ab[:, 1], win_ba[:, 0], atol=1e-5)
-    np.testing.assert_allclose(win_ab[:, 0], win_ba[:, 1], atol=1e-5)
-    # Exact anti-symmetry: P(Team B wins in AB) == 1 - P(Team B wins in BA)
-    np.testing.assert_allclose(win_ab[:, 1], 1.0 - win_ba[:, 1], atol=1e-5)
+    # 3. Side-neutral mode (enable_side_bias=False) guarantees exact winner anti-symmetry
+    model_neutral = build_equivariant_deepsets_model(
+        player_feature_dim=ENRICHED_PLAYER_TIMELINE_TENSOR_DIM,
+        include_macro_clash=True,
+        macro_feature_dim=MACRO_CLASH_FEATURE_DIM,
+        use_cross_attention=False,
+        enable_side_bias=False,
+    )
+    p_neutral_ab = model_neutral({"team_a": team_a, "team_b": team_b, "macro_clash": macro_clash})
+    p_neutral_ba = model_neutral({"team_a": team_b, "team_b": team_a, "macro_clash": -macro_clash})
+    win_n_ab = p_neutral_ab["winner"].numpy()
+    win_n_ba = p_neutral_ba["winner"].numpy()
+    np.testing.assert_allclose(win_n_ab[:, 1], win_n_ba[:, 0], atol=1e-5)
+    np.testing.assert_allclose(win_n_ab[:, 0], win_n_ba[:, 1], atol=1e-5)
+    np.testing.assert_allclose(win_n_ab[:, 1], 1.0 - win_n_ba[:, 1], atol=1e-5)
 
 
 def _make_dummy_records(n: int = 30) -> list[dict]:

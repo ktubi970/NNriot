@@ -115,6 +115,50 @@ def _winner_probabilities(model, x, batch_size: int) -> np.ndarray:
     return np.concatenate(probabilities)
 
 
+def _draft_swap_diagnostics(model, validation_x: dict, batch_size: int) -> dict:
+    """Measure draft complementarity on validation after swapping compositions.
+
+    Team A remains Blue and Team B remains Red. The winner's fixed side bias
+    therefore need not change sign; winner complementarity is not tested here.
+    Historical guarantee fields describe only this observed draft diagnostic.
+    """
+    diagnostic = {
+        "head": "draft_advantage",
+        "split": "validation",
+        "transformation": "composition_swap_fixed_sides",
+        "tolerance": 1e-5,
+        "status": "unavailable",
+        "reason": "draft_advantage_head_missing",
+        "is_equivariant": None,
+        "max_symmetry_violation": None,
+        "anti_symmetry_guarantee": None,
+    }
+    errors = []
+    n = len(validation_x["team_a"])
+    for start in range(0, n, batch_size):
+        batch = {key: validation_x[key][start:start + batch_size]
+                 for key in ("team_a", "team_b")}
+        swapped = {"team_a": batch["team_b"], "team_b": batch["team_a"]}
+        original_prediction = model.predict_on_batch(batch)
+        if not isinstance(original_prediction, dict) or "draft_advantage" not in original_prediction:
+            return diagnostic
+        swapped_prediction = model.predict_on_batch(swapped)
+        if not isinstance(swapped_prediction, dict) or "draft_advantage" not in swapped_prediction:
+            return diagnostic
+        original = np.asarray(original_prediction["draft_advantage"])
+        reverse = np.asarray(swapped_prediction["draft_advantage"])
+        errors.append(np.max(np.abs(original - reverse[:, ::-1])))
+    max_violation = float(np.max(errors))
+    passed = bool(np.isfinite(max_violation) and max_violation <= diagnostic["tolerance"])
+    diagnostic.update(
+        status="passed" if passed else "failed", reason=None,
+        is_equivariant=passed,
+        max_symmetry_violation=max_violation if np.isfinite(max_violation) else None,
+        anti_symmetry_guarantee=passed,
+    )
+    return diagnostic
+
+
 def _write_json(path: Path, value: dict) -> None:
     with path.open("x", encoding="utf-8") as handle:
         json.dump(value, handle, ensure_ascii=False, indent=2, allow_nan=False)
@@ -381,6 +425,11 @@ def train_model(
 
     raw = {name: _winner_probabilities(model, x[name], batch_size)
            for name in ("train", "validation")}
+    symmetry_diagnostics = None
+    if feature_version in ("deepsets", "deepsets_v2"):
+        symmetry_diagnostics = _draft_swap_diagnostics(model, x["validation"], batch_size)
+        logger.info("Validation draft_advantage composition-swap check (tolerance=1e-5): %s",
+                    symmetry_diagnostics)
     fit = fit_temperature(raw["validation"], y["validation"]) if calibrate else None
     raw["test"] = _winner_probabilities(model, x["test"], batch_size)
     metrics = {name: evaluate_winner(y[name], raw[name], train_rate, diagnostics=True)
@@ -431,20 +480,6 @@ def train_model(
         report["matchup_diagnostics"] = matchup_diagnostics
         report["feature_contract_sha256"] = feature_contract_sha
         report["enriched_dataset_sha256"] = compute_enriched_dataset_sha256(splits)
-    symmetry_diagnostics = None
-    if feature_version == "deepsets":
-        test_swapped = {"team_a": x["test"]["team_b"], "team_b": x["test"]["team_a"]}
-        p_norm = raw["test"]
-        p_swap = _winner_probabilities(model, test_swapped, batch_size)
-        max_violation = float(np.max(np.abs(p_norm - (1.0 - p_swap))))
-        symmetry_diagnostics = {
-            "is_equivariant": True,
-            "max_symmetry_violation": max_violation,
-            "anti_symmetry_guarantee": max_violation < 1e-4,
-        }
-        logger.info("Equivariant anti-symmetry check: max_violation=%.6e guaranteed=%s",
-                    max_violation, max_violation < 1e-4)
-
     report["symmetry_diagnostics"] = symmetry_diagnostics
 
     # The application never reads this distinct output unless explicitly promoted.

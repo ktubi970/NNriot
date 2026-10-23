@@ -62,6 +62,7 @@ def neural_case(request):
     model = build_equivariant_deepsets_model(
         player_feature_dim=14, embed_dim=8, latent_dim=16,
         use_evidential=evidential, include_macro_clash=macro, dropout_rate=0.3,
+        enable_side_bias=False,  # These tests exercise side-neutral counterfactual identities.
     )
     rng = np.random.default_rng(602)
     a = rng.uniform(.1, .9, (1, 5, 14)).astype(np.float32)
@@ -119,16 +120,20 @@ def _service_match():
     }
 
 
-def test_prediction_service_exposes_raw_diagnostics_and_keeps_calibration(neural_case):
+def test_prediction_service_exposes_raw_diagnostics_and_keeps_calibration(neural_case, tmp_path, monkeypatch):
     from core.features.pipeline import DraftFeaturePipeline
     from core.prediction_service import PredictionService
+    from tests.serving_artifact_fixture import build_serving_artifacts
 
     model, _, _ = neural_case
     pipeline = DraftFeaturePipeline()
-    service = PredictionService(feature_pipeline=pipeline)
-    service._model = model
-    service._temperature = 2.0
-    service._is_calibrated = True
+    artifacts = build_serving_artifacts(tmp_path, temperature=2.0, output_heads=list(model.output))
+    with monkeypatch.context() as model_patch:
+        model_patch.setattr(tf.keras.models, 'load_model', lambda *args, **kwargs: model)
+        service = PredictionService(
+            feature_pipeline=pipeline, checkpoint_path=artifacts['checkpoint'],
+            manifest_path=artifacts['manifest'],
+        )
     match = _service_match()
     inputs = pipeline.batch_extract_tensors([match])
     if any(t.name == "macro_clash" for t in model.inputs):
@@ -140,7 +145,11 @@ def test_prediction_service_exposes_raw_diagnostics_and_keeps_calibration(neural
     result = service.predict_match(match, action_threshold=0.06)
     assert result["success"] is True
     assert result["winner"]["team_b"] == round(expected_calibrated, 4)
+    assert result["calibration"] == {"status": "artifact_verified", "temperature": 2.0}
     assert result["selective_decision"]["threshold_applied"] == 0.06
+    # Calibration remains valid, but this override was not independently evaluated.
+    assert result["selective_decision"]["tier"] == "UNVALIDATED_MODEL"
+    assert result["selective_decision"]["abstained"] is True
     assert result["shapley_credits"]["draft_delta"] == pytest.approx(p_b - 0.5, abs=2e-6)
     assert len(result["shapley_credits"]["team_a_credits"]) == 5
     assert len(result["shapley_credits"]["team_b_credits"]) == 5
@@ -164,9 +173,20 @@ def test_prediction_service_loads_evidential_checkpoint(tmp_path):
     model = build_equivariant_deepsets_model(embed_dim=8, latent_dim=16)
     checkpoint = tmp_path / "evidential.keras"
     model.save(checkpoint)
+    from core.calibration import sha256_file
+    from core.serving_contract import runtime_feature_sources
+    checkpoint.with_suffix('.manifest.json').write_text(json.dumps({
+        'schema_version': 1, 'model_id': 'test_evidential',
+        'checkpoint': {'path': str(checkpoint), 'sha256': sha256_file(checkpoint)},
+        'feature_contract': 'nnriot.players14.v1', 'output_heads': list(model.output), 'calibration': None,
+        'runtime_feature_sources': runtime_feature_sources(),
+    }), encoding='utf-8')
     service = PredictionService(checkpoint_path=checkpoint)
     assert service.is_ready()
     result = service.predict_match(_service_match())
     assert result["success"] is True
+    assert result['draft_advantage'] is not None
+    assert result['probabilities_calibrated'] is None
+    assert result['selective_decision']['abstained'] is True
     assert 0.0 < result["epistemic_uncertainty"] <= 1.0
     assert len(result["shapley_credits"]["team_b_credits"]) == 5

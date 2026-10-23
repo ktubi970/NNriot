@@ -263,18 +263,18 @@ class SinkhornCrossAttention(tf.keras.layers.Layer):
 @tf.keras.utils.register_keras_serializable(package="nnriot")
 class SiameseTeamEncoder(tf.keras.layers.Layer):
     """Encodes two 5-player teams into permutation-invariant, anti-symmetric representations.
-    
+
     Architecture:
     - Intra-team SetTransformerPMA (SAB self-attention + PMA with k=2 seeds) replaces/enriches sum pooling.
     - Inter-team SinkhornCrossAttention (doubly stochastic optimal transport) supersedes legacy
       unconstrained MultiHeadAttention (`use_cross_attention`), strictly preserving anti-symmetry
       and mass conservation under team swap.
     - Continuous features are embedded via Fourier PeriodicNumericalEmbedding.
-    
+
     Inputs:
         tuple (team_a, team_b) each of shape (batch, 5, 8) or (batch, 5, 14).
         Layout per player: [champion_id, role_id, smooth_wr, smooth_cwr, ...]
-        
+
     Outputs:
         (T_diff, T_sum, T_a, T_b):
             T_diff has shape (batch, total_diff_dim), strictly anti-symmetric:
@@ -282,13 +282,27 @@ class SiameseTeamEncoder(tf.keras.layers.Layer):
             T_sum has shape (batch, total_sum_dim), strictly symmetric:
                 T_sum(B, A) == T_sum(A, B)
             T_a and T_b have shape (batch, team_dim), individual team representations.
-            
+
     Note on Cross Attention:
         `use_sinkhorn_attention` is the modern default (True), enforcing doubly stochastic optimal
         transport with exact transpose-equivariance. The legacy unconstrained `use_cross_attention`
         flag is preserved strictly for backward compatibility and is superseded when `use_sinkhorn_attention`
         is enabled.
     """
+
+    @classmethod
+    def from_config(cls, config):
+        config = dict(config)
+        modern_flags = ('use_set_transformer', 'use_sinkhorn_attention', 'use_periodic_embeddings')
+        present = [key in config for key in modern_flags]
+        if not any(present):
+            # Checkpoints before the SetTransformer/Sinkhorn/Fourier encoder
+            # serialized none of these flags. Reconstruct their actual sum-pool
+            # architecture rather than adopting today's constructor defaults.
+            config.update({key: False for key in modern_flags})
+        elif not all(present):
+            raise ValueError('Ambiguous SiameseTeamEncoder architecture: incomplete serialized modern flags')
+        return cls(**config)
 
     def __init__(
         self,
@@ -590,3 +604,45 @@ class AntiSymmetricSoftmax(tf.keras.layers.Layer):
         neg_s = -s
         logits = tf.concat([neg_s, s], axis=-1)
         return tf.nn.softmax(logits, axis=-1)
+
+
+@tf.keras.utils.register_keras_serializable(package="nnriot")
+class DirectionalSideBias(tf.keras.layers.Layer):
+    """Additive scalar bias representing arena side advantage (e.g. Summoner's Rift Blue side).
+
+    Decouples:
+    - Pure draft interaction f_draft(A, B) where f(A, B) == -f(B, A)
+    - Real-world map asymmetry b_side where logit = f_draft + b_side
+    """
+
+    def __init__(
+        self,
+        initial_bias: float = 0.0,
+        trainable: bool = True,
+        **kwargs: Any,
+    ) -> None:
+        super().__init__(**kwargs)
+        self.initial_bias = float(initial_bias)
+        self.bias_trainable = bool(trainable)
+
+    def build(self, input_shape: Any = None) -> None:
+        if self.built:
+            return
+        self.bias = self.add_weight(
+            name="side_bias",
+            shape=(1,),
+            initializer=tf.keras.initializers.Constant(self.initial_bias),
+            trainable=self.bias_trainable,
+        )
+        super().build(input_shape)
+
+    def call(self, inputs: tf.Tensor) -> tf.Tensor:
+        return inputs + self.bias
+
+    def get_config(self) -> dict[str, Any]:
+        config = super().get_config()
+        config.update({
+            "initial_bias": self.initial_bias,
+            "trainable": self.bias_trainable,
+        })
+        return config

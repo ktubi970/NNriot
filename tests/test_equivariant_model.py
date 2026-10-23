@@ -23,7 +23,10 @@ def _make_teams():
     return tf.constant(t_a), tf.constant(t_b)
 
 def test_winner_probability_inversion_under_team_swap():
-    model = build_equivariant_deepsets_model(player_feature_dim=8, embed_dim=16, latent_dim=32)
+    # Side-neutral mode (enable_side_bias=False) must preserve exact mathematical anti-symmetry
+    model = build_equivariant_deepsets_model(
+        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=False
+    )
     team_a, team_b = _make_teams()
     
     pred_ab = model({"team_a": team_a, "team_b": team_b})
@@ -35,6 +38,12 @@ def test_winner_probability_inversion_under_team_swap():
     # P(Team B wins when B is team_b) == P(Team A wins when B is team_a)
     np.testing.assert_allclose(win_ab[:, 1], win_ba[:, 0], atol=1e-5)
     np.testing.assert_allclose(win_ab[:, 0], win_ba[:, 1], atol=1e-5)
+
+    # Draft advantage is also strictly anti-symmetric
+    draft_ab = pred_ab["draft_advantage"].numpy()
+    draft_ba = pred_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 1], draft_ba[:, 0], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
 
 def test_total_kills_invariance_under_team_swap():
     model = build_equivariant_deepsets_model(player_feature_dim=8, embed_dim=16, latent_dim=32)
@@ -51,7 +60,7 @@ def test_all_heads_present_in_model():
     model = build_equivariant_deepsets_model(
         player_feature_dim=8, embed_dim=16, latent_dim=32, pruned_heads=False, use_evidential=False
     )
-    assert set(model.output_names) == set(ALL_LABEL_KEYS)
+    assert set(model.output_names) == set(ALL_LABEL_KEYS) | {"draft_advantage"}
 
 
 def test_winner_probability_inversion_enriched_14dim():
@@ -70,7 +79,11 @@ def test_winner_probability_inversion_enriched_14dim():
             t_b[b, slot, 2:] = rng.uniform(0.1, 0.9, size=ENRICHED_PLAYER_TENSOR_DIM - 2)
 
     model = build_equivariant_deepsets_model(
-        player_feature_dim=ENRICHED_PLAYER_TENSOR_DIM, embed_dim=16, latent_dim=32, use_cross_attention=True
+        player_feature_dim=ENRICHED_PLAYER_TENSOR_DIM,
+        embed_dim=16,
+        latent_dim=32,
+        use_cross_attention=True,
+        enable_side_bias=False,
     )
     pred_ab = model({"team_a": tf.constant(t_a), "team_b": tf.constant(t_b)})
     pred_ba = model({"team_a": tf.constant(t_b), "team_b": tf.constant(t_a)})
@@ -80,6 +93,11 @@ def test_winner_probability_inversion_enriched_14dim():
 
     np.testing.assert_allclose(win_ab[:, 1], win_ba[:, 0], atol=1e-5)
     np.testing.assert_allclose(win_ab[:, 0], win_ba[:, 1], atol=1e-5)
+
+    draft_ab = pred_ab["draft_advantage"].numpy()
+    draft_ba = pred_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 1], draft_ba[:, 0], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
 
 
 def test_winner_probability_inversion_with_macro_clash():
@@ -107,6 +125,7 @@ def test_winner_probability_inversion_with_macro_clash():
         embed_dim=16,
         latent_dim=32,
         include_macro_clash=True,
+        enable_side_bias=False,
     )
     pred_ab = model({"team_a": tf.constant(t_a), "team_b": tf.constant(t_b), "macro_clash": tf.constant(macro_ab)})
     pred_ba = model({"team_a": tf.constant(t_b), "team_b": tf.constant(t_a), "macro_clash": tf.constant(macro_ba)})
@@ -117,6 +136,11 @@ def test_winner_probability_inversion_with_macro_clash():
     # Exact anti-symmetry guarantee: P(B|A, macro_ab) == 1 - P(B|B, -macro_ab)
     np.testing.assert_allclose(win_ab[:, 1], win_ba[:, 0], atol=1e-5)
     np.testing.assert_allclose(win_ab[:, 0], win_ba[:, 1], atol=1e-5)
+
+    draft_ab = pred_ab["draft_advantage"].numpy()
+    draft_ba = pred_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 1], draft_ba[:, 0], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
 
 
 def test_skew_symmetric_bilinear_dense():
@@ -191,8 +215,9 @@ def test_build_equivariant_model_pruned_heads():
         player_feature_dim=14,
         pruned_heads=True,
         use_evidential=True,
+        enable_side_bias=False,
     )
-    expected_heads = set(PRUNED_LABEL_KEYS) | {"winner_uncertainty"}
+    expected_heads = set(PRUNED_LABEL_KEYS) | {"winner_uncertainty", "draft_advantage"}
     assert set(model.output_names) == expected_heads
 
     team_a = tf.random.normal((2, 5, 14))
@@ -201,11 +226,17 @@ def test_build_equivariant_model_pruned_heads():
     pred_ab = model({"team_a": team_a, "team_b": team_b})
     pred_ba = model({"team_a": team_b, "team_b": team_a})
 
-    # 1. Winner probability anti-symmetry
+    # 1. Winner probability anti-symmetry (when enable_side_bias=False)
     win_ab = pred_ab["winner"].numpy()
     win_ba = pred_ba["winner"].numpy()
     np.testing.assert_allclose(win_ab[:, 1], 1.0 - win_ba[:, 1], atol=1e-5)
     np.testing.assert_allclose(win_ab[:, 0], win_ba[:, 1], atol=1e-5)
+
+    # 1b. Draft advantage anti-symmetry
+    draft_ab = pred_ab["draft_advantage"].numpy()
+    draft_ba = pred_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 1], 1.0 - draft_ba[:, 1], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
 
     # 2. Winner uncertainty invariance & bounds
     u_ab = pred_ab["winner_uncertainty"].numpy()
@@ -253,6 +284,89 @@ def test_build_equivariant_model_pruned_heads():
     np.testing.assert_allclose(fb_ab[:, 0], fb_ba[:, 1], atol=1e-5)
     np.testing.assert_allclose(fb_ab[:, 1], fb_ba[:, 0], atol=1e-5)
     np.testing.assert_allclose(fb_ab[:, 2], fb_ba[:, 2], atol=1e-5)
+
+
+def test_directional_side_bias_layer():
+    from core.deepsets_layers import DirectionalSideBias
+    layer = DirectionalSideBias(initial_bias=-0.05, trainable=True)
+    x = tf.constant([[0.0], [1.0]], dtype=tf.float32)
+    out = layer(x)
+    np.testing.assert_allclose(out.numpy(), [[-0.05], [0.95]], atol=1e-6)
+
+    # Trainable weight
+    assert len(layer.trainable_weights) == 1
+    assert layer.trainable_weights[0].shape == (1,)
+
+    # Gradient propagation
+    with tf.GradientTape() as tape:
+        y = layer(x)
+        loss = tf.reduce_sum(tf.square(y))
+    grad = tape.gradient(loss, layer.trainable_weights)
+    assert grad[0] is not None
+
+    # Serialization
+    cfg = layer.get_config()
+    restored = DirectionalSideBias.from_config(cfg)
+    np.testing.assert_allclose(restored(x).numpy(), out.numpy(), atol=1e-6)
+
+
+def test_blue_side_advantage_mirror_matchup():
+    model = build_equivariant_deepsets_model(
+        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True
+    )
+    team_a, _ = _make_teams()
+    # Mirror matchup: Team A vs Team A
+    pred_aa = model({"team_a": team_a, "team_b": team_a})
+
+    # 1. Draft advantage is strictly neutral (50.0% / 50.0%)
+    draft_aa = pred_aa["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_aa[:, 0], 0.50, atol=1e-5)
+    np.testing.assert_allclose(draft_aa[:, 1], 0.50, atol=1e-5)
+
+    # 2. Match prediction reflects Blue side advantage (> 50.0% for Team A on Blue)
+    win_aa = pred_aa["winner"].numpy()
+    assert np.all(win_aa[:, 0] > 0.50)
+    assert np.all(win_aa[:, 1] < 0.50)
+    np.testing.assert_allclose(win_aa[:, 0], 0.525, atol=1e-2)
+
+
+def test_blue_side_advantage_team_swap_asymmetry():
+    model = build_equivariant_deepsets_model(
+        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True
+    )
+    team_a, team_b = _make_teams()
+    pred_ab = model({"team_a": team_a, "team_b": team_b})
+    pred_ba = model({"team_a": team_b, "team_b": team_a})
+
+    # P(Team A wins on Blue) > P(Team A wins on Red against the same opponent)
+    p_a_on_blue = pred_ab["winner"].numpy()[:, 0]
+    p_a_on_red = pred_ba["winner"].numpy()[:, 1]
+    assert np.all(p_a_on_blue > p_a_on_red)
+
+    # But draft advantage remains strictly anti-symmetric
+    draft_ab = pred_ab["draft_advantage"].numpy()
+    draft_ba = pred_ba["draft_advantage"].numpy()
+    np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
+    np.testing.assert_allclose(draft_ab[:, 1], draft_ba[:, 0], atol=1e-5)
+
+
+def test_multi_dimension_tensors_compatibility():
+    # 18-dim timeline tensors
+    m18 = build_equivariant_deepsets_model(player_feature_dim=18, embed_dim=16, latent_dim=32)
+    ta18 = tf.random.normal((2, 5, 18))
+    tb18 = tf.random.normal((2, 5, 18))
+    p18 = m18({"team_a": ta18, "team_b": tb18})
+    assert "draft_advantage" in p18
+    assert "winner" in p18
+
+    # 46-dim spatial trajectory tensors
+    m46 = build_equivariant_deepsets_model(player_feature_dim=46, embed_dim=16, latent_dim=32)
+    ta46 = tf.random.normal((2, 5, 46))
+    tb46 = tf.random.normal((2, 5, 46))
+    p46 = m46({"team_a": ta46, "team_b": tb46})
+    assert "draft_advantage" in p46
+    assert "winner" in p46
+
 
 
 
