@@ -5,7 +5,7 @@ Single responsibility: convert a raw Riot Match-V5 match dict into a flat
 labels dict suitable for the multi-output Keras model.
 
 Returns ``None`` for malformed matches (missing teams, no clear winner, etc.)
-so callers can skip them. See ``MULTI_OUTPUT_MODEL_PLAN.md`` section 2 for the
+so callers can skip them. See ``docs/history/MULTI_OUTPUT_MODEL_PLAN.md`` section 2 for the
 full design.
 """
 

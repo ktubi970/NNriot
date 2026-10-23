@@ -122,3 +122,24 @@ node_modules/
 /playwright-report/
 /blob-report/
 /playwright/.cache/
+
+# Local tooling state
+.coverage
+htmlcov/
+.claude/settings.local.json
+.claude/worktrees/
+
+# Generated browser screenshots and traces
+/output/
+
+# Bulky generated run data: commit reports, metrics, protocols and scripts only
+/runs/**/*.gz
+/runs/**/*.jsonl
+/runs/**/*.pid
+/runs/**/matplotlib_config/
+/runs/**/curves.html
+/runs/**/train.json
+/runs/**/validation.json
+/runs/**/sealed_test.json
+/runs/**/dataset.json
+/runs/**/availability.json

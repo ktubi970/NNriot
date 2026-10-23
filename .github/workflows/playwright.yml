@@ -2,9 +2,16 @@ name: Playwright Tests
 
 on:
   push:
-    branches: [ main, dev ]
+    branches: [ main ]
   pull_request:
-    branches: [ main, dev ]
+    branches: [ main ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   test:
@@ -12,27 +19,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python 3.12
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt -r requirements-dev.txt
+      - uses: actions/checkout@v5
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: 'npm'
 
       - name: Install npm dependencies
-        run: npm ci || npm install
+        run: npm ci
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps chromium
@@ -40,12 +36,18 @@ jobs:
       - name: Build frontend assets
         run: npm run build
 
+      - name: Check frontend and browser test types
+        run: |
+          npm run typecheck
+          npx tsc --noEmit
+
+      - name: Verify frontend API contracts
+        run: npm run test:unit
+
       - name: Run Playwright tests
-        run: npx playwright test --project=chromium
+        run: npm run test:e2e
         env:
           CI: true
-          PORT: 5000
-          HOST: 127.0.0.1
 
       - name: Upload Playwright Report
         uses: actions/upload-artifact@v4

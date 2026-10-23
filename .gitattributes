@@ -1,2 +1,9 @@
+# Store text files with LF in the repository, whatever the contributor's platform.
+* text=auto
+
 # CUDA setup and launch scripts must remain readable by bash on Windows checkouts.
 /scripts/*.sh text eol=lf
+
+# cmd.exe labels and goto are unreliable with LF line endings.
+*.bat text eol=crlf
+*.cmd text eol=crlf
