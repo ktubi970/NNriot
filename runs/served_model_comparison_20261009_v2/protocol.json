@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "classification": "exploratory; no validated winner or automatic promotion",
+  "source_database": {
+    "path": "D:\\projet\\NNriot\\training_data.db",
+    "schema_version": 14,
+    "snapshot_policy": "read-only single SELECT source window; frozen bytes stored",
+    "window_requested": 12500
+  },
+  "frozen_files": {
+    "source_snapshot.json.gz": "47bb50e2709b6b41c4729b664c0585c90f217fc19438c3da4bbd199c84022ec7",
+    "cohort.jsonl": "530a3ca4226620bb1fcb539a64dd9c9f1e5add322c0596db6c07ef9d794ca7cc",
+    "inventory.json": "691d2e142a1ed1b0eea6d5f2a3d6474f129e1214477fc71589574a84c2d063f1"
+  },
+  "inclusion": "latest CLASSIC creation_time>0 window; invalid labels/roles/payloads retained and counted as feature failures",
+  "partitions": {
+    "history": {
+      "count": 10000,
+      "start_utc": "2026-09-14T16:45:23.557000+00:00",
+      "end_utc": "2026-09-16T18:53:33.843000+00:00"
+    },
+    "validation": {
+      "count": 500,
+      "start_utc": "2026-09-16T18:53:41.761000+00:00",
+      "end_utc": "2026-09-16T20:52:22.051000+00:00"
+    },
+    "test": {
+      "count": 2000,
+      "start_utc": "2026-09-16T20:52:51.592000+00:00",
+      "end_utc": "2026-09-17T11:38:52.620000+00:00"
+    }
+  },
+  "calibration_policy": "Existing checkpoint-bound validation calibration only. No fitting, thresholds, blending or selection on recent test.",
+  "blue_prior": {
+    "red_probability": 0.5228651198613652,
+    "blue_probability": 0.4771348801386348,
+    "completed_pre_test_count": 10387,
+    "cutoff_ms": 1789591971592
+  },
+  "eligibility": {
+    "candidate_deepsets_v2": {
+      "eligible": false,
+      "reasons": [
+        "No checkpoint-bound training split artifact; training bounds unknown",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Training, validation and earlier test time bounds are unknown",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_deepsets_v3": {
+      "eligible": false,
+      "reasons": [
+        "No checkpoint-bound training split artifact; training bounds unknown",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Training, validation and earlier test time bounds are unknown",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_deepsets_v4_compiled_gpu": {
+      "eligible": false,
+      "reasons": [
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_deepsets_v4_timeline": {
+      "eligible": false,
+      "reasons": [
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_deepsets_v4_timeline_gpu": {
+      "eligible": false,
+      "reasons": [
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_equivariant_iter1": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_equivariant_iter2": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_equivariant_iter3": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_max": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_production": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_selective_prod": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "candidate_v3_enriched": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "gpu_validation_20260927_133413": {
+      "eligible": false,
+      "reasons": [
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pilot_deepsets": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pilot_test_iter1": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pilot_v2_draft": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pre_match_10k_15epochs_20260923_211035": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pre_match_calibrated_20260925_145600": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "pre_match_pilot_20260923_210401": {
+      "eligible": false,
+      "reasons": [
+        "Legacy input representation has no audited serving contract; excluded explicitly",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "spatial_deepsets_anti_overfit": {
+      "eligible": false,
+      "reasons": [
+        "Spatial RNN encoder training bounds/hash and historical embedding generation provenance absent; 46D disabled",
+        "No checkpoint-bound training split artifact; training bounds unknown",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Training, validation and earlier test time bounds are unknown",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "spatial_deepsets_run1": {
+      "eligible": false,
+      "reasons": [
+        "Spatial RNN encoder training bounds/hash and historical embedding generation provenance absent; 46D disabled",
+        "No checkpoint-bound training split artifact; training bounds unknown",
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Training, validation and earlier test time bounds are unknown",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    },
+    "tree_baseline": {
+      "eligible": false,
+      "reasons": [
+        "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+        "Recent cohort is not strictly later than all recorded training/selection partitions",
+        "No checkpoint-bound attestation of result-end ordered training priors and encoder provenance"
+      ],
+      "classification": "exploratory"
+    }
+  },
+  "seed": 20261009,
+  "pipeline_policy": "14D/18D exact source layouts, result-end ordered player priors, neutral lane tracker matching legacy training defaults; current static champion profiles, historical patch provenance unknown",
+  "thresholds_frozen": [
+    0,
+    0.02,
+    0.04,
+    0.06,
+    0.08,
+    0.1,
+    0.15,
+    0.2
+  ],
+  "reference_decision": "Keep candidate_deepsets_v3 configured; legacy, uncalibrated and not validated for actionable serving"
+}

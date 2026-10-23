@@ -1,0 +1,619 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-10-11T11:32:31.231707+00:00",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "sqlite_version": "3.49.1",
+  "parser": "original production stdlib json in .venv312",
+  "method": "Read 30 exact IDs only; first/last rows in oldest 12 completed chunks, plus midpoint of oldest 6",
+  "source_read_only": true,
+  "source_data_version_before": 2,
+  "source_data_version_after": 2,
+  "checked_rows": 30,
+  "checked_chunks": 12,
+  "failed_rows": 0,
+  "limitations": [
+    "Deterministic panel, not exhaustive equality of all cached rows."
+  ],
+  "rows": [
+    {
+      "match_id": "EUW1_6976802044",
+      "chunk": "1774293301317-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": false,
+      "original_timeline_parsed": false,
+      "original_metrics_present": false,
+      "cached_metrics_present": false,
+      "source_timeline_type": "NoneType",
+      "source_timeline_bytes": 0,
+      "raw_payload_sha256": "9e2b958cab2eac1f94647ddf369bc30192039328d62f6eb43d6765cdb092f24e"
+    },
+    {
+      "match_id": "NA1_5518411775",
+      "chunk": "1774293301317-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 91068,
+      "raw_payload_sha256": "8dd925b1327e565eed08646f0442d9e1881351810a94f36f403f3eb3dae3110e"
+    },
+    {
+      "match_id": "EUW1_7737955416",
+      "chunk": "1774293301317-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 82116,
+      "raw_payload_sha256": "64b63ce21a8a702afb1ea02f38d11f4208d13bbe1bde0892e58a13f6973fea61"
+    },
+    {
+      "match_id": "NA1_5518412324",
+      "chunk": "1774677464864-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 82108,
+      "raw_payload_sha256": "570dc14a6215880bd87b7a2e22469cf2cb281f6cef2e28aea677492fa75e903e"
+    },
+    {
+      "match_id": "NA1_5522093900",
+      "chunk": "1774677464864-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 108900,
+      "raw_payload_sha256": "2b44c3d59bcae0c4bd4bb82b944d30dff576acc8b3d7994d24a13c1792bc575c"
+    },
+    {
+      "match_id": "NA1_5520224335",
+      "chunk": "1774677464864-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 41964,
+      "raw_payload_sha256": "9e5e79e2ac1ad727aff6a6b5e04820130d2e82806aa1ae467f44441f4f6aecac"
+    },
+    {
+      "match_id": "NA1_5522095884",
+      "chunk": "1774886760531-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 109608,
+      "raw_payload_sha256": "15b527cc2f76472cb32aebad165275bb65e25541e76b2dcd3cb14de090f110a4"
+    },
+    {
+      "match_id": "EUW1_7804439546",
+      "chunk": "1774886760531-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 46332,
+      "raw_payload_sha256": "943a4a0b539c805046bb3764f5101f8abeaa91a4e3731490f34c57b6ffe33288"
+    },
+    {
+      "match_id": "KR_8154187219",
+      "chunk": "1774886760531-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 79392,
+      "raw_payload_sha256": "f56eb3f3fca9d57018ed66f3ab2830069564553acbc6633e5c0ec88f31e09157"
+    },
+    {
+      "match_id": "KR_8155508029",
+      "chunk": "1775410512010-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 87536,
+      "raw_payload_sha256": "d05d024d8820e28bde416a960b3975e225200bed69423a5d393480a172354f47"
+    },
+    {
+      "match_id": "EUN1_3934418602",
+      "chunk": "1775410512010-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 104132,
+      "raw_payload_sha256": "e05d77e8757daf52233c8853c25ac54fe12129746e3e9b5b5b4f3f5ff2334623"
+    },
+    {
+      "match_id": "EUN1_3933281855",
+      "chunk": "1775410512010-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 121828,
+      "raw_payload_sha256": "3c28d08c96c23a99247dc2182066e53d4c3d16dd7646f35b9e973d51b53c9479"
+    },
+    {
+      "match_id": "KR_8163107739",
+      "chunk": "1775661764494-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 132104,
+      "raw_payload_sha256": "48486c206ae14d663d74eae898237e4ff91f5d92ef8d55bac8a620332d77c989"
+    },
+    {
+      "match_id": "EUN1_3935657230",
+      "chunk": "1775661764494-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 103340,
+      "raw_payload_sha256": "21e760051d681697dd7d3282f728eb59a40a8b1eefde7d86a6ac644422b884c0"
+    },
+    {
+      "match_id": "NA1_5532797778",
+      "chunk": "1775661764494-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 114892,
+      "raw_payload_sha256": "41cf0a066cf1d3008fd171fdcd9d244d5e7593c9615f326e72bc7e1673963e2a"
+    },
+    {
+      "match_id": "EUN1_3935650049",
+      "chunk": "1775864847882-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 88652,
+      "raw_payload_sha256": "e996b6a601373888f2053cdfaa981b1c2eb5cfe5d2579c58eed436d8ba22110e"
+    },
+    {
+      "match_id": "EUN1_3936715347",
+      "chunk": "1775864847882-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 117940,
+      "raw_payload_sha256": "1610322982850b2391552beb5db78c1d34b43c8d70d2260ad5321f28c0a757c8"
+    },
+    {
+      "match_id": "NA1_5536380334",
+      "chunk": "1775864847882-1500.json.gz",
+      "row_position": 750,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 56520,
+      "raw_payload_sha256": "101d67857bfe8a36e3ccca7520bb4a60f46c201439e5ee86b2a9f616ed55fc57"
+    },
+    {
+      "match_id": "EUW1_7816722594",
+      "chunk": "1776014072557-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 104852,
+      "raw_payload_sha256": "b1e7149d93e7a19fe283129f220a8f180930ff433053c0b0fbaa29bddc29e553"
+    },
+    {
+      "match_id": "EUW1_7818507116",
+      "chunk": "1776014072557-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 73628,
+      "raw_payload_sha256": "7df3e447da359b470e6840ce53ddfaf3ec4a79b5aec8ce0ccc8271cfcc9db700"
+    },
+    {
+      "match_id": "EUW1_7818508274",
+      "chunk": "1776121118448-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 6144,
+      "raw_payload_sha256": "585243e73b683c1cce03d57a52f9d7d7b30b809237c15ede089b5faea4ede7c4"
+    },
+    {
+      "match_id": "EUW1_7819931392",
+      "chunk": "1776121118448-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 95928,
+      "raw_payload_sha256": "b020ce3977e6e1aa09ffe8dbf6d05862af882f3e11912c31e9d1d47f9e122963"
+    },
+    {
+      "match_id": "EUW1_7819933209",
+      "chunk": "1776225711777-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 75956,
+      "raw_payload_sha256": "2c0555bce7adec40d69a42907f13ce777965a0d4760bb8e6147ea050efb66098"
+    },
+    {
+      "match_id": "NA1_5540422469",
+      "chunk": "1776225711777-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 118188,
+      "raw_payload_sha256": "3cb4a1b45a0af3d13ef55000b9213d7488ed655217c0accc2b1212298db889fb"
+    },
+    {
+      "match_id": "EUN1_3938427241",
+      "chunk": "1776307209077-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 114256,
+      "raw_payload_sha256": "c95beaf261cc6dcc79c1c5b87da9dac3bdd37e39b8ebca0946a5f01601219a97"
+    },
+    {
+      "match_id": "KR_8174813697",
+      "chunk": "1776307209077-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 112652,
+      "raw_payload_sha256": "e3324afc511d0a242bd36b974047b390e1f930c310af6a1f48cabab8f698a60f"
+    },
+    {
+      "match_id": "NA1_5540987755",
+      "chunk": "1776377716368-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 82384,
+      "raw_payload_sha256": "5b34acd4f5006e7ced61fc8337cc6e2bc5e42d54ab7e692df088d546b1052de4"
+    },
+    {
+      "match_id": "EUW1_7822992343",
+      "chunk": "1776377716368-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 87720,
+      "raw_payload_sha256": "5b04e226c4dd80f07467022252c1d38735e73506b6bfb99474efeef951f23b31"
+    },
+    {
+      "match_id": "NA1_5541455907",
+      "chunk": "1776449129885-1500.json.gz",
+      "row_position": 0,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 82708,
+      "raw_payload_sha256": "8155ad1c8e129ce185004e0088f0fffa82073910b23757f7239f3e2ae52a40fa"
+    },
+    {
+      "match_id": "NA1_5542013177",
+      "chunk": "1776449129885-1500.json.gz",
+      "row_position": 1499,
+      "checks": {
+        "compact_raw_facts_equal": true,
+        "timeline_metrics_equal": true,
+        "creation_equal": true,
+        "winner_equal": true,
+        "labels_equal": true,
+        "no_unexpected_source_error": true
+      },
+      "timeline_present": true,
+      "original_timeline_parsed": true,
+      "original_metrics_present": true,
+      "cached_metrics_present": true,
+      "source_timeline_type": "str",
+      "source_timeline_bytes": 75020,
+      "raw_payload_sha256": "6380bc28186ecc726ea2ccc9eea2a3aa496b1389d28bf48a9ef0f0d7be1a1a34"
+    }
+  ]
+}

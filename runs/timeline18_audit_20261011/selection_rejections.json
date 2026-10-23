@@ -1,0 +1,8534 @@
+[
+  {
+    "match_id": "NA1_5538728759",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538749273",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538764380",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538776257",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538779563",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538786729",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171032076",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171104797",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171166981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171253190",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171258738",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171261687",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8171313038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937353509",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937378630",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937400923",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538930973",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937444515",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937460938",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937476673",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538966334",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937499300",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538972706",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937502896",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538985564",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538989373",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5538993958",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937526058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937532740",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937545790",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539012696",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539017826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539022204",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539055912",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539086939",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539113221",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539139769",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539255208",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539359988",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539371826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539389464",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539396357",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539401549",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539416271",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539434840",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539445139",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539448199",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539452504",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937821486",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937884553",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937897035",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937912746",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937941446",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937976304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937988457",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539636082",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3937988765",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172593103",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539673472",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539686930",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539688066",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539701687",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539705823",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539707980",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539709807",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539732878",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539733274",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539733257",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539740770",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539768737",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539768726",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539791082",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539806599",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539810990",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172695084",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539925793",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539923523",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539935572",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539955829",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539955955",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539961613",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539963202",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539969767",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539977308",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172815370",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539987199",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172833943",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172863528",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5539997789",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172906144",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540003185",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540006500",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8172934273",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8173371602",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8173389340",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820464329",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938249247",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820506455",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938257295",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938271332",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820597183",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938298835",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820674219",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540140356",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820703861",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540148362",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820733057",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7820742250",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938356348",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7820789446",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540180318",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540188981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938389147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540223296",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540231151",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540244906",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938399618",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938401585",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540253215",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938404439",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540263071",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938408158",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938405731",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540406905",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540404614",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938423214",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5540427275",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540435404",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540438336",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540451450",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540460240",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540464245",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540522814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540537739",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540538451",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540546575",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821005479",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7821003582",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938530320",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174399117",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174413654",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174425434",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174464508",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938562672",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174511856",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540625248",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938629045",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821488844",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821485234",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938656453",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8174623683",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938666672",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938673338",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821546474",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821553677",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540668299",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938687715",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821588857",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938697727",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938715140",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821631291",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938712591",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938714701",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938730412",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821685978",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7821787681",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540850166",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540878511",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540884011",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540887790",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540895243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540907275",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540909506",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540914815",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540927053",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540927519",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540932995",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540937577",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540947381",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540956656",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540962470",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540961714",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540966317",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540997504",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5540998568",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541013724",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541018997",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541057403",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541065253",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541116582",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541123887",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541138720",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541160899",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541168600",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541180164",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "KR_8175038721",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175089159",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175100904",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175153863",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938896956",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "KR_8175200115",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3938986065",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175700520",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939032253",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541294636",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939040058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7822468343",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541309786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7822526182",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541312481",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541324037",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541324826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175875658",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939128704",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541372798",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939165594",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939181230",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541391185",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939192750",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939195747",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939195839",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541402622",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8175921630",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939216657",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939219379",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541435449",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7822978138",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541463694",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541481467",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823037075",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7823058374",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823082863",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541534665",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541553326",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823103611",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541585278",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541587728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823110971",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541603413",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176100570",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541743259",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176123982",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541770611",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541793241",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541793726",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541817092",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541828984",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541829243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541832499",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541843562",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541851822",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541858767",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541857928",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541862424",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541862571",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541867320",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176307507",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541869784",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541875340",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541880015",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541882552",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541885624",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541892699",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541903799",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176633332",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176862889",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939442073",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8176950199",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939439917",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177025211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939454768",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541957263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939470631",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939479378",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541973523",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939484813",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823619549",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5541983655",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541990149",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939516118",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541999927",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5541999423",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177265237",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939539147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542013203",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542011709",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939544352",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5542016303",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542021074",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823758461",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542023817",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542029137",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542030846",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939575123",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7823802281",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939580515",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939595111",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177325797",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177332243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939609794",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939609022",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177340738",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939640411",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939652103",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177363039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542098373",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824013147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542107614",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939669696",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824038997",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542124718",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939693074",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824086265",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542138395",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542143317",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542155870",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542156346",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939718963",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542217095",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542218605",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542219444",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542237824",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542239814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542244961",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542256736",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542261791",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542263751",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542268210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542271183",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542275635",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542282550",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542293539",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542296253",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542314372",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542316494",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542326881",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542347894",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542382892",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542389599",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542399967",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542405745",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542407159",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5542421056",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542423233",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542425180",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542436735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542449190",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542457503",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542462500",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542466917",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542469814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542480227",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542484454",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542500476",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542503152",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542524488",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542537843",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542539403",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824316016",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5542548260",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177861978",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177879271",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542556425",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542560298",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542565049",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177917853",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542573926",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542574770",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542576829",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542575994",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8177993368",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824359584",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939793193",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542586112",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542585523",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824402928",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542599100",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542598712",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824448458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824493839",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824525087",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824527160",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824532177",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824534922",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824584940",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542632746",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824601003",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824604929",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824609864",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542641511",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939911189",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824681210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824684369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824690821",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824689897",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8178668883",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824717815",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824734628",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824741579",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8178743567",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824747005",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824765685",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824767972",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824767243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824772112",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939954904",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939953994",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824806360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939954941",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542685381",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824820099",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824839454",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824855671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824856993",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542699688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939975056",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939980723",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824887563",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939997274",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542716878",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824902282",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3939994834",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824921313",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8178996165",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824941055",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542731708",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542735353",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824952068",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542736369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824969039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542743232",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7824983911",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542751774",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542751147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542752767",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8179023653",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542757106",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825014289",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542766023",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940057713",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542768930",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542770123",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825047152",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542773112",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542776761",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542776834",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542776966",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542777263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825060165",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825064221",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940072658",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542783360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825104367",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542795401",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940093406",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940101184",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542799994",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542801399",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542802400",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940102819",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940111580",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542811415",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940111001",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542815333",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825170757",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940124732",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825196295",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542831314",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542829499",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542829661",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542835515",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542842687",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542846170",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940145004",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825256028",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940165204",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825284666",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542864022",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542867405",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542875805",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542874374",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542878330",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825323140",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542895362",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542906902",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825360317",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542912864",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542928231",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542935485",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825404131",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542938504",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542952169",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542966120",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5542993577",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543016829",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543029279",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543048048",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543048008",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543044722",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543061884",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543062595",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543077113",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543080301",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543088106",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543106318",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543116144",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543147531",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8179333219",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543164902",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543186059",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8179364568",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543191363",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543194270",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543208981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543218439",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543223016",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543241169",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543250285",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543251620",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543266862",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543275804",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543290459",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543297469",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543313327",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543316716",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543330316",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543337114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543340191",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940283888",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543360335",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543369742",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543370047",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543367688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543376958",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940371089",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940380382",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543383290",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940388058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940407993",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7825986248",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826014475",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940460367",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826060615",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826077184",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826091420",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826135531",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543462171",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826188866",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543476734",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826281977",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543499544",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940564981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543519948",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826376964",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543530987",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543532812",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940611036",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543549247",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940638334",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543556189",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543556294",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826469146",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543567245",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543570463",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543577728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940672114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826535220",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543594455",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826571481",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5543605095",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826578531",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543620724",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826603789",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543628151",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543637538",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543645775",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826645161",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543659528",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543688536",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7826696777",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543713498",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543772501",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543799937",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543844580",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543845574",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543848579",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543863676",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543878170",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543892567",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543929786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5543952932",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544017381",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544055954",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544068675",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940797345",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940801860",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940863648",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827089141",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940889421",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827113798",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827137792",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940952203",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940958991",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940971156",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940990784",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3940997721",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544216600",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827428342",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827458145",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3941046619",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941045879",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941066989",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827526854",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941096361",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941095480",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941096659",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827617480",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941107706",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941130735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827706438",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941143556",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941152965",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544352091",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827766510",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827784122",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544406210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544408292",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827797130",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827805211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544453282",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544458192",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7827815329",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544481217",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544499548",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544530930",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544531045",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544544910",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544569521",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544571068",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544577919",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544574589",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544576469",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544586753",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544596853",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544605562",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544609462",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544620285",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544625193",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544646678",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544671970",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544680526",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544698977",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544718010",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941276176",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941318164",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941324903",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941339814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941346895",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7828307417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941391487",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941413347",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941422130",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7828381850",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941426058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941438675",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941446440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941454350",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941451826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941465086",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941466441",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941473672",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941479128",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941482957",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941491151",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941503376",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941503738",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941512263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941518872",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941541561",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941544869",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544945002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544955267",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941572394",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5544974440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545026162",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545053623",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941607718",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941613095",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545081257",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545082967",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545103810",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545109084",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545112719",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545143830",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545165781",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545172144",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545183649",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545200007",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545202443",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545210888",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545216254",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545218909",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545220475",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545229206",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545232785",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545238863",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545243579",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545250297",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545263529",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545268574",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545279856",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545303968",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545304698",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545319542",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545324797",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941621477",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545327550",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545338706",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545362099",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545365943",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545369962",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545370038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941646029",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829056461",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941740147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941747334",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941751004",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941759896",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941763434",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941768118",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941775123",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941779201",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941777950",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941791519",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941788514",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941790677",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545443213",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941798211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941801871",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941812186",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941810653",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941818458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941814933",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941816990",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941833079",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941828951",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829416265",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545470956",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941836941",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941845311",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545478062",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941862079",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941854071",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829475194",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941872290",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941881691",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941881973",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941891373",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941900360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941900608",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829569299",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3941913279",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941906958",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941915411",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941923479",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829606040",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941936184",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941937693",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941947394",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829682812",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941956916",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7829728933",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941969736",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545570010",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5545572124",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3941983715",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545592595",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545605641",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545612457",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942001074",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545621349",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545643845",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545643224",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545677597",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545680859",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545751262",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545778458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545811728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545826157",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545859595",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545883867",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545941504",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545945503",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545954754",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545954267",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545956329",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545965191",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545966620",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942092826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942099036",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5545999107",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546003965",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830146338",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546011828",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830166387",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942163810",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942167918",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942174395",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942170626",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830262777",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942186888",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546043770",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942199644",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942211814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942215874",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546060804",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546064108",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830400507",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942247103",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942243646",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942251263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546078762",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942255687",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942280168",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942276869",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942277048",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942289710",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942309897",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942318396",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546121363",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942337716",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942340782",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830655379",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830665469",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942350349",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3942354137",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546140395",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830671096",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942359474",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942367087",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546152688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830717732",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942371989",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830742090",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546170482",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942378030",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942383730",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942390350",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942392452",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830775863",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942389632",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942387886",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546200444",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7830797017",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546207248",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546210990",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546212971",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942399651",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942404534",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942403736",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942405035",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546229486",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546239395",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546248083",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546244609",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546262047",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546263209",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942416715",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546283269",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546301379",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942418723",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546317755",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546317244",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546327913",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546339703",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942420764",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546356244",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546354530",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546362895",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546394804",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546401678",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546403371",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546412328",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546415929",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546420459",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546438613",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546447903",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546467137",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546482066",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546483057",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546485031",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546509686",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546517016",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546531833",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546531970",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546531381",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546556342",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546578297",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546585045",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942485660",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3942487510",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942512039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942520670",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3942525398",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942525071",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942533497",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942533726",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942544705",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942553118",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831195602",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942562319",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942575831",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942618304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942615975",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831400145",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942638335",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942639432",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831431649",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942654251",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942655244",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831463012",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831475775",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942664800",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942667568",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942667621",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942673688",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3942673806",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546713735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942679896",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942686757",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831528312",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942699219",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942700562",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546726639",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546730417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942720499",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942724540",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942736252",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831635111",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942741002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942757293",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831732761",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942779270",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942784522",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942791187",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546811168",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831807032",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942799822",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546830416",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546833851",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942811369",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3942816417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546848568",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942810039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546852027",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942815740",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546856177",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546860228",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546864727",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546869901",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942825377",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942818844",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546870581",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546874290",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546876220",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546874233",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546874589",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546878452",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546880507",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546885089",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546895941",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546897128",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546899106",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831900195",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546911905",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546910851",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546912248",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546912856",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546911723",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546915891",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546915436",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546920227",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546924372",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7831911359",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546941041",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546946113",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546948318",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546948083",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546952591",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546960811",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546966955",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546964730",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546968573",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546973920",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546981210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546992859",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547000642",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5546995688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547010126",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547013369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547026860",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547035915",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547053833",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547057170",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547055320",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547073061",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547086165",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547089288",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547092621",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547118102",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547120556",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547126097",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547128626",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547141460",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547146113",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547155047",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547160885",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547162320",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547178818",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547176728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547196347",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547199002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942860916",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942869547",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5547218165",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7832020321",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7832029625",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942883005",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942892623",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7832059261",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7832068658",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7832120581",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942917926",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942928470",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942946162",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942944946",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942947488",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942961540",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3942960776",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836174039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836180851",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836198595",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836202776",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836212189",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836230207",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7836245181",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5551545106",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3946274416",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3947193861",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947444534",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947457576",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947609576",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947615372",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947632333",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5554219473",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3947670506",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5554490694",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3948041598",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5554830061",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5554855969",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948072222",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5554881244",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8205993590",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8206788858",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5555343352",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5555365210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5555378457",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948402065",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7845996388",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7846043237",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948473061",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7846082382",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948500180",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7846112317",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7846146747",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207040498",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207057804",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5555789533",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5555817002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5555830346",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948557378",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948578038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207422261",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207539604",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207620136",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948629335",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8207672786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948645494",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948655533",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948664739",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556057171",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556075575",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556090490",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847103529",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847115989",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556131867",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948924143",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948923591",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556157228",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556183038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948957101",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556218940",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948962333",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3948963625",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847287961",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847286136",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847289290",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556335493",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556359790",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556375300",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556377319",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556396086",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556403255",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556416259",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556419618",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556435360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556444880",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556449624",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556455051",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556472896",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556477114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556479612",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556489592",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556488734",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556503717",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556509324",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556515962",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556524353",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556537555",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556542963",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7847378668",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8208862882",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8208921486",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556581714",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8208947910",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8208987901",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209041926",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949041022",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209088126",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949048828",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209139169",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949059541",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949067316",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949078125",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949081593",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949098393",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949104270",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949113218",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949118704",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949127366",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949129426",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209702363",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556661428",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209743438",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556679940",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949192879",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949203959",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556697278",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556702500",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556720699",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556724842",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8209948980",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556736069",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556736095",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556735605",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556747462",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556748454",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556762643",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556765138",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556770244",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556777933",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7848104866",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949319405",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556807644",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556826162",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949375885",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556871564",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556886808",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556907539",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556940759",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5556944730",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557025011",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949443838",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949448538",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557127910",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557164529",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557166837",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8210296080",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557183240",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557200648",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557201326",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557205584",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557237793",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557240126",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557245353",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557247834",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8210429764",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557248610",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557253213",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8210485619",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557269451",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557276026",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557280038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557285668",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557303195",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557304979",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557304629",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557315362",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949488018",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949495948",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557321605",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949502411",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949509076",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949517563",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949530832",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7848666791",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3949555147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949557691",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3949563771",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949574692",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949578743",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949587078",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949593415",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949619358",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949634280",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949628037",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949639661",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7848996103",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7849018570",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3949719340",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949728153",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557447735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949750785",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7849199022",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949750050",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949760052",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557479145",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7849259333",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949796153",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557496058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949824077",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949835502",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557527092",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949850383",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949856095",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557549177",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557564923",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3949876453",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557598033",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3949894031",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557641876",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5557641462",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557666327",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557679544",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557681062",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557687809",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557703029",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557713058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557721195",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557734349",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557741960",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557745105",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557758148",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557762814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557773875",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557778941",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557787799",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557798869",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557808097",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557812824",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557826746",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557830154",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557835117",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557837653",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8211749013",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557855444",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557867263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557897162",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557906966",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557921062",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557943330",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557957914",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557958178",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557973167",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5557986191",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5557986446",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558001402",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558007541",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558009959",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558014932",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558015143",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558016360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558022081",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558021672",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558024599",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558025671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558029184",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558033794",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558046558",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558051893",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558050972",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558050435",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558052902",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558052481",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8212142351",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558058855",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558058426",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950003148",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558064136",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950017560",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558068987",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950024112",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558070399",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950033134",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558074912",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950028768",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950032540",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950042211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558079827",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950038747",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558080638",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950053170",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950051062",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950062417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950059828",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558094023",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950073570",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950075646",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950075799",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950081210",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950078549",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950083701",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558102625",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950097407",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558114811",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558120082",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558121403",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850114602",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850115153",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950132630",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7850147859",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950138518",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850204905",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950175132",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950178552",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850262408",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950194717",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950189069",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7850315174",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950208826",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950217211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950225597",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558188577",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950233751",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558191696",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950237902",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950244034",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950245050",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558200910",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558204156",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558212802",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950272821",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558226927",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558231075",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558244795",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558252081",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558254133",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558271164",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558275347",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850607017",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850623297",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558289279",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558317128",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850676458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558393812",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850704279",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558425445",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558439259",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558450942",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558454339",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558461257",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558465995",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558474650",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950369508",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558479722",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558492756",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558494378",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558500875",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558512417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558515503",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558515635",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558528146",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558532631",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558543785",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558547240",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558550958",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558554777",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558559162",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950368972",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558570276",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850743781",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558585293",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558588386",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558593599",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558599030",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558597417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850745916",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558620213",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558622860",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558624189",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558627550",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850749768",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558629683",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850754479",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558639155",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558643679",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558649325",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558655521",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558671378",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950378751",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558675062",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558677215",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558676715",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558680385",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558680397",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558693696",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558700039",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950394100",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558707296",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7850803314",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7850834059",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558741756",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950424227",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558744935",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950441588",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950447544",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950446682",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950453615",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950463479",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950486363",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558775761",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3950499816",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950515271",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950518263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950527670",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950526794",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558805763",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558812078",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950557394",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5558822790",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950581634",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950607339",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8213930926",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950610355",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950621470",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558856362",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950640170",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950641121",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950636036",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3950639674",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558861718",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950648222",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950651343",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950655716",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558870322",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7851399756",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3950661438",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558876454",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558877611",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950676735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950684380",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558887417",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558888388",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950680954",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558891766",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558893590",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950698939",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558909191",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950727312",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7851574480",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3950733689",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950740027",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950748819",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950766429",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950766668",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7851679304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950770777",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558985503",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950776730",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5558995120",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559008720",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559023006",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3950787913",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559031800",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950794602",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950793746",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950794729",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559039995",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950791032",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559049774",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559063658",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950804223",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559076049",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559088357",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559102411",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559104660",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950815211",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559166977",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559173722",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559209664",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950810403",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950808448",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559246972",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559253440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559258304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950814588",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559277719",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559306119",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559337905",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559341175",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559350061",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559355896",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559358393",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559363031",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8214256671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559375449",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559375671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559382049",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559389415",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8214306369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559398424",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950830482",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950829680",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559411389",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559417501",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559424311",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8214535150",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559431498",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7851970758",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559438128",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950881962",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559439796",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950889755",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559445973",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950910178",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5559451006",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5559449229",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950924553",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559457703",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559463866",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559465068",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3950982831",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559490366",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951001345",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951000829",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559501348",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951010181",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559513166",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852375918",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951066530",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951071597",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951072717",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951077405",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852451707",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951081917",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852462648",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951087671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951091919",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951102275",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951101775",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951106961",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951119328",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559577201",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951132261",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951133744",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951140521",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951149954",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951169649",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559625180",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559637308",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559641735",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559642288",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559649271",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852792369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852803245",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951217410",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951227338",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7852855807",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559724763",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559737432",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559766944",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559788980",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559792012",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559798846",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559799242",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559815724",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559831119",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559830434",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559842251",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559850387",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559850724",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559857764",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559861613",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559866741",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8215266388",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559876313",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559885574",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559898779",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559898345",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559901324",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559905757",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559934531",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559933703",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559936599",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559938586",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559954867",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559954321",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559954665",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559968338",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559974519",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559984891",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559984319",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559991649",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5559992712",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560003492",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560005278",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560018697",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560023632",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560027304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560030427",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560040893",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560047414",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560049861",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560059500",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560063227",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560064907",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560081235",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560097395",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560104072",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560117183",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560121389",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951300419",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560138465",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951318060",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7853227934",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951348884",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951360518",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7853300710",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951378231",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951386201",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560167243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951407661",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7853440418",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951425764",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951438432",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951441703",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951458384",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951458488",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951460462",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951467147",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951475153",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951478918",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951488611",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951498728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951498018",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560238525",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951508471",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951514504",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951518397",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951521699",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951541519",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560265298",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560272502",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951566590",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560281670",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951580772",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951585897",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951593136",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951598441",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560307494",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560316913",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951610490",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951620199",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560325787",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951623629",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560333671",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951631403",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951637369",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7853982206",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951639598",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951645634",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560369911",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951649774",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951654596",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854031497",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7854032502",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951658348",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951660428",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951666514",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854057112",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560393732",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560410314",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560412650",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854084166",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560428235",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951678371",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560442165",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560442161",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560453588",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560456862",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951685287",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560469796",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560469953",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560481339",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560488336",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560498813",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560506359",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560510710",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560513572",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951689387",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560526324",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560529341",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854134002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560543415",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951695139",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560557513",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560562825",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8216483313",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8216495029",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560602772",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8216505618",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560630770",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560626688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560636577",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560640697",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560655253",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560667970",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560673045",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560678189",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560684234",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560691626",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560696740",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560708072",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560706461",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560717786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560719270",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560721057",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560724832",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951700494",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560736214",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560744765",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560746316",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560768260",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8216709728",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951709394",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560773698",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560777276",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854189361",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951743194",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560815892",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854353606",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951770440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951795651",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217200992",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217260114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951806015",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951817589",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854487594",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951818623",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854489279",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5560849643",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854507370",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951833221",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217432949",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951840283",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951836989",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217452351",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560859337",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854564718",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951847667",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560868457",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217526347",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951860490",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951857024",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217611818",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854686798",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560900303",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951914135",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951915133",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854725440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560910345",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951920350",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854756167",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951928367",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951924965",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951933115",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951928499",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951932505",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560921259",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951929734",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560926854",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951940408",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951946294",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951942820",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951940957",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951951191",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951946997",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951947960",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560937136",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560941882",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951963950",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3951973552",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951977239",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951982215",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560957235",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951987083",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560968326",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7854930366",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3951998925",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952005983",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8217787575",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952013624",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5560984380",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855006886",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952035545",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952041252",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561005614",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952043332",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952043786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561024084",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855082157",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952057807",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952064399",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952063525",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855092174",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561026479",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855108850",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952072596",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952079202",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561041114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855136463",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952080458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855159682",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952088872",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855177695",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952103454",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855206073",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855206990",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952108805",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855235779",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561122872",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561133514",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561134683",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561171538",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561187685",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561197681",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561233025",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561239987",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561242818",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561257667",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561265274",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561275620",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561287384",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561302300",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561314651",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855313816",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218028608",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561324292",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561350032",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855316079",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561358842",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561359961",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561374030",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561378774",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561385345",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561393233",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561405919",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561409771",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561411448",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218157810",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561418499",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561421975",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561426126",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218194601",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561432965",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561434355",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561444078",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218230397",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561447710",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218277174",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561459571",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218278471",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952167585",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952181667",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218570911",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561522811",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561524811",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952201927",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218602857",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561522677",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218644410",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561529799",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561534897",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855544252",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561538058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952256856",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561541536",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8218879409",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855626488",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952271656",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "KR_8218958320",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952284042",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "KR_8218996415",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219036732",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219072008",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561573779",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855746958",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219146980",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561578360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855794096",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952365125",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561604639",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952364442",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952387714",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561648760",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952414708",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7855966977",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952424463",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952425651",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952430720",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5561665356",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561666347",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856010000",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952437821",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561673202",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952442486",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952451498",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952450837",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219467732",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561687535",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952461465",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7856069048",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856067333",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952458968",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561696254",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952476082",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952473621",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561703570",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856104465",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952483472",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952489807",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561721786",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856145751",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561725188",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856152001",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952503356",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856169725",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952502838",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952507455",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUN1_3952511537",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952511909",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561744171",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561743704",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856202227",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856211020",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561751989",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952530073",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952522981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952526436",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561759590",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952531834",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856242086",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856240259",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561770881",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952547243",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952543585",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952545609",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952542963",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561776408",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952549396",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952551632",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856288204",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561793915",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561795434",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952563199",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5561798097",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952564485",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952570231",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856347561",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561816745",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856346054",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856354636",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561820843",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952573778",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561823059",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561822375",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561826087",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856367603",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561827258",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856379677",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856378079",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856378976",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856378229",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561841424",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952591286",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561850360",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561852213",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856399137",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561857999",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856399404",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561861543",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856413832",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561870346",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561875052",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952605075",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5561878029",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952604399",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952599886",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561894561",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952605645",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856435229",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561912412",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952608534",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561922605",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561926982",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856452199",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952611942",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561954353",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856467860",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5561971428",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562010006",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562028508",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562041506",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562082892",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562089114",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562105263",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562105981",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562108318",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856488264",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219815867",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856496848",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562170470",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562171878",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562173934",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562179783",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562189031",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562194269",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8219983102",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562199316",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562203412",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562204703",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562208911",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562211755",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562216750",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562215523",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220053038",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562220545",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562223064",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562226345",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220090390",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562232579",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562237760",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220138276",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562240202",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220159999",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856547115",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562246600",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562247304",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856557565",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220205294",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562248469",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562248564",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562254738",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562255002",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220262641",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562258289",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856580330",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856584140",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562258625",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220290051",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856601295",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856605292",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220334546",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562269213",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220365881",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952691782",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220417219",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952706266",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562276925",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220459458",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562280806",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220514476",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220558537",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856722193",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562282547",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952730948",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856742869",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220621372",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220638485",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7856768297",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856801810",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856803713",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220708986",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952766759",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856807973",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952765985",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220775813",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562302370",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856848042",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562307968",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856870688",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "KR_8220829058",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856899017",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856896348",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "NA1_5562321515",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856959657",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7856962183",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7857003639",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952867528",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952871252",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7857064814",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7857094004",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952889089",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7857110792",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952897440",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952937698",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952948501",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUN1_3952962630",
+    "reason": "unsupported_queue"
+  },
+  {
+    "match_id": "EUW1_7972421220",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "NA1_5635277717",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7976526607",
+    "reason": "team_a roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7979652241",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  },
+  {
+    "match_id": "EUW1_7985406019",
+    "reason": "team_b roles must contain each canonical role exactly once"
+  }
+]

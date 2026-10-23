@@ -126,6 +126,7 @@ def _populate(
     extractor_version: str,
     existing: set[str] | None = None,
     commit_every: int | None = None,
+    ordered_source: bool = True,
 ) -> tuple[int, Counter[str], int]:
     inserted = 0
     issue_counts: Counter[str] = Counter()
@@ -133,7 +134,7 @@ def _populate(
     processed = 0
     pending: list[ExtractionResult] = []
     existing = existing or set()
-    for match_id, raw_json in iter_source_rows(source_path):
+    for match_id, raw_json in iter_source_rows(source_path, ordered=ordered_source):
         if match_id in existing:
             continue
         processed += 1
@@ -208,7 +209,7 @@ def _full_build(
             drop_secondary_indexes(conn)
             logger.info("Starting bulk extraction from %s", source_path)
             inserted, issues, unexplained = _populate(
-                source_path, conn, config.extractor_version
+                source_path, conn, config.extractor_version, ordered_source=False
             )
             logger.info("Bulk extraction complete; validating source snapshot")
             if source_snapshot(source_path) != _snapshot_from(fingerprint):
@@ -216,6 +217,8 @@ def _full_build(
             report = _report(fingerprint, inserted, issues, unexplained)
             logger.info("Creating analytical indexes")
             create_secondary_indexes(conn)
+            conn.execute("PRAGMA journal_mode=WAL")
+            conn.execute("PRAGMA synchronous=NORMAL")
             _write_metadata(conn, fingerprint, report, config, "full")
             logger.info("Temporary mart metadata written")
         if not report.quality_gate_passed:
@@ -224,6 +227,16 @@ def _full_build(
         logger.info("Revalidating source immediately before publication")
         if source_snapshot(source_path) != _snapshot_from(fingerprint):
             raise RuntimeError("operational source changed during analytics build")
+        for suffix in ("-wal", "-shm"):
+            temp_wal = Path(f"{temporary}{suffix}")
+            target_wal = Path(f"{target}{suffix}")
+            if temp_wal.exists():
+                os.replace(temp_wal, target_wal)
+            else:
+                try:
+                    target_wal.unlink()
+                except FileNotFoundError:
+                    pass
         logger.info("Publishing temporary mart to %s", target)
         os.replace(temporary, target)
         logger.info("Analytics mart publication complete")

@@ -5,7 +5,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import datetime as _dt
 import pytest
-import database
+from core import database
 
 
 def test_get_stale_puuids_empty_list(tmp_path):
@@ -38,7 +38,7 @@ def test_get_stale_puuids_old_record_is_stale(tmp_path):
     database.init_db(db)
     database.save_player("OLD_PUUID", "Name", "Tag", db_path=db)
     # Manually backdate
-    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
                      (old_date, "OLD_PUUID"))
@@ -55,7 +55,7 @@ def test_get_stale_puuids_mixed(tmp_path):
     database.save_player("FRESH", "Name", "Tag", db_path=db)
     # Stale player
     database.save_player("STALE", "Name", "Tag", db_path=db)
-    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?", (old_date, "STALE"))
     # Missing player — not inserted
@@ -70,7 +70,7 @@ def test_get_stale_puuids_threshold_boundary(tmp_path):
     database.init_db(db)
     database.save_player("BOUNDARY", "Name", "Tag", db_path=db)
     # Set to 3 days ago — well within 7-day window
-    recent = (_dt.datetime.utcnow() - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    recent = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
     with database.get_connection(db) as conn:
         conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
                      (recent, "BOUNDARY"))
@@ -85,15 +85,9 @@ def test_warmup_status_endpoint(tmp_path, monkeypatch):
     from app import app as flask_app
     from app import core as app_core
 
-    # Point the function defaults at a fresh, initialized tmp DB so the
-    # endpoint doesn't hit the dev DB (which may not be migrated/initialized
-    # in this test environment). The function's `db_path` default was
-    # captured at module-import time, so we have to patch __defaults__.
     db = str(tmp_path / "warmup_status.db")
     database.init_db(db)
-    monkeypatch.setattr(database, "DB_PATH", db)
-    # Replace the (stale_after_days, db_path) defaults to use the tmp DB.
-    monkeypatch.setattr(database.get_stale_puuids, "__defaults__", (7, db))
+    monkeypatch.setitem(flask_app.config, "NNRIOT_DB_PATH", db)
 
     # Mock the trainer so the app can boot
     monkeypatch.setattr(app_core, "global_trainer", MagicMock())
@@ -117,9 +111,14 @@ def test_warmup_status_endpoint(tmp_path, monkeypatch):
     assert set(data["stale_puuids"]) == {"p1", "p2"}
 
 
-def test_app_package_calls_init_db_at_create():
-    """The app package's create_app() should ensure DB is initialized."""
-    import inspect
-    import app as app_pkg
-    src = inspect.getsource(app_pkg)
-    assert "database.init_db()" in src
+def test_app_factory_initializes_selected_database(tmp_path):
+    """Creating an app initializes schema in the injected database."""
+    import sqlite3
+    from app import create_app
+
+    selected = tmp_path / "factory.db"
+    created = create_app({"TESTING": True, "NNRIOT_DB_PATH": str(selected)})
+    assert created.config["NNRIOT_DB_PATH"] == str(selected)
+    with sqlite3.connect(selected) as connection:
+        version = connection.execute("SELECT version FROM schema_version").fetchone()[0]
+    assert version == database.SCHEMA_VERSION

@@ -1,0 +1,1500 @@
+[
+  {
+    "model_id": "candidate_deepsets_v2",
+    "checkpoint": {
+      "path": "runs/candidate_deepsets_v2/model.keras",
+      "sha256": "38d850d89b29a6ee640993fadbf7b2496e994c7fd88b0a140792431640da6742"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players14.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        14
+      ],
+      "team_b": [
+        null,
+        5,
+        14
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "unknown",
+      "source_db": null,
+      "bounds_ms": null,
+      "split_manifest_sha256": null
+    },
+    "calibration": {
+      "path": "runs/candidate_deepsets_v2/model.calibration.json",
+      "sha256": "7bf5bb120e722a2c07147452350f19b0b8f915298b02ef21466a1d659a1a7d50"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "No checkpoint-bound training split artifact; training bounds unknown",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@19:27:37"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_deepsets_v3",
+    "checkpoint": {
+      "path": "runs/candidate_deepsets_v3/model.keras",
+      "sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players14.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        14
+      ],
+      "team_b": [
+        null,
+        5,
+        14
+      ],
+      "macro_clash": [
+        null,
+        15
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "unknown",
+      "source_db": null,
+      "bounds_ms": null,
+      "split_manifest_sha256": null
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "No checkpoint-bound training split artifact; training bounds unknown",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-27@10:40:33"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_deepsets_v4_compiled_gpu",
+    "checkpoint": {
+      "path": "runs/candidate_deepsets_v4_compiled_gpu/model.keras",
+      "sha256": "6e8414314b1831426a038f794e10331ac6212aa64a3596d1588a33a2a477113b"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players18.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        18
+      ],
+      "team_b": [
+        null,
+        5,
+        18
+      ],
+      "macro_clash": [
+        null,
+        15
+      ]
+    },
+    "outputs": [
+      "draft_advantage",
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "/root/data/training_data.db",
+      "bounds_ms": {
+        "train": {
+          "count": 17500,
+          "min_ms": 1774677478411,
+          "max_ms": 1776544607680
+        },
+        "validation": {
+          "count": 3750,
+          "min_ms": 1776544610864,
+          "max_ms": 1776777034949
+        },
+        "test": {
+          "count": 3750,
+          "min_ms": 1776777039266,
+          "max_ms": 1777004350834
+        }
+      },
+      "split_manifest_sha256": "eda184cfdbee8a186c028857ec3bdec9fb5bcbf32decaa58c89d8ae7c8f29bc1",
+      "dataset_sha256": "f98f92481e59113237e2e45b44c96f01c1383b307fc710159d324475a8332082"
+    },
+    "calibration": {
+      "path": "runs/candidate_deepsets_v4_compiled_gpu/model.calibration.json",
+      "sha256": "42f479595f60365731b90faca746ba437a6cf8fe14ac2bd11f5fdead98a6c46e"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-10-04@18:37:23"
+    },
+    "has_directional_side_bias": true
+  },
+  {
+    "model_id": "candidate_deepsets_v4_timeline",
+    "checkpoint": {
+      "path": "runs/candidate_deepsets_v4_timeline/model.keras",
+      "sha256": "c52b429be8e7cbf7ac15cca67ff3956093e4779ecb4b6bdf9ff5b68738ca97d8"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players18.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        18
+      ],
+      "team_b": [
+        null,
+        5,
+        18
+      ],
+      "macro_clash": [
+        null,
+        15
+      ]
+    },
+    "outputs": [
+      "draft_advantage",
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\training_data.db",
+      "bounds_ms": {
+        "train": {
+          "count": 8400,
+          "min_ms": 1774467008542,
+          "max_ms": 1776007196728
+        },
+        "validation": {
+          "count": 1800,
+          "min_ms": 1776007256619,
+          "max_ms": 1776139838828
+        },
+        "test": {
+          "count": 1800,
+          "min_ms": 1776139949791,
+          "max_ms": 1776261942670
+        }
+      },
+      "split_manifest_sha256": "dc0385c2c54db034e0a30d9e029f0964882be7be29db468041eac1612db01981",
+      "dataset_sha256": "a9ee7493506488b24b6f4cac036d38863e5acd23aa77c2b2b13be375c7b03c65"
+    },
+    "calibration": {
+      "path": "runs/candidate_deepsets_v4_timeline/model.calibration.json",
+      "sha256": "4e1bd4f867a93dd707bbfa6c6ed57a3bfc5ae86b5a1e3a8dce177e789b7698f0"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-10-04@14:41:41"
+    },
+    "has_directional_side_bias": true
+  },
+  {
+    "model_id": "candidate_deepsets_v4_timeline_gpu",
+    "checkpoint": {
+      "path": "runs/candidate_deepsets_v4_timeline_gpu/model.keras",
+      "sha256": "7dd06fe8533b779e917162ef40cca34106f67b0bd419963347c22c0e93ad95df"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players18.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        18
+      ],
+      "team_b": [
+        null,
+        5,
+        18
+      ],
+      "macro_clash": [
+        null,
+        15
+      ]
+    },
+    "outputs": [
+      "draft_advantage",
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "/root/data/training_data.db",
+      "bounds_ms": {
+        "train": {
+          "count": 17500,
+          "min_ms": 1774677478411,
+          "max_ms": 1776544607680
+        },
+        "validation": {
+          "count": 3750,
+          "min_ms": 1776544610864,
+          "max_ms": 1776777034949
+        },
+        "test": {
+          "count": 3750,
+          "min_ms": 1776777039266,
+          "max_ms": 1777004350834
+        }
+      },
+      "split_manifest_sha256": "eda184cfdbee8a186c028857ec3bdec9fb5bcbf32decaa58c89d8ae7c8f29bc1",
+      "dataset_sha256": "f98f92481e59113237e2e45b44c96f01c1383b307fc710159d324475a8332082"
+    },
+    "calibration": {
+      "path": "runs/candidate_deepsets_v4_timeline_gpu/model.calibration.json",
+      "sha256": "824e15f0daf795f6253535cba62eb404b3d52898608f7c8fabdec56a592c47af"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-10-04@17:44:18"
+    },
+    "has_directional_side_bias": true
+  },
+  {
+    "model_id": "candidate_equivariant_iter1",
+    "checkpoint": {
+      "path": "runs/candidate_equivariant_iter1/model.keras",
+      "sha256": "6c7165e5f1bdc4e02fc5b3ba25ac613a6c623565931c0604d16847e2de6c058d"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 14000,
+          "min_ms": 1774677478411,
+          "max_ms": 1776407684518
+        },
+        "validation": {
+          "count": 3000,
+          "min_ms": 1776407868347,
+          "max_ms": 1776529901370
+        },
+        "test": {
+          "count": 3000,
+          "min_ms": 1776530018584,
+          "max_ms": 1776691507803
+        }
+      },
+      "split_manifest_sha256": "27f596e9567dc7320409cd16532da08091dda6cd07d7cfd1c41620ab4cc54f61",
+      "dataset_sha256": "95b9d06a161611445553b16bec1b9378d32d1e07693a15e49eaf11e795c5b199"
+    },
+    "calibration": {
+      "path": "runs/candidate_equivariant_iter1/model.calibration.json",
+      "sha256": "7f2fca351d62d3548c2ee4efd53f365f4430d9b750182743656e675331ce7d45"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@11:44:29"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_equivariant_iter2",
+    "checkpoint": {
+      "path": "runs/candidate_equivariant_iter2/model.keras",
+      "sha256": "9aed13eb90a67ae53ab2ebb5f0189f2d61147877a3cffd7f59d4b9349941695b"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 31500,
+          "min_ms": 1774677478411,
+          "max_ms": 1778267903757
+        },
+        "validation": {
+          "count": 6750,
+          "min_ms": 1778268028027,
+          "max_ms": 1778476307175
+        },
+        "test": {
+          "count": 6750,
+          "min_ms": 1778476331517,
+          "max_ms": 1778605723869
+        }
+      },
+      "split_manifest_sha256": "4d450851852a7e73ff2e91bf61521b11ad34e1e2bb66fe989460aaad774f2844",
+      "dataset_sha256": "553c8ac3ccd466acb7babe1869e9dfd6636dc60729473b86f34df9bac0776f18"
+    },
+    "calibration": {
+      "path": "runs/candidate_equivariant_iter2/model.calibration.json",
+      "sha256": "298f027936787ccaf236991931c9dcf7df27bbbc69e7acccff12b1fe619e881c"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@12:03:17"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_equivariant_iter3",
+    "checkpoint": {
+      "path": "runs/candidate_equivariant_iter3/model.keras",
+      "sha256": "9b25c8540116ffbe8029d208a184a44641f7f805b6af00b472d1a6d5647d9b9d"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 56000,
+          "min_ms": 1775740726308,
+          "max_ms": 1778950254445
+        },
+        "validation": {
+          "count": 12000,
+          "min_ms": 1778950269476,
+          "max_ms": 1788785257808
+        },
+        "test": {
+          "count": 12000,
+          "min_ms": 1788785275212,
+          "max_ms": 1789068675805
+        }
+      },
+      "split_manifest_sha256": "68b82a97dc06ff5b2bccd15281ca86f30969bace78a476f68f1ff8ffbd875f5f",
+      "dataset_sha256": "8255e0219d8029ce1c72207e988c807e8954532380c4b6a78b40036862e97840"
+    },
+    "calibration": {
+      "path": "runs/candidate_equivariant_iter3/model.calibration.json",
+      "sha256": "22a5ac1af15813ea2df39c3a55f53332a259d1ed92608b5ebe433936f20b7ef2"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@13:25:42"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_max",
+    "checkpoint": {
+      "path": "runs/candidate_max/candidate.keras",
+      "sha256": "1a16c10d9e3fd5b057c2f10c74f959b932dbc832e4fc66df0671e8e02deeb2a4"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        203
+      ]
+    },
+    "outputs": [
+      "winner"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 126000,
+          "min_ms": 1774677478411,
+          "max_ms": 1789524322132
+        },
+        "validation": {
+          "count": 27000,
+          "min_ms": 1789524327028,
+          "max_ms": 1789858233066
+        },
+        "test": {
+          "count": 27000,
+          "min_ms": 1789858245688,
+          "max_ms": 1790178096573
+        }
+      },
+      "split_manifest_sha256": "345e0b4fe2ced7600a898402fde60225e16cb8636228b01803df9ac6047a819d",
+      "dataset_sha256": "12efbc2d18e1b477a20ebb92fd76d90873c73b3d6dd51d81374c7ffde3830b3d"
+    },
+    "calibration": {
+      "path": "runs/candidate_max/candidate.calibration.json",
+      "sha256": "d5b9ad4f2704638d9cba44d936ef475af4244161faee68214c575d4f77b760b5"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@00:28:01"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_production",
+    "checkpoint": {
+      "path": "runs/candidate_production/candidate.keras",
+      "sha256": "5469538d567eee5c31ab9280958923528feb8ace1b24b43fe71f371af76f0f15"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        203
+      ]
+    },
+    "outputs": [
+      "winner"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 14000,
+          "min_ms": 1774677478411,
+          "max_ms": 1776407684518
+        },
+        "validation": {
+          "count": 3000,
+          "min_ms": 1776407868347,
+          "max_ms": 1776529901370
+        },
+        "test": {
+          "count": 3000,
+          "min_ms": 1776530018584,
+          "max_ms": 1776691507803
+        }
+      },
+      "split_manifest_sha256": "27f596e9567dc7320409cd16532da08091dda6cd07d7cfd1c41620ab4cc54f61",
+      "dataset_sha256": "95b9d06a161611445553b16bec1b9378d32d1e07693a15e49eaf11e795c5b199"
+    },
+    "calibration": {
+      "path": "runs/candidate_production/candidate.calibration.json",
+      "sha256": "b7636af78df1999195300fa6aa3b3b58a2d185ab25c9ff06c6f0844ff2cdcbb8"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-25@23:21:52"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_selective_prod",
+    "checkpoint": {
+      "path": "runs/candidate_selective_prod/model.keras",
+      "sha256": "d6b0b50c485fee0d37095ea68e666f9b005bf841f098564fc5a22e4338befa2d"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 31500,
+          "min_ms": 1774677478411,
+          "max_ms": 1778267903757
+        },
+        "validation": {
+          "count": 6750,
+          "min_ms": 1778268028027,
+          "max_ms": 1778476307175
+        },
+        "test": {
+          "count": 6750,
+          "min_ms": 1778476331517,
+          "max_ms": 1778605723869
+        }
+      },
+      "split_manifest_sha256": "4d450851852a7e73ff2e91bf61521b11ad34e1e2bb66fe989460aaad774f2844",
+      "dataset_sha256": "553c8ac3ccd466acb7babe1869e9dfd6636dc60729473b86f34df9bac0776f18"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@16:28:34"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "candidate_v3_enriched",
+    "checkpoint": {
+      "path": "runs/candidate_v3_enriched/candidate.keras",
+      "sha256": "13e7405830d635a89d30a5e18874683cfe0abe95ff47cc36702a0d09b1de6050"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        203
+      ]
+    },
+    "outputs": [
+      "winner"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 3500,
+          "min_ms": 1774346016861,
+          "max_ms": 1775176866315
+        },
+        "validation": {
+          "count": 750,
+          "min_ms": 1775177198891,
+          "max_ms": 1775395797674
+        },
+        "test": {
+          "count": 750,
+          "min_ms": 1775395847814,
+          "max_ms": 1775514653567
+        }
+      },
+      "split_manifest_sha256": "a5339bde69471a195edd03a19da49225f40c9d0a81c994e214bf057efb64eb18",
+      "dataset_sha256": "816a6f530b9834af74bcd5d29656ae9d111da174ac3343cc49b418ea3aedc45e"
+    },
+    "calibration": {
+      "path": "runs/candidate_v3_enriched/candidate.calibration.json",
+      "sha256": "484f75cf152fe62000219f547d83cfbed0130c322506c5f52ffbfe82bc0f741b"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-25@22:52:55"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "gpu_validation_20260927_133413",
+    "checkpoint": {
+      "path": "runs/gpu_validation_20260927_133413/model.keras",
+      "sha256": "100b6bfd88ee3f9820cc9116278e5021fc0500df45326fa7df2e540fe2efad3c"
+    },
+    "kind": "keras",
+    "feature_contract": "nnriot.players14.v1",
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        14
+      ],
+      "team_b": [
+        null,
+        5,
+        14
+      ],
+      "macro_clash": [
+        null,
+        15
+      ]
+    },
+    "outputs": [
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": null,
+      "bounds_ms": {
+        "train": {
+          "count": 512,
+          "min_ms": 1774677478411,
+          "max_ms": 1774755669197
+        },
+        "validation": {
+          "count": 128,
+          "min_ms": 1778268028027,
+          "max_ms": 1778272681737
+        },
+        "test": {
+          "count": 128,
+          "min_ms": 1778476331517,
+          "max_ms": 1778480595152
+        }
+      },
+      "split_manifest_sha256": "4ed649556f735f8297e87992ef45d11079792e9fbf15d8fa8ae17b7e5dd0d423",
+      "dataset_sha256": null
+    },
+    "calibration": {
+      "path": "runs/gpu_validation_20260927_133413/model.calibration.json",
+      "sha256": "4113996e49e915b5a35ed027065a9f42b1741d5b8c711edd192c95c75a5a1406"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-27@13:53:10"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pilot_deepsets",
+    "checkpoint": {
+      "path": "runs/pilot_deepsets/model.keras",
+      "sha256": "3af54c89c0c0928449887b2ea7dd962c84043daa7927284bc2b5f498b87bff7e"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+      "bounds_ms": {
+        "train": {
+          "count": 70,
+          "min_ms": 1788915194487,
+          "max_ms": 1788917499298
+        },
+        "validation": {
+          "count": 15,
+          "min_ms": 1788917518522,
+          "max_ms": 1788917933698
+        },
+        "test": {
+          "count": 15,
+          "min_ms": 1788917938511,
+          "max_ms": 1788918292850
+        }
+      },
+      "split_manifest_sha256": "9473a93dd437257b673b41a08d520e5e79b5b7b66df6e119c429e87ccfccb8fa",
+      "dataset_sha256": "56d6ff06eaf737dbb504cff19f27368f6202a1b3b07563de6f27fe33f5216a9f"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@11:10:19"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pilot_test_iter1",
+    "checkpoint": {
+      "path": "runs/pilot_test_iter1/model.keras",
+      "sha256": "c4b4633922ef8f76117e2416ded566c408ce8ade7daf10cf39f7351eacbfd3a3"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        8
+      ],
+      "team_b": [
+        null,
+        5,
+        8
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 350,
+          "min_ms": 1762623345806,
+          "max_ms": 1773368400420
+        },
+        "validation": {
+          "count": 75,
+          "min_ms": 1773369156554,
+          "max_ms": 1773691250422
+        },
+        "test": {
+          "count": 75,
+          "min_ms": 1773693336423,
+          "max_ms": 1773878712110
+        }
+      },
+      "split_manifest_sha256": "fd43c26483b6c52473db024b14dd3e672b7f2a6073ed3ba69652baa427ebe7c9",
+      "dataset_sha256": "0de1dca90d7bde2486ae265000ac63b613c3f70ff8b695b3d07d6ea419ad2f15"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-26@11:41:07"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pilot_v2_draft",
+    "checkpoint": {
+      "path": "runs/pilot_v2_draft/candidate.keras",
+      "sha256": "684f50dd402ca8713258eb069faf6a661f498658e28009f09b32d625384f4fe6"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        1870
+      ]
+    },
+    "outputs": [
+      "winner"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 3500,
+          "min_ms": 1790188079696,
+          "max_ms": 1790219398674
+        },
+        "validation": {
+          "count": 750,
+          "min_ms": 1790219429331,
+          "max_ms": 1790227135425
+        },
+        "test": {
+          "count": 750,
+          "min_ms": 1790227140684,
+          "max_ms": 1790258787690
+        }
+      },
+      "split_manifest_sha256": "3abcbf7207ccfa033e09b888a7db2b0fab715b1b9d35272d0d6d735447d96967",
+      "dataset_sha256": "5bc0a22dcf7d051eea2f26861411e495ee8ba7180a6cf3752cfd909c719f9f8f"
+    },
+    "calibration": {
+      "path": "runs/pilot_v2_draft/candidate.calibration.json",
+      "sha256": "28a676bcbd026f543873c9d5e072d3a34eed9b5404122fc26aea8ad31cd42e59"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-25@21:07:51"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pre_match_10k_15epochs_20260923_211035",
+    "checkpoint": {
+      "path": "runs/pre_match_10k_15epochs_20260923_211035/model.keras",
+      "sha256": "f1bfb75fe0167f6f2b07478321f485d9467a81080d127bff9cb1504cd370f9d6"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        20000
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "kill_handicap",
+      "total_kills",
+      "team_a_kills",
+      "team_b_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+      "bounds_ms": {
+        "train": {
+          "count": 7000,
+          "min_ms": 1789962654790,
+          "max_ms": 1790110422691
+        },
+        "validation": {
+          "count": 1500,
+          "min_ms": 1790110444002,
+          "max_ms": 1790128810280
+        },
+        "test": {
+          "count": 1500,
+          "min_ms": 1790128832370,
+          "max_ms": 1790180743383
+        }
+      },
+      "split_manifest_sha256": "dfebf8af404cb9e55a2524271b61827dd495f564250a0a305c161dab1952cd65",
+      "dataset_sha256": "e178c61f142f37939508dae0d57c4c7e6896f5fcc3dca8b7d2847864ceb41d7c"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-23@21:14:36"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pre_match_calibrated_20260925_145600",
+    "checkpoint": {
+      "path": "runs/pre_match_calibrated_20260925_145600/model.keras",
+      "sha256": "cbcd5c58450fdb899835ccf41b8cdd3a28dd467b3208c7c6f28990b9aebf52f5"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        20000
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "kill_handicap",
+      "total_kills",
+      "team_a_kills",
+      "team_b_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+      "bounds_ms": {
+        "train": {
+          "count": 7000,
+          "min_ms": 1790120567287,
+          "max_ms": 1790206712844
+        },
+        "validation": {
+          "count": 1500,
+          "min_ms": 1790206713848,
+          "max_ms": 1790219398674
+        },
+        "test": {
+          "count": 1500,
+          "min_ms": 1790219429331,
+          "max_ms": 1790258787690
+        }
+      },
+      "split_manifest_sha256": "4b1d8d4d27c4c2beed7349487e10d24afa93d8a0d73fe8ecba928567cf0c92c4",
+      "dataset_sha256": "5de7c01f031eeb51fcccff9ae28e0196fbd8bd0b736ceeeecc7dd6d4bb1c46c2"
+    },
+    "calibration": {
+      "path": "runs/pre_match_calibrated_20260925_145600/model.calibration.json",
+      "sha256": "b200c507e10afb0846951c60c73444e1e65ff945de9355b2a6040a6c9e3f6234"
+    },
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-25@14:59:40"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "pre_match_pilot_20260923_210401",
+    "checkpoint": {
+      "path": "runs/pre_match_pilot_20260923_210401/model.keras",
+      "sha256": "06265145e7676f6f9a1b2cd21c0e82d2195d377b711f5b2053d43387b3df94fd"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "Input": [
+        null,
+        20000
+      ]
+    },
+    "outputs": [
+      "winner",
+      "team_b_kill_lead",
+      "first_blood",
+      "first_baron",
+      "first_inhibitor",
+      "first_tower",
+      "first_to_5_kills",
+      "first_to_10_kills",
+      "first_to_15_kills",
+      "first_to_20_kills",
+      "kills_odd",
+      "both_baron",
+      "both_inhibitor",
+      "both_dragon",
+      "elder_dragon",
+      "kill_handicap",
+      "total_kills",
+      "team_a_kills",
+      "team_b_kills",
+      "total_barons",
+      "total_dragons",
+      "total_towers"
+    ],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+      "bounds_ms": {
+        "train": {
+          "count": 700,
+          "min_ms": 1790134916023,
+          "max_ms": 1790147807640
+        },
+        "validation": {
+          "count": 150,
+          "min_ms": 1790147837653,
+          "max_ms": 1790166669183
+        },
+        "test": {
+          "count": 150,
+          "min_ms": 1790166821193,
+          "max_ms": 1790180743383
+        }
+      },
+      "split_manifest_sha256": "4ef1f39b02c90cd4d55044d3cfb21a684d82082b83d56cf9e04227a507c75330",
+      "dataset_sha256": "c04ccf4546007aa4ab4fd445f32c27baf57908e664d958fea57ef030a7092859"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Legacy input representation has no audited serving contract; excluded explicitly",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+      "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-09-23@21:04:46"
+    },
+    "has_directional_side_bias": false
+  },
+  {
+    "model_id": "spatial_deepsets_anti_overfit",
+    "checkpoint": {
+      "path": "runs/spatial_deepsets_anti_overfit/model.keras",
+      "sha256": "bc27bb73b9d0e8b070e764f32f8968ae825d433e77f50beb0618a1365f6b492b"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        46
+      ],
+      "team_b": [
+        null,
+        5,
+        46
+      ]
+    },
+    "outputs": [
+      "draft_advantage",
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "unknown",
+      "source_db": null,
+      "bounds_ms": null,
+      "split_manifest_sha256": null
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Spatial RNN encoder training bounds/hash and historical embedding generation provenance absent; 46D disabled",
+      "No checkpoint-bound training split artifact; training bounds unknown",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-10-06@19:57:48"
+    },
+    "has_directional_side_bias": true
+  },
+  {
+    "model_id": "spatial_deepsets_run1",
+    "checkpoint": {
+      "path": "runs/spatial_deepsets_run1/model.keras",
+      "sha256": "ad9cdd3bc1c4c6a3e9da29ed99ce6c6b82f419da4e1156995a383abb1d1df11f"
+    },
+    "kind": "keras",
+    "feature_contract": null,
+    "input_shapes": {
+      "team_a": [
+        null,
+        5,
+        46
+      ],
+      "team_b": [
+        null,
+        5,
+        46
+      ]
+    },
+    "outputs": [
+      "draft_advantage",
+      "winner",
+      "winner_uncertainty",
+      "team_b_kill_lead",
+      "kill_handicap",
+      "team_a_kills",
+      "team_b_kills",
+      "total_kills",
+      "first_blood"
+    ],
+    "training": {
+      "status": "unknown",
+      "source_db": null,
+      "bounds_ms": null,
+      "split_manifest_sha256": null
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Spatial RNN encoder training bounds/hash and historical embedding generation provenance absent; 46D disabled",
+      "No checkpoint-bound training split artifact; training bounds unknown",
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ],
+    "saved_metadata": {
+      "keras_version": "3.15.1",
+      "date_saved": "2026-10-06@18:57:55"
+    },
+    "has_directional_side_bias": true
+  },
+  {
+    "model_id": "tree_baseline",
+    "checkpoint": {
+      "path": "runs/pre_match_calibrated_20260925_145600/tree_baseline/model.joblib",
+      "sha256": "6d2b4fb1250d678df6812ba9f0506a035721d75ec015c30f53e67b6b97dc60c9"
+    },
+    "kind": "tree",
+    "feature_contract": "legacy.tree24.v1",
+    "input_shapes": null,
+    "outputs": [],
+    "training": {
+      "status": "split_membership_recorded_training_semantics_unverified",
+      "source_db": null,
+      "bounds_ms": {
+        "train": {
+          "count": 7000,
+          "min_ms": 1790120567287,
+          "max_ms": 1790206712844
+        },
+        "validation": {
+          "count": 1500,
+          "min_ms": 1790206713848,
+          "max_ms": 1790219398674
+        },
+        "test": {
+          "count": 1500,
+          "min_ms": 1790219429331,
+          "max_ms": 1790258787690
+        }
+      },
+      "split_manifest_sha256": "498182da45f81382aed92ad5f8a21b4a65ad8cd7e4598bca534fcda9dfb27779",
+      "dataset_sha256": "5de7c01f031eeb51fcccff9ae28e0196fbd8bd0b736ceeeecc7dd6d4bb1c46c2"
+    },
+    "calibration": null,
+    "independent_test_eligible": false,
+    "limitations": [
+      "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+    ]
+  }
+]

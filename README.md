@@ -1,446 +1,330 @@
 # NNriot
 
-[![CI](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml/badge.svg)](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/downloads/)
-[![Framework: TensorFlow 2.x](https://img.shields.io/badge/Framework-TensorFlow%202.x-orange.svg)](https://www.tensorflow.org/)
+[![Continuous Integration](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml/badge.svg)](https://github.com/ktubi970/NNriot/actions/workflows/ci.yml)
+[![Playwright Tests](https://github.com/ktubi970/NNriot/actions/workflows/playwright.yml/badge.svg)](https://github.com/ktubi970/NNriot/actions/workflows/playwright.yml)
+[![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Schema](https://img.shields.io/badge/sqlite%20schema-v15-blueviolet.svg)](core/database.py)
 
-A pure Python machine learning system for processing JSON data and predicting outcomes. NNriot demonstrates a sophisticated approach to handling variable-structure JSON inputs for machine learning tasks using feature hashing and deep neural networks.
+**NNriot** is a League of Legends competitive match collection, analytical mining, and deep learning platform. It combines automated Riot API match and timeline collection into SQLite, equivariant and Siamese DeepSets neural networks for pre-match draft and outcome forecasting, an anti-symmetric draft combat engine decoupled from Summoner's Rift map bias, a selective classification decision layer (Chow's rule), and a Flask REST API with a React cockpit and existing Jinja pages.
 
-## Overview
+> **Not included in this repository:** SQLite databases (`training_data.db`, `analytics.db`), model checkpoints (`*.keras`, `*.joblib`) and bulky generated run data (datasets, predictions, source snapshots) are excluded by `.gitignore`. A fresh clone can run the test suites, build the cockpit and start the web app, but predictions require a local checkpoint and its manifest, and collection requires your own Riot API key. Committed `runs/` folders keep only reports, metrics, protocols and split manifests.
 
-NNriot is a pure Python system designed to handle arbitrary JSON structures and learn from them to make predictions on new, potentially different JSON schemas. The system uses feature hashing for efficient vectorization and TensorFlow for neural network operations.
+## Project Status
 
-## Architecture
+**Served model (9 October 2026):** The fixed default is `runs/candidate_deepsets_v3/model.keras` (not distributed), a legacy 14D reference with unknown checkpoint-bound training dates, no calibration and no separate draft/side-bias heads. It is not validated for actionable serving; the service returns raw probabilities, explicitly null calibrated probabilities and abstention. Modern architecture capabilities below describe source code and experiments, not an automatic upgrade of saved checkpoints. See [the serving contract and reproducible common-cohort comparison](docs/model_serving/README.md), [the reference manifest](docs/model_serving/reference.manifest.json), [the actual comparable results](runs/served_model_comparison_20261009_complete/report.md) and [tests and verification](docs/model_serving/verification.md).
 
-### Core Components
+**Frontend (9 October 2026):** React/Vite, npm configuration and Playwright tooling have been restored to their original paths. Flask serves the redesigned, responsive cockpit at `/`, with the Jinja dashboard available at `/dashboard`. The interface starts with an empty draft, distinguishes raw and calibrated probabilities, shows conviction, threshold and abstention, and never substitutes demonstration predictions or player statistics when an API fails. Dialogs support keyboard navigation, focus restoration and reduced motion. The original source snapshot remains in [`archive/frontend-2026-10-09/`](archive/frontend-2026-10-09/ARCHIVE.md). Live/OCR imports are explicitly unavailable until backed by real endpoints.
 
-- **Standalone Layer**: High-performance match prediction without external model dependencies (`final_web_app.py`)
-- **Neural Engine**: TensorFlow 1.x deep learning for pattern recognition (`main.py`, `continuous_trainer.py`)
-- **Match Explorer**: Interactive dashboard for match history and detailed player statistics
-- **Custom Predictor**: 5v5 lineup simulator with searchable players and champions
-- **Continuous Training**: Automated pipeline for periodic model updates on new data
-- **JSON Vectorization**: Feature hashing for converting arbitrary JSON to vectors (`json_utils.py`)
-- **Riot API Integration**: Real-time data collection (`riot_api.py`, `data_collector.py`)
+---
 
-### Data Processing Pipeline
+## Key Capabilities
 
-1. **JSON Vectorization** (`json_utils.py`): Converts arbitrary JSON structures into fixed-size vectors using feature hashing
-2. **Neural Network** (`main.py`): TensorFlow 1.x compatibility implementation with residual blocks
-3. **Standalone Interface** (`final_web_app.py`): Optimized web application for real-time predictions
+- **Equivariant & Siamese DeepSets Networks**: Permutation-invariant player pooling across team rosters (`TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY`), Sinkhorn matchup cross-attention, and skew-symmetric bilinear forms.
+- **Draft Combat Engine vs. Arena Bias Decoupling**: Pure composition counter-synergy ($s_{\text{draft}}$ via `draft_advantage`) is mathematically guaranteed to be strictly anti-symmetric ($s(A, B) = -s(B, A)$, yielding exactly 50/50 on mirror or balanced drafts). Empirical map bias ($b_{\text{side}}$ via `DirectionalSideBias`) is decoupled to reflect real-world match outcomes (the 52.5% value is an initialization prior for modern models, not a measured claim about this cohort or the legacy reference).
+- **Multi-Scale Feature Spaces**:
+  - **14-dim Base Priors**: Historical Bayesian player priors with explicit cold defaults, static champion profiles, and neutral legacy lane-matchup features under the served v1 contract.
+  - **18-dim Early-Game Timeline Priors**: Objective gold differential (GD@15), CS differential (CSD@15), XP differential (XPD@15), and first blood involvement (FBI@10).
+  - **46-dim Spatio-Temporal Trajectories**: Experimental recurrent embeddings of player positioning from a fixed, untrained GRU projection whose weights are committed in `core/assets/spatial_encoder_v1.json`; every stored embedding records its `encoder_id`. Serving and the common comparison still reject these candidates until embedding availability provenance is established.
+- **Multi-Task Optimization with PCGrad**: Multi-objective training balancing primary heads (`winner`, `team_b_kill_lead`, `kill_handicap`) and auxiliary heads (`match_duration`, `first_blood_team`) by projecting conflicting gradients.
+- **Selective Classification (Chow's Rule)**: Conviction-based decision framework with measured risk diagnostics providing conviction scoring $C = |P - 0.5|$, Wilson score confidence intervals, and three-tier actionability gating (`Tier 1: High Conviction`, `Tier 2: Leaning`, `Tier 3: Abstain`).
+- **Prediction Facade**: Thread-safe `PredictionService` validating model manifests and feature compatibility, exposing raw/calibrated winner probabilities, and forcing abstention without calibration and independent validation. Legacy leave-one-player-out credits are diagnostic; the service does not silently activate ensemble weights.
+- **Data Engineering & Analytics Mart**: Schema v15 SQLite database with WAL mode and transaction isolation, high-throughput Riot crawler, timeline backfilling, and a separate retrospective analytics evidence mart.
 
-## Features
+---
 
-- **Standalone Mode**: Efficient predictions without heavy dependencies like TensorFlow
-- **Residual Networks**: Deep learning architecture with skip connections (available in Neural Engine mode)
-- **High Performance**: Optimized for low-latency match outcome analysis
-- **Production-ready**: Includes dependency management, error handling, and comprehensive testing
+## Architectural & Mathematical Foundations
 
-### Explainable Analytics
+### 1. Invariance, Anti-Symmetry & Side Advantage Decoupling
 
-NNriot includes a separate, rebuildable `analytics.db` mart and a French chat
-interface at `/analytics`. It reports retrospective gameplay associations with
-sample sizes, confidence intervals, corrected q-values, robustness checks and
-traceable evidence IDs. Regional comparisons are adjusted by patch; causal,
-timeline and unsupported team claims are explicitly refused.
+Following the formal architecture conventions in [`AGENTS.md`](AGENTS.md):
+
+1. **Anti-Symmetric Draft Evaluation ($s_{\text{draft}}$)**:
+   The interaction between team compositions $T_A$ and $T_B$ satisfies strict anti-symmetry:
+   $$s_{\text{draft}}(T_B, T_A) = -s_{\text{draft}}(T_A, T_B)$$
+   For a mirror match ($T_A = T_B$), $s_{\text{draft}} = 0$, guaranteeing $P_{\text{draft}} = [0.50, 0.50]$ by construction via the dedicated `draft_advantage` head.
+2. **Arena Side Advantage ($b_{\text{side}}$)**:
+   On Summoner's Rift, the Blue side exhibits an empirical advantage (~51–53% winrate) due to camera perspective, baron/dragon pit geometry, and first-pick priority. This map bias is decoupled from composition analysis via a trainable additive layer:
+   $$s_{\text{match}} = s_{\text{draft}} + b_{\text{side}}$$
+   The `winner` head outputs the side-aware match outcome probability ($P(\text{Blue}) \approx 52.5\%$ on neutral drafts), while `draft_advantage` preserves pure draft analytics.
+3. **Intra-Team Permutation Invariance**:
+   Roster order within each team is canonicalized by role (`TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY`) and pooled through symmetric DeepSets layers invariant to arbitrary player sequencing.
+
+```mermaid
+flowchart TD
+    subgraph Inputs["Team Inputs (14, 18, or 46 dim per player)"]
+        TB["Team Blue (5, D)"]
+        TR["Team Red (5, D)"]
+        MC["Optional Macro Clash (15,)"]
+    end
+
+    subgraph SiameseDraftEngine["Siamese Draft Engine"]
+        STE["SiameseTeamEncoder"]
+        SSB["SkewSymmetricBilinearDense (M = W - W^T)"]
+        Sinkhorn["Sinkhorn Lane Cross-Attention"]
+        SDraft["s_draft (Strictly Anti-Symmetric)"]
+    end
+
+    subgraph DualHeads["Dual Output Heads"]
+        DA["draft_advantage Head<br/>(Pure 50/50 on mirror)"]
+        SBias["DirectionalSideBias (b_side)"]
+        SMatch["s_match = s_draft + b_side"]
+        Winner["winner Head<br/>(Side-Aware Match Outcome)"]
+    end
+
+    TB --> STE
+    TR --> STE
+    STE --> SSB
+    STE --> Sinkhorn
+    SSB --> SDraft
+    Sinkhorn --> SDraft
+    MC --> SDraft
+
+    SDraft --> DA
+    SDraft --> SBias
+    SBias --> SMatch
+    SMatch --> Winner
+```
+
+---
+
+## Setup & Installation
+
+### Requirements
+- **Python**: Python 3.11+ (recommended: **Python 3.12**; CI runs 3.11 and 3.12)
+- **Node.js**: Node 18+ and npm for React/Vite development and builds
+- **Operating System**: Windows (native CPU) or Linux / Windows WSL2 (with NVIDIA GPU for accelerated training)
+
+### 1. Environment Setup
+
+From the repository root:
+
+```powershell
+# Create and activate virtual environment
+python -m venv .venv312
+.\.venv312\Scripts\Activate.ps1
+
+# Install Python dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Install frontend dependencies and build assets
+npm ci
+npm run build
+```
+
+### 2. Configuration (`.env`)
+
+Copy `.env.example` to `.env` and set your credentials:
 
 ```bash
-python -m analytics --source training_data.db --analytics analytics.db build
-python -m analytics --source training_data.db --analytics analytics.db health
-python run.py
+cp .env.example .env
 ```
 
-See [the Analytics operating guide](docs/analytics.md) for supported questions,
-thresholds, model evaluation, benchmark commands and limitations.
+Key environment variables:
+- `RIOT_API_KEY`: Personal or production Riot Games API key (required for collection).
+- `NNRIOT_DB_PATH`: Path to source SQLite database (defaults to `training_data.db`).
+- `NNRIOT_ANALYTICS_DB_PATH`: Path to analytics database (defaults to `analytics.db`).
+- `NNRIOT_CHECKPOINT_PATH`: Explicit checkpoint (default `runs/candidate_deepsets_v3/model.keras`; no automatic fallback).
+- `NNRIOT_MODEL_MANIFEST_PATH`: Matching hashed manifest (default `docs/model_serving/reference.manifest.json` for v3).
+- `HOST` and `PORT`: Web application host and port (defaults: `127.0.0.1:5000`).
+- `NNRIOT_FETCH_TIMELINES`: Set to `1` to download match timelines during collection.
 
-## Use Cases
+---
 
-- **JSON Risk Assessment**: Classifying JSON payloads as "safe" or "alert"
-- **Gaming Analytics**: League of Legends match outcome prediction via Riot API integration
-- **General JSON Classification**: Any scenario requiring ML on variable-structure JSON data
+## Running NNriot
 
-## Installation
+### Web Application
 
-### Prerequisites
+Start the web application with the configured database:
 
-- Python 3.8+
-- Riot API key (for gaming features)
+```powershell
+# Production / Local Flask Server
+python cli.py web
 
-### Setup
+# With explicit database path
+python cli.py web --db runs/active.db
+```
 
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd NNriot
+Flask serves the React cockpit when `static/dist/index.html` exists. For frontend development, start Flask as above, then run Vite in a second terminal (API requests are proxied to port 5000):
+
+```powershell
+npm run dev
+```
+
+The launcher also supports `start.bat build`, `start.bat dev` and `start.bat test`. The default browser suite (`npm run test:e2e`) starts an isolated Vite server and mocks API responses; it does not start Flask, collection or training. It covers desktop, tablet and mobile with reduced motion. Use `npm run typecheck` for frontend types and `npm run test:unit` for the API adapter contract. The earlier cockpit tests remain available through `npm run test:e2e:legacy`; they include demonstration assertions, manual training and an old external screenshot path, so review them before opting in.
+
+### Unified CLI Commands
+
+```powershell
+# 1. Train an evaluated pre-match candidate model
+python cli.py train --samples 5000 --epochs 5 --batch-size 64 --feature-version v3_enriched --split-strategy chronological --calibrate
+
+# 2. Benchmark statistical signal in draft features
+python cli.py benchmark-signal --samples 10000 --feature-version v3_enriched
+
+# 3. Continuous online training loop
+python cli.py train-continuous
+
+# 4. Backfill missing labels in database
+python cli.py backfill
+```
+
+---
+
+## Advanced Training & Pipelines
+
+### Flagship Neural Pipelines
+
+1. **DeepSets v4 with 18-dim Timeline Priors & PCGrad** (Experimental):
+   ```powershell
+   python scripts/train_deepsets_v4_timeline.py --db runs/active.db --epochs 10 --batch-size 64 --output-dir runs/candidate_deepsets_v4_timeline
+   ```
+   Trains on 18-dim timeline-augmented tensors (GD@15, CSD@15, XPD@15, FBI@10) and 15-dim macro clash features using projected conflicting gradients.
+
+2. **DeepSets v3 (14-dim Base Priors)**:
+   ```powershell
+   python scripts/train_deepsets_v3.py --epochs 10 --batch-size 64 --output-dir runs/candidate_deepsets_v3
    ```
 
-2. Install Python dependencies:
-   ```bash
-   pip install -r requirements.txt
+3. **Spatial Trajectory Embeddings (46-dim)**:
+   ```powershell
+   python scripts/compute_spatial_embeddings.py --db runs/active.db
+   python scripts/train_spatial_deepsets.py --epochs 10 --batch-size 64
+   ```
+   Embeddings come from the pinned encoder only. The script refuses to append to a database that holds embeddings from other or unknown encoder weights (all rows written before schema v15); `--recompute-all` deletes and recomputes every stored embedding. Live collection skips embeddings in that case, and training reads only rows of the pinned `encoder_id`. Outputs are reproducible up to float round-off, which can vary with batch size and hardware.
+
+4. **Tree Baselines & Ensembling**:
+   ```powershell
+   python scripts/train_tree_baseline.py --db runs/active.db --output-dir runs/tree_baseline
+   python scripts/evaluate_ensemble.py --nn-model runs/candidate_deepsets_v4_timeline/model.keras --tree-model runs/tree_baseline/model.joblib
    ```
 
-3. Set up environment variables:
-   ```bash
-   # Copy the example environment file
-   cp .env.example .env
-   
-   # Edit .env with your Riot API key
-   # RIOT_API_KEY=your_api_key_here
-   ```
+### GPU Training via WSL2
 
-## Usage
+NVIDIA CUDA training is orchestrated through a dedicated WSL2 distribution (`NNriot-GPU`), keeping data in the Windows host while running TensorFlow with CUDA on Linux. See [`docs/gpu_training.md`](docs/gpu_training.md) for full instructions.
 
-### Basic JSON Classification
+```powershell
+# Verify GPU availability and matrix multiplication
+.\scripts\train_gpu.ps1 -Check
 
-```python
-import tensorflow.compat.v1 as tf
-import numpy as np
-import json_utils
-import plotly.graph_objects as go
-
-# Disable eager execution for TF 1.x graph mode
-tf.disable_eager_execution()
-
-# Define training data
-json_inputs = [
-    {"type": "login", "details": {"success": True, "attempts": 1}},
-    {"type": "purchase", "amount": 50.0, "items": ["book", "pen"]},
-    {"type": "login", "details": {"success": False, "attempts": 3}},
-    {"type": "refund", "amount": 20.0, "reason": "damaged"}
-]
-
-# Define labels (binary classification)
-y_data = np.array([[1.0, 0.0], [1.0, 0.0], [0.0, 1.0], [0.5, 0.5]], dtype=np.float32)
-
-# Vectorize JSON inputs
-VECTOR_DIM = 20000
-x_data = json_utils.json_to_vector(json_inputs, dim=VECTOR_DIM)
-
-# Create TensorFlow session and define network
-sess = tf.Session()
-
-# Define neural network architecture
-x = tf.placeholder(tf.float32, shape=[None, 10000], name="Input")
-y = tf.placeholder(tf.float32, shape=[None, 2], name="Label")
-
-# [Network definition code here...]
-
-# Initialize variables
-sess.run(tf.global_variables_initializer())
-
-# Train the network
-losses = []
-for epoch in range(1000):
-    _, loss_val = sess.run([train_op, loss], feed_dict={x: x_data, y: y_data})
-    losses.append(loss_val)
-
-# Predict on new JSON
-test_json = {"type": "login", "details": {"success": False, "attempts": 10}, "ip": "192.168.1.1"}
-test_vec = json_utils.json_to_vector(test_json, dim=VECTOR_DIM)
-prediction = sess.run(pred, feed_dict={x: test_vec})
-print(f"Risk Prediction: {prediction[0][0]:.4f}")
+# Train DeepSets v4 on GPU
+.\scripts\train_gpu.ps1 -Script scripts/train_deepsets_v4_timeline.py -TrainingArgs @(
+  '--output-dir', 'runs/candidate_deepsets_v4_gpu',
+  '--epochs', '10',
+  '--batch-size', '64'
+)
 ```
 
-### Quick Start
+### Match Collection & Timeline Extraction
 
-For a complete working example, simply run:
-```bash
-python main.py
+```powershell
+# High-throughput multi-region crawler
+python scripts/crawler_1m.py
+
+# Extract & backfill 15-minute timelines from Riot API
+python scripts/backfill_timelines.py --db runs/active.db --duration-hours 4
 ```
 
-This will demonstrate:
-- JSON feature training
-- Loss visualization (saved to `loss_plot.html`)
-- Prediction on unseen JSON structures
+---
 
-### League of Legends Analytics
+## Data & Analytics
 
-```python
-from data_collector import collect_training_data
-from riot_api import get_player_summary, get_matchup_data
+### SQLite Database (Schema v15)
+- **WAL Mode**: Write-Ahead Logging enabled for concurrent reader performance.
+- **Point-in-Time Bayesian Priors**: Streaming loader prevents lookahead data leakage by accumulating player history chronologically up to match time.
+- **Participant Indexing**: Fast indexed queries over `match_participants` and compressed timeline blobs.
+- **Database Merges**: Use `python scripts/merge_databases.py` to consolidate databases safely without duplicate rows or index corruption (see [`docs/database_merge.md`](docs/database_merge.md)). The merger accepts schema v15 inputs only (migrate a copy of older databases first); the target wins crawl-queue conflicts and source spatial embeddings are archived, never imported.
 
-# Collect training data from Riot API
-seed_players = [
-    ("Hide on bush", "KR1"),
-    ("Chovy", "KR1"),
-    ("T1 Gumayusi", "KR1")
-]
-collect_training_data(seed_players, matches_per_player=10)
+### Retrospective Analytics Evidence Mart
+The analytics mart extracts post-match associations, meta snapshots, and champion performance profiles into an isolated database:
 
-# Get player statistics
-faker_stats = get_player_summary("Hide on bush", "KR1", match_count=5)
-print(faker_stats)
+```powershell
+# Build analytics evidence mart
+python -m analytics build
 
-# Compare team matchups
-team_a = [("Player1", "Tag1"), ("Player2", "Tag2")]
-team_b = [("Player3", "Tag3"), ("Player4", "Tag4")]
-matchup = get_matchup_data(team_a, team_b)
+# Check analytics mart health
+python -m analytics health
 ```
+See [`docs/analytics.md`](docs/analytics.md) for details on query capabilities and limitations.
+
+---
 
 ## Project Structure
 
-```
+```text
 NNriot/
-├── final_web_app.py        # Main web interface with Explorer and Predictor
-├── continuous_trainer.py   # Automated 10min training loop
-├── calculate_stats.py      # Historical player performance calculator
-├── main.py                 # Neural engine demonstration
-├── json_utils.py           # JSON vectorization utilities
-├── generate_graph.py       # Neural network architecture definition
-├── data_collector.py       # Riot API data collection
-├── database.py            # SQLite database management with schema migrations
-├── riot_api.py            # Riot Games API integration
-├── templates/             # HTML templates (Explorer, Predictor)
-├── requirements.txt       # Core dependencies
-├── web_requirements.txt   # Web interface dependencies
-├── PROJECT_SUMMARY.md     # Detailed project documentation
-└── .env                   # Environment variables
+├── app/                  # Flask REST API, route handlers, and application factory
+│   ├── routes/           # REST endpoints (api.py, explorer, spectator, monitor)
+│   └── services/         # Application-level services
+├── core/                 # Core domain logic, models, and data access
+│   ├── collection/       # Crawler queue, ingestor, tracker, and Riot API service
+│   ├── features/         # Strategy pattern feature extractors (static_meta, matchup, pipeline)
+│   ├── deepsets_layers.py# DeepSets pooling, Siamese encoders, DirectionalSideBias
+│   ├── equivariant_model.py# Anti-symmetric model architecture and custom layers
+│   ├── pcgrad.py         # PCGrad multi-task gradient surgery
+│   ├── selective_classification.py # Chow's rule, Wilson intervals, abstention logic
+│   ├── selective_infer.py# Actionability tiers (Tier 1, Tier 2, Tier 3)
+│   ├── prediction_service.py # Production PredictionService Facade
+│   ├── database.py       # SQLite connection manager, schema v15 migrations
+│   └── point_in_time_dataset.py # Leakage-free chronologically streaming dataset
+├── frontend/             # Restored React/TypeScript cockpit and styles
+├── e2e/                  # Restored Playwright browser tests
+├── archive/
+│   └── frontend-2026-10-09/ # Original source snapshot and restoration history
+├── runs/                 # Experiment reports, metrics and split manifests (bulky data git-ignored)
+├── scripts/              # Training, collection, benchmarking, and maintenance scripts
+│   ├── train_deepsets_v4_timeline.py # Flagship 18-dim PCGrad training pipeline
+│   ├── train_deepsets_v3.py          # 14-dim DeepSets training pipeline
+│   ├── train_gpu.ps1                 # WSL2 CUDA training orchestrator
+│   ├── backfill_timelines.py         # Timeline extraction and backfilling
+│   ├── crawler_1m.py                 # Multi-region high-scale crawler
+│   └── merge_databases.py            # SQLite database consolidation tool
+├── analytics/            # Retrospective analytics mart engine and CLI
+├── docs/                 # Architecture specifications, plans, and guides
+│   ├── gpu_training.md               # Windows/WSL2 CUDA setup guide
+│   ├── pre_match_training.md         # Pre-match validation and split protocol
+│   ├── analytics.md                  # Analytics evidence mart documentation
+│   └── database_merge.md             # Multi-database consolidation runbook
+└── tests/                # Unit & integration tests; executed scope in docs/model_serving/verification.md
 ```
 
-## Neural Network Architecture
+---
 
-The network uses a TensorFlow 1.x graph-based architecture with the following structure:
+## Testing & Quality Assurance
 
-1. **Input Layer**: 20,000 features from JSON vectorization
-2. **Projection**: Dense layer (20,000 → 1,024) with ReLU activation
-3. **Residual Blocks**: Two residual blocks (1,024 → 1,024) with skip connections
-4. **Bottleneck**: Dense layers (1,024 → 512 → 128) with ReLU activation
-5. **Output**: Dense layer (128 → 2) with softmax activation for binary classification
+NNriot enforces strict regression testing for all invariants, equivariance constraints, and pipeline changes.
 
-## JSON Vectorization
+```powershell
+# Run the complete Python test suite
+pytest tests/
 
-The system uses enhanced feature engineering to convert arbitrary JSON structures into fixed-size vectors:
+# Run targeted Equivariance, Symmetry, and Layer tests
+pytest tests/test_equivariant_model.py tests/test_deepsets_layers.py
 
-### Enhanced Features
+# Run timeline features and PCGrad tests
+pytest tests/test_train_deepsets_v4_timeline.py tests/test_pcgrad.py
 
-1. **Smart Flattening**: Recursive flattening with depth control and path preservation
-2. **Advanced Feature Encoding**: Multiple encodings per key-value pair:
-   - Path-based features (`path:key.subkey`)
-   - Type-based features (`type:int`, `type:str`)
-   - Hash-based features for categorical values
-3. **Value Normalization**: 
-   - Log transformation for large numbers
-   - String length normalization
-   - Boolean to numeric conversion
-4. **Feature Combinations**: Interaction features between related attributes
-5. **N-gram Features**: Multi-level key path combinations
-6. **L2 Normalization**: Unit vector normalization for better ML performance
+# Run selective classification and inference tests
+pytest tests/test_selective_classification.py tests/test_selective_infer.py
 
-### Key Improvements
-
-- **Richer Representation**: Multiple feature encodings capture different aspects
-- **Better Generalization**: Feature combinations improve model learning
-- **Sparsity Control**: Configurable sparsity for memory optimization
-- **Data Type Handling**: Advanced normalization for mixed data types
-- **Feature Importance**: Built-in analysis for feature selection
-
-### Usage Examples - League of Legends Match Data
-
-```python
-import json_utils
-
-# League of Legends match data
-lol_match = {
-    "match_id": "EUW1_1234567890",
-    "game_mode": "CLASSIC",
-    "game_duration": 1850,
-    "participants": [
-        {
-            "summoner_name": "Hide on bush",
-            "champion_name": "Kaisa",
-            "team_id": 100,
-            "win": True,
-            "kills": 18,
-            "deaths": 2,
-            "assists": 12,
-            "gold_earned": 18500,
-            "cs": 245,
-            "role": "CARRY",
-            "items": [3085, 3005, 3035, 3086, 3006, 3153]
-        }
-    ],
-    "teams": [
-        {"team_id": 100, "win": True, "dragon_kills": 3, "baron_kills": 1}
-    ]
-}
-
-# Basic usage (backward compatible)
-vectors = json_utils.json_to_vector(lol_match, dim=10000)
-
-# Enhanced features for better ML performance
-vectors = json_utils.enhanced_json_to_vector(
-    lol_match, 
-    dim=10000,
-    feature_combinations=True,
-    n_grams=3,
-    sparsity_threshold=0.01
-)
-
-# Sparse representation for memory optimization
-sparse_vectors = json_utils.create_sparse_vector(
-    lol_match, 
-    dim=10000, 
-    sparsity=0.05
-)
-
-# Feature importance analysis
-importance = json_utils.get_feature_importance(lol_match, dim=10000)
-
-# Compare multiple matches
-match_data = [match1, match2, match3]
-enhanced_vectors = json_utils.enhanced_json_to_vector(match_data, dim=10000)
+# Verify frontend types, API contracts and isolated browser behavior
+npm run typecheck
+npm run test:unit
+npm run test:e2e
 ```
 
-## Performance Considerations
+---
 
-- **Memory Efficiency**: Feature hashing allows handling high-dimensional sparse data
-- **Generalization**: Network can handle JSON schemas not seen during training
-- **Pure Python**: No compilation required, easier deployment
-- **Scalability**: SQLite database supports large training datasets
+## Contributing & Security
 
-## Contributing
+See [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) and [.github/SECURITY.md](.github/SECURITY.md).
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
+Licensed under [MIT](LICENSE).
 
-## License
+## Legal
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+NNriot isn't endorsed by Riot Games and doesn't reflect the views or opinions of Riot Games or anyone officially involved in producing or managing Riot Games properties. Riot Games, and all associated properties are trademarks or registered trademarks of Riot Games, Inc.
 
-## Dependencies
-
-### Python
-- tensorflow
-- numpy
-- requests
-- python-dotenv
-- plotly (for visualization)
-
-## Troubleshooting
-
-### API Issues
-- Verify Riot API key in `.env` file
-- Check rate limits for API calls
-- Ensure proper region configuration in `riot_api.py`
-
-### Runtime Issues
-- Check TensorFlow version compatibility
-- Ensure all dependencies are installed
-- Verify environment variables are set correctly
-
-## Testing
-
-Run comprehensive component tests:
-```bash
-python test_components.py
-```
-
-This tests all components independently:
-- JSON utilities
-- Database functionality
-- TensorFlow operations
-- Plotly visualization
-- NumPy operations
-- Riot API integration
-
-## Examples
-
-See the `main.py` file for a complete working example that demonstrates:
-- JSON feature training
-- Loss visualization (saved to `loss_plot.html`)
-- Prediction on unseen JSON structures
-
-## Neural Network Visualization
-
-The `plot_graph.py` module provides interactive visualization of the neural network architecture:
-
-```bash
-# Create network architecture visualization
-python plot_graph.py
-```
-
-### Generated Visualizations
-
-- **nn_architecture.html**: Complete network architecture with all layers and connections
-- **Layer-specific views**: Detailed views of individual layers (input, projection, output)
-- **Interactive features**: Hover information, color-coded layers, responsive design
-
-### Visualization Features
-
-- **Interactive Network Graph**: Shows all layers and connections
-- **Layer Details**: Neuron-level detail for key layers
-- **Connection Types**: Different visual styles for dense, residual, and skip connections
-- **Data Flow**: Demonstrates how JSON data flows through the network
-- **Educational**: Helps understand the architecture and data processing pipeline
-
-### Integration with Training
-
-The visualization can be integrated with actual training data to show:
-- How JSON features are processed
-- Data flow through each layer
-- Feature dimensionality reduction
-- Final classification output
-
-## Web Interface for Match Outcome Prediction
-
-A comprehensive Flask-based web application is available for League of Legends match outcome prediction:
-
-### 🚀 Quick Start
-
-1. **Install Web Dependencies**
-   ```bash
-   pip install -r web_requirements.txt
-   ```
-
-2. **Run the Standalone Web Server**
-   ```bash
-   python final_web_app.py
-   ```
-
-3. **Access the Interface**
-   Open your browser and navigate to `http://localhost:5000`
-
-### 🎯 Features
-
-- **Real-time Prediction**: Instant match outcome predictions using enhanced JSON vectorization
-- **Interactive Interface**: Beautiful, responsive web interface with real-time feedback
-- **Model Training**: Train the neural network with custom match data
-- **API Endpoints**: RESTful API for programmatic access
-- **Professional Theme**: League of Legends-inspired dark theme
-
-### 📊 Web Interface Components
-
-1. **Match Explorer**: Historical match records with detailed player KDA, Gold, and Vision stats.
-2. **Custom Match Predictor**: Searchable 5v5 simulator using historical player averages and champion data.
-3. **Global Navigation**: Seamless switching between modules via a sticky navigation panel.
-4. **Real-time Results**: Live probability bars and confidence indicators.
-5. **Model Training**: Train the neural network with custom match data.
-
-### 🔌 API Endpoints
-
-- **GET /api/status**: Check model status and system information
-- **POST /api/predict**: Predict match outcome from JSON data
-- **POST /api/train**: Train model with new match data
-- **GET /api/sample-match**: Get sample match structure for reference
-
-### 🎨 User Interface Features
-
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
-- **JSON Editor**: Built-in JSON validation and formatting
-- **Loading States**: Animated spinners and progress indicators
-- **Error Handling**: Comprehensive error messages and validation
-- **Professional Styling**: Dark theme with League of Legends-inspired colors
-
-## Community & Governance
-
-- **Contributing**: Contributions are welcome! Please read [.github/CONTRIBUTING.md](.github/CONTRIBUTING.md) before submitting pull requests.
-- **Security Policy**: For reporting security vulnerabilities, please refer to [.github/SECURITY.md](.github/SECURITY.md).
-- **Issue Templates**: Use our standard [Bug Report](.github/ISSUE_TEMPLATE/bug_report.md) or [Feature Request](.github/ISSUE_TEMPLATE/feature_request.md) templates when filing issues.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
+Match data is collected through the [Riot Games API](https://developer.riotgames.com/) and is subject to the [Riot Developer Portal policies](https://developer.riotgames.com/policies/general). Use your own API key and never commit it.

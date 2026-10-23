@@ -1,0 +1,43 @@
+{
+  "outcome": "completed",
+  "error": null,
+  "auth_failed": false,
+  "stop_reason": [],
+  "elapsed_seconds": 2869.97,
+  "before": {
+    "matches": 116966,
+    "training_dataset": 108703,
+    "match_participants": 1220844,
+    "match_timelines": 116966
+  },
+  "after": {
+    "matches": 117966,
+    "training_dataset": 109703,
+    "match_participants": 1230844,
+    "match_timelines": 117966
+  },
+  "delta": {
+    "matches": 1000,
+    "training_dataset": 1000,
+    "match_participants": 10000,
+    "match_timelines": 1000
+  },
+  "validation": {
+    "new_matches": 1000,
+    "training_records": 1000,
+    "participants": 10000,
+    "timelines_nonnull": 1000,
+    "spatial_rows": 10000,
+    "missing_training": [],
+    "missing_timelines": [],
+    "invalid_participant_count": []
+  },
+  "service_result": {
+    "matches_saved": 1000,
+    "records_saved": 1000,
+    "timelines_saved": 1000,
+    "embeddings_computed": 1000,
+    "skipped": 391,
+    "errors": 0
+  }
+}

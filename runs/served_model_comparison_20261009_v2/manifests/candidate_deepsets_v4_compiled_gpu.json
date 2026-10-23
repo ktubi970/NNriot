@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "model_id": "candidate_deepsets_v4_compiled_gpu",
+  "checkpoint": {
+    "path": "runs/candidate_deepsets_v4_compiled_gpu/model.keras",
+    "sha256": "6e8414314b1831426a038f794e10331ac6212aa64a3596d1588a33a2a477113b"
+  },
+  "feature_contract": "nnriot.players18.v1",
+  "feature_semantics_status": "layout_verified_training_semantics_unverified",
+  "training": {
+    "status": "split_membership_recorded_training_semantics_unverified",
+    "source_db": "/root/data/training_data.db",
+    "bounds_ms": {
+      "train": {
+        "count": 17500,
+        "min_ms": 1774677478411,
+        "max_ms": 1776544607680
+      },
+      "validation": {
+        "count": 3750,
+        "min_ms": 1776544610864,
+        "max_ms": 1776777034949
+      },
+      "test": {
+        "count": 3750,
+        "min_ms": 1776777039266,
+        "max_ms": 1777004350834
+      }
+    },
+    "split_manifest_sha256": "eda184cfdbee8a186c028857ec3bdec9fb5bcbf32decaa58c89d8ae7c8f29bc1",
+    "dataset_sha256": "f98f92481e59113237e2e45b44c96f01c1383b307fc710159d324475a8332082"
+  },
+  "calibration": {
+    "path": "runs/candidate_deepsets_v4_compiled_gpu/model.calibration.json",
+    "sha256": "42f479595f60365731b90faca746ba437a6cf8fe14ac2bd11f5fdead98a6c46e"
+  },
+  "output_heads": [
+    "draft_advantage",
+    "winner",
+    "winner_uncertainty",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "team_a_kills",
+    "team_b_kills",
+    "total_kills",
+    "first_blood"
+  ],
+  "has_directional_side_bias": true,
+  "decision_policy": {
+    "action_threshold": 0.04,
+    "high_threshold": 0.08,
+    "origin": "existing defaults; not validated risk guarantees"
+  },
+  "limitations": [
+    "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+  ]
+}

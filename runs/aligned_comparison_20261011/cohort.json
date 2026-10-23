@@ -1,0 +1,31 @@
+{
+  "source_rows": 61000,
+  "source_first_utc": "2026-05-12T22:14:31.581000+00:00",
+  "source_last_utc": "2026-10-11T10:22:30.047000+00:00",
+  "splits": {
+    "train": {
+      "count": 44184,
+      "first_utc": "2026-05-15T12:33:01.128000+00:00",
+      "last_utc": "2026-09-16T09:10:27.228000+00:00"
+    },
+    "validation": {
+      "count": 3000,
+      "first_utc": "2026-09-16T09:23:43.534000+00:00",
+      "last_utc": "2026-09-16T20:52:22.051000+00:00"
+    },
+    "test": {
+      "count": 1344,
+      "first_utc": "2026-09-27T10:30:38.497000+00:00",
+      "last_utc": "2026-10-11T10:22:30.047000+00:00"
+    }
+  },
+  "exclusions": {
+    "unsupported_queue": 350,
+    "team_a roles must contain each canonical role exactly once": 9,
+    "team_b roles must contain each canonical role exactly once": 12,
+    "previous_test": 2000,
+    "timeline_unavailable_in_audit": 14,
+    "result_not_available_at_partition_start": 87
+  },
+  "temporal_purge_count": 87
+}

@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "model_id": "candidate_deepsets_v3",
+  "checkpoint": {
+    "path": "runs/candidate_deepsets_v3/model.keras",
+    "sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f"
+  },
+  "runtime_feature_sources": {
+    "core/features/pipeline.py": "a40732951bf01be398c90e7dbaf5c14813ae135255f30a4a839919939a33e1bb",
+    "core/player_priors.py": "70c69331fde832ac140a0db1f04a57bbccf1cb9d7b505404c44116a425e2f3b6",
+    "core/champion_registry.py": "19c43cb95ba831f660b4443c6e0046be0d7962468da58316d9f699f9e535c598",
+    "core/features/static_meta.py": "3433bd64cd2d15c96f3d96368d370c1c0219e68aa6e10ba7477b72c582bfa332",
+    "core/features/draft_composition.py": "1a926af7b1dc74b8524a94fcf7107ad45a99474113ed7f5f02298acd528a4848",
+    "core/pre_match_history.py": "13d1af481b5c7b12b8aedf09af03beabb1cb9a2e3e01051987abb375f20af597",
+    "core/features/matchup_matrix.py": "7123897bca24f1cd8e8896e28945e79039342ba191ec30da890ab4b59447dc0b",
+    "core/pre_match_dataset.py": "d68bd5242a26aa3ba67994da62ee00e4f1ac462a40bf882255b27cfef664cae5",
+    "core/deepsets_layers.py": "90b7612c1d77406bb35776e43cf2c26b396ebce941ad59266faef842a5c1b1e5",
+    "core/equivariant_model.py": "d3e82ccb0d98dd91493529767ebd66ea1523911da111336d023475d79addd60d",
+    "core/draft_features.py": "ec86a9d571615bd6fb6d6911cd5d2703dc0ff74def72e5e310f871f96a54b784",
+    "core/features/timeline_metrics.py": "61c47b0337ca3762a2fe0385d2032a3c8f04c6b7c8b9b85de42ac7e30f4f30f8",
+    "core/point_in_time_dataset.py": "5e18e30745ecd8b441500e4b9a97747619cec88cfbb72f7adc6c85ce2e110dbf",
+    "core/json_utils.py": "80e62fe9b6a22f8dc5af14cd39039c1cd2f9c85954123fc1d20da93d754136d6",
+    "core/collection/regions.py": "ceecc5bbff7925a172dff02d0df46a928f673799b578ce0aa76f4603120bd8d5"
+  },
+  "feature_contract": "nnriot.players14.v1",
+  "feature_semantics_status": "layout_verified_training_semantics_unverified",
+  "training": {
+    "status": "unknown",
+    "source_db": null,
+    "bounds_ms": null,
+    "split_manifest_sha256": null
+  },
+  "calibration": null,
+  "output_heads": [
+    "winner",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "team_a_kills",
+    "team_b_kills",
+    "total_kills",
+    "total_barons",
+    "total_dragons",
+    "total_towers",
+    "kills_odd",
+    "both_baron",
+    "both_inhibitor",
+    "both_dragon",
+    "elder_dragon",
+    "first_blood",
+    "first_baron",
+    "first_inhibitor",
+    "first_tower",
+    "first_to_5_kills",
+    "first_to_10_kills",
+    "first_to_15_kills",
+    "first_to_20_kills"
+  ],
+  "has_directional_side_bias": false,
+  "decision_policy": {
+    "action_threshold": 0.04,
+    "high_threshold": 0.08,
+    "origin": "existing defaults; not validated risk guarantees"
+  },
+  "serving_validation": {
+    "status": "unverified",
+    "independent_evaluation_report": null
+  },
+  "limitations": [
+    "No checkpoint-bound training split artifact; training bounds unknown",
+    "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+    "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+  ]
+}

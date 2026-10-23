@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from unittest.mock import patch, MagicMock
 import pytest
 
-import database
-import backfill_timelines as bt
+from core import database
+from scripts import backfill_timelines as bt
 
 
 @pytest.fixture(autouse=True)
@@ -129,3 +129,66 @@ def test_backfill_respects_limit(tmp_path):
     # which lands processed at 6 (>= 5). The early-termination guard takes effect there.
     assert stats["processed"] >= 5
     assert stats["processed"] <= 9  # well below 10
+
+
+def test_backfill_pauses_and_resumes_on_key_renewal(tmp_path, monkeypatch):
+    """When a RiotAuthError occurs, backfill pauses without writing NULL, reloads the new key, and resumes."""
+    from core.riot_api import RiotAuthError
+
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+    _insert_match(db, "EUW1_RENEW")
+
+    fake_timeline = {"info": {"frames": []}}
+    call_count = 0
+
+    def mock_batch(self, ids, **kwargs):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            raise RiotAuthError("Key expired 403")
+        return {mid: fake_timeline for mid in ids}
+
+    # Simulate reload_key finding a new key on second poll
+    poll_count = 0
+    def fake_reload(self):
+        nonlocal poll_count
+        poll_count += 1
+        if poll_count >= 1:
+            return "NEW_KEY_VALID"
+        return None
+
+    monkeypatch.setattr(bt.time, "sleep", lambda s: None)
+    monkeypatch.setattr(bt.riot_api.RiotAPI, "reload_key", fake_reload)
+    monkeypatch.setattr(bt.riot_api.RiotAPI, "get_match_timelines_batch", mock_batch)
+
+    stats = bt.backfill_timelines(db_path=db, chunk_size=5, sleep_between_chunks=0)
+
+    assert stats["processed"] == 1
+    assert stats["saved"] == 1
+    assert stats["errors"] == 0
+    assert database.match_timeline_exists("EUW1_RENEW", db_path=db) is True
+    # Verify timeline_json is NOT NULL
+    assert database.get_match_timeline("EUW1_RENEW", db_path=db) is not None
+
+
+def test_backfill_duration_limit(tmp_path):
+    """Backfill stops when duration_hours limit is reached."""
+    db = str(tmp_path / "test.db")
+    database.init_db(db)
+    for i in range(10):
+        _insert_match(db, f"EUW1_{i}")
+
+    fake_timeline = {"info": {"frames": []}}
+    with patch.object(bt.riot_api.RiotAPI, "get_match_timelines_batch",
+                      return_value={f"EUW1_{i}": fake_timeline for i in range(10)}):
+        stats = bt.backfill_timelines(
+            db_path=db,
+            chunk_size=1,
+            duration_hours=0.0000001,
+            sleep_between_chunks=0,
+        )
+
+    assert stats["processed"] >= 1
+    assert stats["processed"] < 10
+

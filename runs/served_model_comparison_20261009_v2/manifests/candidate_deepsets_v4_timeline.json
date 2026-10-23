@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "model_id": "candidate_deepsets_v4_timeline",
+  "checkpoint": {
+    "path": "runs/candidate_deepsets_v4_timeline/model.keras",
+    "sha256": "c52b429be8e7cbf7ac15cca67ff3956093e4779ecb4b6bdf9ff5b68738ca97d8"
+  },
+  "feature_contract": "nnriot.players18.v1",
+  "feature_semantics_status": "layout_verified_training_semantics_unverified",
+  "training": {
+    "status": "split_membership_recorded_training_semantics_unverified",
+    "source_db": "D:\\projet\\NNriot\\training_data.db",
+    "bounds_ms": {
+      "train": {
+        "count": 8400,
+        "min_ms": 1774467008542,
+        "max_ms": 1776007196728
+      },
+      "validation": {
+        "count": 1800,
+        "min_ms": 1776007256619,
+        "max_ms": 1776139838828
+      },
+      "test": {
+        "count": 1800,
+        "min_ms": 1776139949791,
+        "max_ms": 1776261942670
+      }
+    },
+    "split_manifest_sha256": "dc0385c2c54db034e0a30d9e029f0964882be7be29db468041eac1612db01981",
+    "dataset_sha256": "a9ee7493506488b24b6f4cac036d38863e5acd23aa77c2b2b13be375c7b03c65"
+  },
+  "calibration": {
+    "path": "runs/candidate_deepsets_v4_timeline/model.calibration.json",
+    "sha256": "4e1bd4f867a93dd707bbfa6c6ed57a3bfc5ae86b5a1e3a8dce177e789b7698f0"
+  },
+  "output_heads": [
+    "draft_advantage",
+    "winner",
+    "winner_uncertainty",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "team_a_kills",
+    "team_b_kills",
+    "total_kills",
+    "first_blood"
+  ],
+  "has_directional_side_bias": true,
+  "decision_policy": {
+    "action_threshold": 0.04,
+    "high_threshold": 0.08,
+    "origin": "existing defaults; not validated risk guarantees"
+  },
+  "limitations": [
+    "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
+  ]
+}

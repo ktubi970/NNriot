@@ -1,0 +1,21 @@
+{
+  "head": "3bb93c7ccb4e5e201f953d2686b468ff1413b825",
+  "default": {
+    "threshold": 0.10001098999999997,
+    "coverage": 0.99,
+    "accuracy": 0.9,
+    "count": 990,
+    "wilson_lower": 0.8797385499492674,
+    "wilson_upper": 0.9171692394880921,
+    "target_met": false,
+    "target_accuracy": 0.9007
+  },
+  "witness": {
+    "threshold": 0.100003,
+    "coverage": 0.998,
+    "accuracy": 0.9008016032064128,
+    "count": 998,
+    "wilson_lower": 0.88069069507611,
+    "wilson_upper": 0.917838845657521
+  }
+}

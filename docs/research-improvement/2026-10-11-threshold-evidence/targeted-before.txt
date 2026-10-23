@@ -1,0 +1,38 @@
+============================= test session starts =============================
+platform win32 -- Python 3.12.10, pytest-9.1.1, pluggy-1.6.0 -- D:\projet\NNriot\.venv312\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\projet\NNriot
+configfile: pytest.ini
+plugins: cov-7.1.0
+collecting ... collected 28 items
+
+tests/test_selective_classification.py::test_compute_conviction_invariance PASSED [  3%]
+tests/test_selective_classification.py::test_wilson_score_interval PASSED [  7%]
+tests/test_selective_classification.py::test_evaluate_selective_coverage_abstention PASSED [ 10%]
+tests/test_selective_classification.py::test_evaluate_selective_coverage_anti_symmetry PASSED [ 14%]
+tests/test_selective_classification.py::test_find_threshold_for_accuracy PASSED [ 17%]
+tests/test_selective_classification.py::test_find_threshold_noisy_gradient PASSED [ 21%]
+tests/test_selective_classification.py::test_find_threshold_unmet PASSED [ 25%]
+tests/test_selective_classification.py::test_stratify_by_conviction PASSED [ 28%]
+tests/test_selective_classification.py::test_compute_conviction_scalar_and_error PASSED [ 32%]
+tests/test_selective_classification.py::test_wilson_score_interval_validation PASSED [ 35%]
+tests/test_selective_classification.py::test_selective_coverage_mismatched_lengths_and_empty PASSED [ 39%]
+tests/test_selective_classification.py::test_selective_coverage_python_lists PASSED [ 42%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.46-0.04-1] PASSED [ 46%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.54-0.04-1] PASSED [ 50%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.42-0.08-1] PASSED [ 53%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.58-0.08-1] PASSED [ 57%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5399996-0.04-1] PASSED [ 60%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5399994-0.04-0] PASSED [ 64%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.4600005-0.04-0] PASSED [ 67%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5399995-0.04-0] PASSED [ 71%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5799996-0.08-1] PASSED [ 75%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5799994-0.08-0] PASSED [ 78%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.475-0.025-1] PASSED [ 82%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.525-0.025-1] PASSED [ 85%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5000004-1e-06-0] PASSED [ 89%]
+tests/test_selective_classification.py::test_selective_boundaries_match_serving_and_team_swap[0.5000006-1e-06-1] PASSED [ 92%]
+tests/test_selective_classification.py::test_selective_boundary_metrics_include_both_teams PASSED [ 96%]
+tests/test_selective_classification.py::test_threshold_search_uses_served_boundary_selection PASSED [100%]
+
+============================= 28 passed in 1.03s ==============================

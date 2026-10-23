@@ -8,6 +8,7 @@ without having to reach into individual route module globals.
 import os
 import re
 import glob
+import uuid
 import random
 import time
 import base64
@@ -16,12 +17,34 @@ import logging
 
 from flask import Blueprint, request, jsonify, current_app
 
-import database
-import live_game
-import data_collector
-import riot_api
-import json_utils
-from feature_labels import VECTOR_DIM
+from core import database
+from core import live_game
+from core.collection import CollectionService, resolve_region
+from core.collection.service import (
+    DEFAULT_LOOKBACK_DAYS,
+    DEFAULT_MATCHES_PER_PLAYER,
+    DEFAULT_PLAYERS_PER_REGION,
+    DEFAULT_REGIONS,
+)
+from core import riot_api
+from core import json_utils
+from core.task_runner import global_task_runner
+from ..services.player_service import PlayerService
+from core.repository import PlayerRepository
+from ..services.system_service import SystemService
+
+def _system_service():
+    from core.repository import SystemRepository
+    return SystemService(SystemRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
+from core.feature_labels import VECTOR_DIM
+from core.calibration import UncalibratedModelError
+from core.pre_match_dataset import to_pre_match_features
+
+
+def get_prediction_service(**kwargs):
+    """Load TensorFlow only when the serving facade is actually requested."""
+    from core.prediction_service import get_prediction_service as get_service
+    return get_service(**kwargs)
 
 from .. import core
 
@@ -29,129 +52,77 @@ api_bp = Blueprint("api", __name__)
 logger = logging.getLogger(__name__)
 
 
+def _player_service():
+    return PlayerService(PlayerRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
+
+
 # ── Status / health ─────────────────────────────────────────────────────────
 
 @api_bp.route("/api/status", methods=["GET"])
 def api_status():
     """API endpoint to check system status."""
-    import tensorflow as tf
+    import sys
+    tf_mod = sys.modules.get("tensorflow")
+    tf_version = getattr(tf_mod, "__version__", "N/A") if tf_mod else "N/A"
 
-    tf_version = "N/A"
+    result = {
+        "tensorflow_version": tf_version,
+        "trainer_loaded": bool(core.tf_available and core.global_trainer is not None),
+        "output_classes": 2,
+    }
     try:
-        tf_version = tf.__version__
-    except Exception:
-        pass
-
-    return jsonify(
-        {
-            "model_loaded": core.tf_available and core.global_trainer is not None,
-            "tensorflow_version": tf_version,
-            "input_dimension": VECTOR_DIM if core.tf_available else "N/A",
-            "output_classes": 2,
-            "status": (
-                "Model ready"
-                if (core.tf_available and core.global_trainer is not None)
-                else "Model unavailable"
-            ),
-        }
-    )
+        service = get_prediction_service(
+            db_path=current_app.config["NNRIOT_DB_PATH"],
+            checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
+            manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+        )
+        manifest = service.manifest or {}
+        verification = service.verification_status()
+        result.update({
+            "model_loaded": service.is_ready(),
+            "input_dimension": service.contract.dim,
+            "feature_contract": service.contract.version,
+            "checkpoint": manifest.get("checkpoint"),
+            "model_id": manifest.get("model_id", "in_memory_unverified"),
+            "calibration_available": verification["calibrated"],
+            "serving_validation": verification["serving_validation"],
+            "decision_policy": verification["decision_policy"],
+            "status": "Loaded; abstention required" if (
+                not verification["calibrated"] or not verification["validated"]
+            ) else "Loaded; independently validated",
+        })
+    except Exception as exc:
+        result.update({"model_loaded": False, "input_dimension": None,
+                       "status": "Model unavailable", "error_code": "model_contract", "error": str(exc)})
+    return jsonify(result)
 
 
 @api_bp.route("/api/db-health", methods=["GET"])
 def api_db_health():
-    """Returns database health metrics for the stats strip."""
     try:
-        stats = database.get_db_stats()
-        return jsonify(
-            {
-                "players": stats.get("players", 0),
-                "matches": stats.get("matches", 0),
-                "training_records": stats.get("training_records", 0),
-                "trained_records": stats.get("trained_records", 0),
-                "untrained_records": stats.get("untrained_records", 0),
-                "trained_ratio": stats.get("trained_ratio", 0),
-                "success": True,
-                "ok": True,
-            }
-        )
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+        result = _system_service().get_full_telemetry(db_path=db_path)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching db-health: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
 
 
-# ── Explorer ────────────────────────────────────────────────────────────────
-
-@api_bp.route("/api/explorer/stats", methods=["GET"])
-def api_explorer_stats():
-    """API endpoint to get database statistics."""
-    try:
-        stats = database.get_db_stats()
-        # Add human readable size
-        db_path = database.DB_PATH
-        if os.path.exists(db_path):
-            size_mb = os.path.getsize(db_path) / (1024 * 1024)
-            stats["db_size_mb"] = round(size_mb, 2)
-        else:
-            stats["db_size_mb"] = 0.0
-
-        return jsonify(stats)
-    except Exception as e:
-        logger.error(f"Explorer stats error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/matches", methods=["GET"])
-def api_explorer_matches():
-    """API endpoint to get paginated match records."""
-    try:
-        page = int(request.args.get("page", 1))
-        limit = int(request.args.get("limit", 20))
-
-        # Ensure reasonable limits
-        limit = max(1, min(100, limit))
-        page = max(1, page)
-        offset = (page - 1) * limit
-
-        records = database.get_recent_training_records(limit=limit, offset=offset)
-        total_records = database.get_training_count()
-
-        return jsonify(
-            {
-                "success": True,
-                "page": page,
-                "limit": limit,
-                "total_records": total_records,
-                "total_pages": (total_records + limit - 1) // limit,
-                "records": records,
-            }
-        )
-    except Exception as e:
-        logger.error(f"Explorer matches error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
-
-
-@api_bp.route("/api/explorer/match/<match_id>", methods=["GET"])
-def api_explorer_match_details(match_id):
-    """API endpoint to get full raw details for a specific match."""
-    try:
-        raw_match = database.get_raw_match(match_id)
-        if not raw_match:
-            return jsonify({"error": "Match not found"}), 404
-
-        return jsonify({"success": True, "match": raw_match})
-    except Exception as e:
-        logger.error(f"Explorer match details error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+@api_bp.route("/api/jobs/<job_id>", methods=["GET"])
+def api_get_job_status(job_id):
+    status = global_task_runner.get_status(job_id)
+    if not status:
+        return jsonify({"success": False, "error": "Job not found"}), 404
+    return jsonify({"success": True, "job": status}), 200
 
 
 # ── Players ─────────────────────────────────────────────────────────────────
 
 @api_bp.route("/api/players/aliases", methods=["GET"])
 def api_players_aliases():
-    """Retrieve all linked player aliases."""
     try:
-        aliases = database.get_all_aliases()
-        return jsonify(aliases)
+        result = _player_service().get_all_aliases()
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Error fetching aliases: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -159,13 +130,12 @@ def api_players_aliases():
 
 @api_bp.route("/api/players/unlink", methods=["DELETE"])
 def api_players_unlink():
-    """Unlink an alias from its canonical account."""
     try:
         alias_puuid = request.args.get("alias_puuid")
-        if not alias_puuid:
-            return jsonify({"error": "alias_puuid is required"}), 400
-        database.unlink_accounts(alias_puuid)
-        return jsonify({"success": True})
+        result = _player_service().unlink_accounts(alias_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Error unlinking accounts: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -173,15 +143,11 @@ def api_players_unlink():
 
 @api_bp.route("/api/players/search", methods=["GET"])
 def api_players_search():
-    """Search for existing players in the local database by name."""
     try:
-        q = request.args.get("q", "").strip()
+        q = (request.args.get("q") or request.args.get("query") or "").strip()
         limit = request.args.get("limit", 10, type=int)
-        if len(q) < 2:
-            return jsonify([])
-
-        players = database.search_players(q, limit=limit)
-        return jsonify(players)
+        result = _player_service().search_players(q, limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Player search error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -189,15 +155,10 @@ def api_players_search():
 
 @api_bp.route("/api/players/random", methods=["GET"])
 def api_players_random():
-    """Return a random sample of players from the database."""
-    limit = request.args.get("limit", 10, type=int)
-    # Sample from a pool of high-match-count players so results are actually
-    # varied but still skewed toward players the model has data on.
-    pool_size = max(limit * 20, 200)
     try:
-        pool = database.get_top_players(limit=pool_size)
-        sample = random.sample(pool, min(limit, len(pool)))
-        return jsonify(sample)
+        limit = request.args.get("limit", 10, type=int)
+        result = _player_service().get_random_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Random players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -205,12 +166,10 @@ def api_players_random():
 
 @api_bp.route("/api/players/top", methods=["GET"])
 def api_players_top():
-    """API endpoint to get top players by match count."""
-    limit = request.args.get("limit", 10, type=int)
-
     try:
-        players = database.get_top_players(limit=limit)
-        return jsonify(players)
+        limit = request.args.get("limit", 10, type=int)
+        result = _player_service().get_top_players(limit)
+        return jsonify(result), 200
     except Exception as e:
         logger.error(f"Top players error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -218,19 +177,16 @@ def api_players_top():
 
 @api_bp.route("/api/players/link", methods=["POST"])
 def api_link_players():
-    """Link a smurf/alias account to a canonical main account."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         main_puuid = data.get("canonical_puuid")
         smurf_puuid = data.get("alias_puuid")
-        if not main_puuid or not smurf_puuid:
-            return (
-                jsonify({"error": "canonical_puuid and alias_puuid are required"}),
-                400,
-            )
-
-        database.link_accounts(main_puuid, smurf_puuid)
-        return jsonify({"success": True, "message": "Accounts completely linked."})
+        result = _player_service().link_accounts(main_puuid, smurf_puuid)
+        return jsonify(result), 200
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     except Exception as e:
         logger.error(f"Link accounts error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -254,8 +210,10 @@ def api_stream_process_frame():
             503,
         )
     try:
-        data = request.get_json()
-        if not data or "image" not in data:
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
+        if "image" not in data:
             return jsonify({"error": "No image data provided"}), 400
 
         # Decode base64 image
@@ -269,14 +227,33 @@ def api_stream_process_frame():
         if not os.path.exists(screenshot_dir):
             os.makedirs(screenshot_dir)
 
-        # Save image
-        filepath = os.path.join(screenshot_dir, "latest_capture.jpg")
+        # Save image with unique filename to prevent overwrite collisions
+        frame_id = uuid.uuid4().hex
+        filename = f"capture_{frame_id}.jpg"
+        filepath = os.path.join(screenshot_dir, filename)
         with open(filepath, "wb") as f:
             f.write(image_bytes)
 
+        # Retention janitor: prune oldest screenshots if exceeding threshold
+        try:
+            entries = [
+                os.path.join(screenshot_dir, f)
+                for f in os.listdir(screenshot_dir)
+                if f.startswith("capture_") and f.endswith(".jpg")
+            ]
+            if len(entries) > 50:
+                entries.sort(key=lambda p: os.path.getmtime(p))
+                for old_file in entries[:-50]:
+                    try:
+                        os.remove(old_file)
+                    except OSError:
+                        pass
+        except Exception:
+            pass
+
         # DYNAMIC OCR RESULTS (PICK 10 RANDOM FROM DB)
         try:
-            db_players = database.get_top_players(limit=20)
+            db_players = database.get_top_players(limit=20, db_path=current_app.config["NNRIOT_DB_PATH"])
             if len(db_players) >= 10:
                 random.shuffle(db_players)
                 blue_names = [p["game_name"] for p in db_players[:5]]
@@ -318,7 +295,7 @@ def api_stream_process_frame():
         return jsonify(
             {
                 "success": True,
-                "screenshot_url": "/static/screenshots/latest_capture.jpg",
+                "screenshot_url": f"/static/screenshots/{filename}",
                 "roster": mock_roster,
             }
         )
@@ -334,22 +311,11 @@ def api_train_manual():
     """API endpoint to trigger a single training step manually."""
     try:
         if not core.tf_available or core.global_trainer is None:
-            # Fallback for demonstration/UI testing if model isn't truly loaded
-            # in this environment
-            untrained = database.get_untrained_records(limit=10)
-            if untrained:
-                record_ids = [r["id"] for r in untrained]
-                database.mark_as_trained(record_ids)
-                return jsonify(
-                    {
-                        "success": True,
-                        "records_processed": len(untrained),
-                        "message": f"Simulation: Processed {len(untrained)} new records.",
-                    }
-                )
-            return jsonify({"error": "No untrained data available for simulation"}), 404
+            return jsonify({
+                "success": False,
+                "error": "TensorFlow model is not loaded or available. Real training step cannot run.",
+            }), 503
 
-        # Run a real training step
         records_processed = core.global_trainer.run_training_step()
 
         return jsonify(
@@ -361,7 +327,7 @@ def api_train_manual():
         )
     except Exception as e:
         logger.error(f"Manual train error: {e}", exc_info=True)
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @api_bp.route("/api/train", methods=["POST"])
@@ -379,6 +345,19 @@ def api_train():
         if not matches:
             return jsonify({"error": "No matches provided for training"}), 400
 
+        # Enforce veracity: fail fast if TF is unavailable unless ?simulate=true is requested
+        if not core.tf_available or core.global_trainer is None:
+            if request.args.get("simulate", "false").lower() != "true":
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "error": "Model trainer is unavailable. TensorFlow or model weights could not be loaded. Pass ?simulate=true for mock testing.",
+                        }
+                    ),
+                    503,
+                )
+
         # Setup background thread training process
         start_time = time.time()
 
@@ -391,15 +370,14 @@ def api_train():
                     logger.info("Background training completed.")
                 except Exception as e:
                     logger.error(f"Background training failed: {e}", exc_info=True)
+                    raise
             else:
                 # Simulate training process if model isn't active
                 training_time = min(3.0, len(matches) * 0.05)
                 time.sleep(training_time)
                 logger.info("Mock background training completed.")
 
-        thread = threading.Thread(target=background_train)
-        thread.daemon = True
-        thread.start()
+        job_id = global_task_runner.submit_task("training", background_train)
 
         return jsonify(
             {
@@ -407,6 +385,7 @@ def api_train():
                 "message": "Training job started in the background",
                 "training_samples_queued": len(matches),
                 "queued_time": round(time.time() - start_time, 2),
+                "job_id": job_id,
             }
         )
 
@@ -434,10 +413,10 @@ def api_predict():
                 return jsonify({"error": f"Missing required field: {field}"}), 400
 
         # Make final prediction
-        result = core.final_predict_match_outcome(match_data)
+        result = core.final_predict_match_outcome(match_data, db_path=current_app.config["NNRIOT_DB_PATH"], checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"), manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"))
 
         if "error" in result:
-            return jsonify(result), 500
+            return jsonify(result), (400 if result.get("error_code") == "feature_contract" else 503)
 
         return jsonify(result)
 
@@ -450,7 +429,9 @@ def api_predict():
 def api_predict_custom():
     """API endpoint for custom 5v5 match prediction based on selected players and champions."""
     try:
-        data = request.get_json()
+        data = request.get_json(silent=True) or {}
+        if not data:
+            return jsonify({"error": "Invalid or missing JSON payload"}), 400
         blue_team_data = data.get("blue_team", [])  # List of {puuid}
         red_team_data = data.get("red_team", [])  # List of {puuid}
 
@@ -465,7 +446,7 @@ def api_predict_custom():
         # whatever data is in the DB now.
         all_puuids = blue_team_puuids + red_team_puuids
         try:
-            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7)
+            stale_puuids = database.get_stale_puuids(all_puuids, stale_after_days=7, db_path=current_app.config["NNRIOT_DB_PATH"])
             if stale_puuids:
                 logger.info(
                     "Warm-up: %d/%d players have stale data — enqueueing refresh",
@@ -474,7 +455,7 @@ def api_predict_custom():
                 )
                 # Get account info (game_name, tag_line) for each stale puuid
                 # to feed collect_by_puuid
-                with database.get_connection() as conn:
+                with database.get_connection(current_app.config["NNRIOT_DB_PATH"]) as conn:
                     placeholders = ",".join(["?"] * len(stale_puuids))
                     rows = conn.execute(
                         f"SELECT puuid, game_name, tag_line FROM players WHERE puuid IN ({placeholders})",
@@ -490,61 +471,40 @@ def api_predict_custom():
                     for r in rows
                 ]
                 if accounts:
+                    db_path = current_app.config["NNRIOT_DB_PATH"]
+
                     def _refresh_stale():
                         try:
-                            result = data_collector.collect_by_puuid(
+                            service = CollectionService(db_path=db_path)
+                            result = service.collect_by_puuid_accounts(
                                 accounts, matches_per_player=20
                             )
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
                             logger.error("Warm-up refresh failed", exc_info=True)
+                            raise
 
-                    threading.Thread(target=_refresh_stale, daemon=True).start()
+                    global_task_runner.submit_task("warmup_refresh", _refresh_stale)
         except Exception:
             logger.error("Warm-up enqueue failed (non-fatal)", exc_info=True)
 
-        # Fetch stats for all players
-        blue_stats = [database.get_player_stats(p) for p in blue_team_puuids]
-        red_stats = [database.get_player_stats(p) for p in red_team_puuids]
-
-        if not core.tf_available or core.global_trainer is None:
-            return jsonify({"error": "TensorFlow model is not loaded"}), 503
-
-        # Construct a synthetic match structure for feature extraction
+        # Construct a synthetic match structure for pre-match feature extraction
         participants = []
         for i, p in enumerate(blue_team_data):
-            stats = blue_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 100,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 100,
+                "championName": p.get("champion_name") or p.get("championName"),
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "puuid": p.get("puuid"),
+            })
 
         for i, p in enumerate(red_team_data):
-            stats = red_stats[i]
-            _avg_kda = float(stats.get("avg_kda", 0)) if stats else 0.0
-            participants.append(
-                {
-                    "teamId": 200,
-                    "championName": p.get("champion_name")
-                    or p.get("championName")
-                    or "Aatrox",
-                    "kills": _avg_kda * 0.7,
-                    "deaths": 1,
-                    "assists": _avg_kda * 0.3,
-                    "goldEarned": stats.get("avg_gold", 0) if stats else 0,
-                    "teamPosition": p.get("role") or "UNKNOWN",
-                }
-            )
+            participants.append({
+                "teamId": 200,
+                "championName": p.get("champion_name") or p.get("championName"),
+                "teamPosition": p.get("role") or "UNKNOWN",
+                "puuid": p.get("puuid"),
+            })
 
         match_data = {
             "info": {
@@ -553,47 +513,65 @@ def api_predict_custom():
             }
         }
 
-        # Use centralized feature extraction
-        feature_dict = json_utils.extract_match_features(match_data)
+        from core.pre_match_history import to_serving_features
+        from core.serving_contract import ContractError, FeatureUnavailableError
+        try:
+            service = get_prediction_service(
+                checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
+                manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+                db_path=current_app.config["NNRIOT_DB_PATH"],
+            )
+        except (ContractError, ValueError, OSError) as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "model_contract"}), 503
+        try:
+            result = service.predict_match(to_serving_features(match_data))
+        except FeatureUnavailableError as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "feature_unavailable", "is_actionable": False}), 503
+        except ContractError as exc:
+            return jsonify({"success": False, "error": str(exc), "error_code": "feature_contract"}), 400
+        if result.get("success"):
+            blue_prob_nn = result["winner"]["team_a"]
+            red_prob_nn = result["winner"]["team_b"]
 
-        sparse_vec = json_utils.json_to_vector([feature_dict], dim=VECTOR_DIM)
-        dense_vec = sparse_vec.toarray()
-
-        with core.predict_lock:
-            preds = core.global_trainer.predict(dense_vec)
-
-        formatted = core._format_multi_output_response(preds)
-        # Keep the legacy fields for the custom predictor UI
-        blue_prob_nn = formatted["winner"]["team_a"]
-        red_prob_nn = formatted["winner"]["team_b"]
-
-        response_data = {
-            "success": True,
-            "nn_results": {
+            response_data = {
+                "success": True,
+                "nn_results": {
+                    "blue_win_probability": blue_prob_nn,
+                    "red_win_probability": red_prob_nn,
+                },
+                "predicted_winner": result["winner"]["predicted"].upper()
+                    if "predicted" in result["winner"] else ("BLUE" if blue_prob_nn > red_prob_nn else "RED"),
+                "confidence": result["winner"].get("confidence", round(max(blue_prob_nn, red_prob_nn), 4)),
                 "blue_win_probability": blue_prob_nn,
-                "red_win_probability":  red_prob_nn,
-            },
-            "predicted_winner": "BLUE" if blue_prob_nn > red_prob_nn else "RED",
-            "confidence": round(abs(blue_prob_nn - red_prob_nn) * 2, 2),
-            "blue_win_probability": blue_prob_nn,
-            "red_win_probability":  red_prob_nn,
-            "explanation": "Multi-head NN analysis complete.",
-            "llm_active": False,
-            # Include the full multi-output dict for clients that want it
-            "multi_output": {
-                k: v for k, v in formatted.items()
-                if k not in (
-                    "success",
-                    "predicted_outcome",
-                    "win_probability",
-                    "lose_probability",
-                    "confidence",
-                )
-            },
-        }
+                "red_win_probability": red_prob_nn,
+                "blue_win_prob": blue_prob_nn,
+                "red_win_prob": red_prob_nn,
+                "explanation": "Multi-head NN analysis complete (PredictionService).",
+                "llm_active": False,
+                # Structured outputs from PredictionService
+                "model": result.get("model"),
+                "probabilities_raw": result.get("probabilities_raw"),
+                "probabilities_calibrated": result.get("probabilities_calibrated"),
+                "calibration": result.get("calibration"),
+                "draft_advantage": result.get("draft_advantage"),
+                "priors_provenance": result.get("priors_provenance"),
+                "selective_decision": result.get("selective_decision"),
+                "shapley_credits": result.get("shapley_credits"),
+                "draft_composition": result.get("draft_composition"),
+                "epistemic_uncertainty": result.get("epistemic_uncertainty"),
+                # Legacy multi_output key for backward compatibility
+                "multi_output": {
+                    "winner": result["winner"],
+                    "selective_decision": result.get("selective_decision"),
+                },
+            }
+        else:
+            return jsonify(result), 503
 
         return jsonify(response_data)
 
+    except UncalibratedModelError as e:
+        return jsonify({"error": str(e), "uncalibrated": True}), 503
     except Exception as e:
         logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500
@@ -608,7 +586,7 @@ def api_warmup_status():
     puuids = [p.strip() for p in raw.split(",") if p.strip()]
     if not puuids:
         return jsonify({"error": "puuids query param required"}), 400
-    stale = database.get_stale_puuids(puuids, stale_after_days=7)
+    stale = database.get_stale_puuids(puuids, stale_after_days=7, db_path=current_app.config["NNRIOT_DB_PATH"])
     return jsonify(
         {
             "puuids_checked": puuids,
@@ -654,9 +632,6 @@ def api_spectator_active():
             )
 
         # Enhance participants with local database info (puuid and stats)
-        # We need to resolve each participant
-        from data_collector import resolve_region
-
         region = resolve_region(tag)
         participants = game_data.get("participants", [])
 
@@ -668,7 +643,7 @@ def api_spectator_active():
         for p in participants:
             puuid = p.get("puuid")
             if puuid:
-                p["stats"] = database.get_player_stats(puuid)
+                p["stats"] = database.get_player_stats(puuid, db_path=current_app.config["NNRIOT_DB_PATH"])
                 if not p["stats"]:
                     new_players.append(
                         {"name": p.get("summonerName"), "tag": tag, "puuid": puuid}
@@ -677,16 +652,19 @@ def api_spectator_active():
         # If there are new players, trigger background collection (Auto-Import)
         if new_players:
             logger.info(f"Triggering auto-collection for {len(new_players)} new players")
+            db_path = current_app.config["NNRIOT_DB_PATH"]
 
             def auto_collect_task():
                 try:
                     # Use seeds approach
                     seeds = [(p["name"], p["tag"]) for p in new_players]
-                    data_collector.collect_training_data(seeds, matches_per_player=10)
+                    service = CollectionService(db_path=db_path)
+                    service.collect_seed_players(seeds, matches_per_player=10)
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
+                    raise
 
-            threading.Thread(target=auto_collect_task, daemon=True).start()
+            global_task_runner.submit_task("auto_collect", auto_collect_task)
 
         return jsonify({"success": True, "game": game_data})
 
@@ -709,43 +687,13 @@ def api_sample_match():
 def api_monitor_metrics():
     """API endpoint to get model performance and training metrics."""
     try:
-        metrics = {
-            "database_stats": {},
-            "training_records": 0,
-            "players": 0,
-            "matches": 0,
-            "model_checkpoint": None,
-            "training_config": {},
-        }
+        db_path = current_app.config["NNRIOT_DB_PATH"]
+        telemetry = _system_service().get_full_telemetry(db_path=db_path)
+        regions = _system_service().get_region_distribution(db_path=db_path)
 
-        # Get database statistics using context manager
-        with database.get_connection() as conn:
-            # Count training records
-            count_records = conn.execute(
-                "SELECT COUNT(*) FROM training_dataset"
-            ).fetchone()[0]
-            metrics["training_records"] = count_records
-
-            # Count unique players
-            count_players = conn.execute("SELECT COUNT(*) FROM players").fetchone()[0]
-            metrics["players"] = count_players
-
-            # Count matches
-            count_matches = conn.execute("SELECT COUNT(*) FROM matches").fetchone()[0]
-            metrics["matches"] = count_matches
-
-            # Get region distribution
-            regions = conn.execute(
-                """
-                SELECT
-                    SUBSTR(match_id, 1, INSTR(match_id, '_') - 1) as region,
-                    COUNT(*) as count
-                FROM matches
-                GROUP BY region
-                ORDER BY count DESC
-            """
-            ).fetchall()
-            metrics["regions"] = {r[0]: r[1] for r in regions}
+        metrics = dict(telemetry)
+        metrics["database_stats"] = dict(telemetry)
+        metrics["regions"] = regions
 
         # Check for model checkpoints
         checkpoint_files = glob.glob(
@@ -771,16 +719,16 @@ def api_monitor_metrics():
                 "versions": sorted(checkpoint_versions),
             }
 
-        # Training configuration — regions/lookback come from data_collector
+        # Training configuration — regions/lookback come from core.collection
         # so the UI tracks the collector defaults. batch_size/epochs are
         # hardcoded here to avoid importing TF-heavy continuous_trainer; if
         # the trainer constants change, bump these to match (continuous_trainer
         # BATCH_SIZE / EPOCHS_PER_BATCH).
         metrics["training_config"] = {
-            "regions": data_collector.DEFAULT_REGIONS,
-            "players_per_region": data_collector.DEFAULT_PLAYERS_PER_REGION,
-            "matches_per_player": data_collector.DEFAULT_MATCHES_PER_PLAYER,
-            "lookback_days": data_collector.DEFAULT_LOOKBACK_DAYS,
+            "regions": DEFAULT_REGIONS,
+            "players_per_region": DEFAULT_PLAYERS_PER_REGION,
+            "matches_per_player": DEFAULT_MATCHES_PER_PLAYER,
+            "lookback_days": DEFAULT_LOOKBACK_DAYS,
             "model_type": "ResMLP-22",  # 22-head multi-output model
             "batch_size": 500,
             "epochs": 100,

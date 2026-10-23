@@ -1,0 +1,72 @@
+........................................................................ [ 10%]
+........................................................................ [ 20%]
+........................................................................ [ 30%]
+........................................................................ [ 40%]
+........................................................................ [ 50%]
+........................................................................ [ 60%]
+........................................................................ [ 70%]
+........................................................................ [ 80%]
+........................................................................ [ 90%]
+..................................................................       [100%]
+============================== warnings summary ===============================
+tests/analytics/test_interpretable.py: 10 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\sklearn\linear_model\_logistic.py:1403: FutureWarning: 'penalty' was deprecated in version 1.8 and will be removed in 1.10. To avoid this warning, leave 'penalty' set to its default value and use 'l1_ratio' or 'C' instead. Use l1_ratio=0 instead of penalty='l2', l1_ratio=1 instead of penalty='l1', l1_ratio set to a float between 0 and 1 instead of penalty='elasticnet', and C=np.inf instead of penalty=None.
+    warnings.warn(
+
+tests/test_calibrated_serving.py: 2 warnings
+tests/test_predict_api.py: 5 warnings
+tests/test_warmup_ttl.py: 6 warnings
+  D:\projet\NNriot\core\database.py:1100: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    cutoff = _dt.datetime.utcnow() - _dt.timedelta(days=stale_after_days)
+
+tests/test_draft_pre_match_training.py: 8 warnings
+tests/test_model_calibration_guard.py: 88 warnings
+tests/test_multi_output_trainer.py: 204 warnings
+tests/test_p5_smoke.py: 102 warnings
+tests/test_periodic_embeddings.py: 3 warnings
+tests/test_pre_match_run.py: 220 warnings
+tests/test_pre_match_training.py: 62 warnings
+tests/test_shapley_credit.py: 62 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\backend\tensorflow\core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+tests/test_model_calibration_guard.py::test_model_factory_valid_model_without_sidecar_stays_uncalibrated
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_7', because it has 90 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_model_calibration_guard.py::test_model_factory_valid_model_with_sidecar_is_calibrated
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_8', because it has 90 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_multi_output_trainer.py::test_validate_checkpoint_input_dim_mismatch
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_15', because it has 206 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_multi_output_trainer.py::test_validate_checkpoint_correct_arch_passes
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_17', because it has 206 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_shapley_credit.py::test_prediction_service_loads_evidential_checkpoint
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\saving\saving_lib.py:869: UserWarning: Skipping variable loading for optimizer 'adam_4', because it has 126 variables whereas the saved optimizer has 2 variables. 
+    saveable.load_own_variables(store)
+
+tests/test_tree_baseline.py: 367 warnings
+tests/test_tree_baseline_structured.py: 517 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\joblib\numpy_pickle.py:207: DeprecationWarning: Setting the shape on a NumPy array has been deprecated in NumPy 2.5.
+  As an alternative, you can create a new view using np.reshape (with copy=False if needed).
+    array.shape = self.shape
+
+tests/test_warmup_ttl.py::test_get_stale_puuids_old_record_is_stale
+  D:\projet\NNriot\tests\test_warmup_ttl.py:41: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
+
+tests/test_warmup_ttl.py::test_get_stale_puuids_mixed
+  D:\projet\NNriot\tests\test_warmup_ttl.py:58: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    old_date = (_dt.datetime.utcnow() - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+
+tests/test_warmup_ttl.py::test_get_stale_puuids_threshold_boundary
+  D:\projet\NNriot\tests\test_warmup_ttl.py:73: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    recent = (_dt.datetime.utcnow() - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+714 passed, 1664 warnings in 343.14s (0:05:43)
