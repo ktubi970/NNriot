@@ -314,13 +314,14 @@ def test_endpoint_feature_parity_and_calibration(monkeypatch, tmp_path):
     legacy = legacy_response.get_json()
     custom = custom_response.get_json()
 
-    # Both routes reach the real aligned encoder with only pre-match facts.
+    # Both routes reach the real aligned encoder with only pre-match facts plus
+    # result-ordered history priors from the serving history source.
     assert len(captured_features) == len(captured_inputs) == 2
     assert captured_features[0] == captured_features[1]
     for features in captured_features:
         assert set(features) <= {
             'game_mode', 'game_version', 'season_id', 'region',
-            'team_a', 'team_b', 'prediction_time_ms',
+            'team_a', 'team_b', 'prediction_time_ms', 'priors_provenance',
         }
         for key in ('team_a', 'team_b'):
             assert len(features[key]) == 5
@@ -328,7 +329,7 @@ def test_endpoint_feature_parity_and_calibration(monkeypatch, tmp_path):
                 'TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY',
             }
             for player in features[key]:
-                assert set(player) == {'champion', 'role', 'puuid'}
+                assert set(player) == {'champion', 'role', 'puuid', 'priors'}
     assert set(captured_inputs[0]) == set(captured_inputs[1])
     for key in captured_inputs[0]:
         np.testing.assert_array_equal(captured_inputs[0][key], captured_inputs[1][key])

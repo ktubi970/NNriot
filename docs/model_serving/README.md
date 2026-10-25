@@ -15,13 +15,14 @@ The complete input contract is [feature_contracts.v1.json](feature_contracts.v1.
 ## Configuration to response
 
 1. `core/config.py` resolves explicit arguments, process environment / `.env`, and the fixed reference. Relative artifact paths are anchored to the project root.
-2. `to_serving_features` allowlists champion, canonical role, identity and draft context. It removes current kills/gold/outcomes and undated career aggregates. Team A is Blue (`teamId=100`); team B is Red (`teamId=200`). Each team must have five players and every canonical role exactly once. Duplicate known identities are rejected.
-3. The HTTP facade supplies `DatabaseHistoryProvider` for both 14D and 18D. Its global window is the latest 10,000 CLASSIC creation rows strictly before the prediction cutoff. Indexed participant lookup fetches relevant player histories; incomplete indexes fall back to raw payloads before filtering by identity. `build_target_history`, also used by evaluation, applies historical results in **end-time order**, only when `result_end_ms < prediction_time_ms`. Missing/invalid result ends do not update priors. Valid Riot results do not require an ML training label to enter history.
+2. `to_serving_features` allowlists champion, canonical role, identity and draft context. It removes current kills/gold/outcomes and undated career aggregates. Team A is Blue (`teamId=100`); team B is Red (`teamId=200`). Raw participant payloads must carry an integer `teamId` of 100 or 200 (`core/serving_guards.validate_participant_teams`); a `team_id`-only or missing team would otherwise attach identities to the wrong champions. Each team must have five players and every canonical role exactly once. Duplicate known identities are rejected.
+3. The HTTP facade supplies `DatabaseHistoryProvider` for both 14D and 18D. Its global window is the latest 10,000 CLASSIC creation rows strictly before the prediction cutoff. Indexed participant lookup fetches relevant player histories; incomplete indexes fall back to raw payloads before filtering by identity. `build_target_history`, also used by evaluation, applies historical results in **end-time order**, only when `result_end_ms < prediction_time_ms`. Missing/invalid result ends do not update priors. Valid Riot results do not require an ML training label to enter history. For live requests without an explicit prediction time, `core/serving_history.CachedHistoryProvider` reuses one player set's decoded history window for up to 60 s; `priors_provenance.as_of_ms` then reports that window's cutoff, which is still strictly before the prediction. Requests with an explicit `prediction_time_ms` are always replayed exactly.
 4. Historical evaluation uses creation time as its pre-match cutoff. A live request uses explicit `prediction_time_ms`, otherwise `gameCreation`, otherwise current UTC milliseconds. `gameStartTimestamp` is used to validate result-end metadata, not to move the prediction cutoff forward. Backfilled acquisition timestamps are absent; retrospective evaluation explicitly assumes results were observable at result end.
 5. The contract selects the real 14D or 18D pipeline. Supplied priors must have exactly 10 or 14 finite list values and result-ordered provenance. There is no padding/truncation. 18D derives historical GD@15, CSD@15, XPD@15 and FBI@10; it requires usable completed timeline metrics, with declared per-player cold-start defaults; the response reports combat cold-start count and total usable timeline matches. An unavailable timeline source is an error. The lane tracker is explicitly neutral, as in the legacy candidate pipeline, rather than populated from undated/global state.
 6. Keras reconstructs legacy encoders with their original sum-pooling architecture when the historical serialized config lacks all three modern architecture flags. Partial flags are ambiguous and rejected. No input features, checkpoint weights or tensor dimensions are altered.
 7. Only `winner` is temperature-calibrated. A valid artifact must bind checkpoint and split hashes, dimensions, class order, method, validation fit status/count/classes and loss diagnostics through the existing strict calibration verifier.
-8. The response has `probabilities_raw`, nullable `probabilities_calibrated`, calibration status, model identity, provenance, `heads_raw`, separate nullable `draft_advantage`, and selective decision metadata. The legacy `winner.team_a/team_b` view uses calibrated probabilities when available, otherwise raw probabilities; callers must inspect calibration status. Missing heads are never invented.
+8. The response has `probabilities_raw`, nullable `probabilities_calibrated`, calibration status, model identity, provenance, `heads_raw`, separate nullable `draft_advantage`, and selective decision metadata. The legacy `winner.team_a/team_b` view uses calibrated probabilities when available, otherwise raw probabilities; `winner.probability_basis` (and `probability_basis` on `/api/predict/custom`, which copies them into `blue_win_probability`/`red_win_probability`) states `calibrated` or `raw_uncalibrated`. Missing heads are never invented.
+9. Both prediction endpoints share `app.core.final_predict_match_outcome` and its error codes: `feature_contract` (HTTP 400, the request cannot satisfy the contract), `model_contract` (503, the artifacts cannot be loaded), `feature_unavailable` (503, a required history source or the database is unavailable) and `model_output` (503, the checkpoint produced invalid heads). `/api/status` reports `model_loading` instead of waiting while another request loads the model. The facade reloads when the checkpoint, manifest, calibration, split or evaluation report changes on disk, and a failed load is replayed for 60 s unless those files change.
 
 Conviction is `abs(P(Red)-0.5)` with existing thresholds 0.04 / 0.08. These thresholds are not validated risk guarantees. Missing calibration forces `UNCALIBRATED` abstention; missing independent serving validation forces `UNVALIDATED_MODEL` abstention. No experimental candidate has been promoted. For modern checkpoints, temperature scaling affects the side-aware `winner` only. `draft_advantage` remains the raw anti-symmetric composition head; swapping teams must not erase the fixed map-side bias of `winner`.
 
@@ -80,7 +81,11 @@ responses apply the same verification gates.
 The feature contracts also fix the historical window at 10,000 global creation
 rows. A provider configured with another window, or supplied provenance declaring
 another window, invalidates serving approval while retaining verified calibration.
-This also applies when the provider setting changes after model loading.
+This also applies when the provider setting changes after model loading. A service
+without any history source would score every player with cold-start defaults, so it
+is never validated unless the caller supplies result-ordered priors with their
+provenance. The service adopts the manifest's declared `decision_policy` thresholds
+unless explicit thresholds are passed.
 
 These checks do not promote any existing candidate or rewrite historical hashes.
 An old report containing only a status, checkpoint hash and feature contract is
@@ -134,3 +139,19 @@ unchanged. The former comparison protocol and its verification record retain
 their original runtime hashes. Replaying that comparison with changed source
 code must reject the mismatch; old provenance is not rewritten to match a new
 runtime.
+
+## Re-binding runtime sources
+
+`FEATURE_SOURCE_FILES` hashes whole files, model-definition modules
+(`core/deepsets_layers.py`, `core/equivariant_model.py`) included, and frozen
+datasets additionally bind `core/serving_contract.py` and the aligned-dataset
+modules. Any edit to one of them, even a docstring, stops every manifest and
+frozen dataset from loading until it is re-stamped. Each re-stamp must be recorded
+in the manifest's `limitations` (what changed and that the checkpoint was not
+retrained or re-evaluated). A `validated` manifest must never be re-stamped
+without re-running its independent evaluation: the report binds the old hashes, so
+the manifest would fail closed. Serving-only logic belongs in unbound modules such
+as `core/serving_guards.py`, `core/serving_history.py` or `core/prediction_service.py`.
+On 25 October 2026 the seven serving manifests were re-stamped after the
+`blue_win_prior` default change; the 9-11 October frozen datasets still bind the
+previous `core/equivariant_model.py` bytes and no longer load.

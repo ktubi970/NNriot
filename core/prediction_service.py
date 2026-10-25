@@ -10,13 +10,15 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import threading
+import time
 from copy import deepcopy
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 import numpy as np
 
-from core.features.pipeline import DraftFeaturePipeline, get_feature_pipeline
+from core.features.pipeline import DraftFeaturePipeline
 from core.aligned_features import extract_aligned_inputs
 from core.features.matchup_matrix import LaneMatchupTracker
 from core.selective_infer import (
@@ -26,15 +28,47 @@ from core.selective_infer import (
     DEFAULT_HIGH_THRESHOLD,
 )
 from core.calibration import apply_temperature_to_probabilities
-from core.deepsets_layers import SiameseTeamEncoder, AntiSymmetricSoftmax
-from core.equivariant_model import ThreeClassEquivariantSoftmax, NNRIOT_CUSTOM_OBJECTS
+from core.equivariant_model import NNRIOT_CUSTOM_OBJECTS
 from core.shapley_credit import compute_counterfactual_shapley
 from core.serving_contract import (
-    FeatureContract, ContractError, HISTORY_WINDOW_LIMIT, load_model_manifest,
-    validate_probabilities, serving_decision_policy,
+    FeatureContract, ContractError, HISTORY_POLICY, HISTORY_WINDOW_LIMIT, load_model_manifest,
+    validate_probabilities, serving_decision_policy, _artifact_path,
 )
+from core.serving_guards import ModelOutputError, ServiceLoading
 
 logger = logging.getLogger("prediction_service")
+
+
+def _sidecar_paths(checkpoint_path, manifest_path) -> list[Path]:
+    """Artifacts known before the manifest is parsed."""
+    checkpoint = Path(checkpoint_path)
+    return [checkpoint, Path(manifest_path),
+            checkpoint.with_suffix('.calibration.json'), checkpoint.with_suffix('.split.json')]
+
+
+def _manifest_artifact_paths(manifest: dict, manifest_path, checkpoint_path) -> list[Path]:
+    """Every file the loaded manifest verification read."""
+    from core.config import PROJECT_ROOT
+    paths = _sidecar_paths(checkpoint_path, manifest_path)
+    calibration = manifest.get('calibration')
+    if isinstance(calibration, dict) and calibration.get('path'):
+        paths.append(_artifact_path(calibration['path'], PROJECT_ROOT))
+    report = (manifest.get('serving_validation') or {}).get('independent_evaluation_report')
+    if isinstance(report, dict) and report.get('path'):
+        paths.append(_artifact_path(report['path'], PROJECT_ROOT))
+    return paths
+
+
+def _stamp(paths) -> tuple:
+    """Cheap change detector: (path, mtime_ns, size), or None fields for a missing file."""
+    stamp = []
+    for path in paths:
+        try:
+            st = os.stat(path)
+            stamp.append((str(path), st.st_mtime_ns, st.st_size))
+        except OSError:
+            stamp.append((str(path), None, None))
+    return tuple(stamp)
 
 
 class PredictionService:
@@ -44,17 +78,18 @@ class PredictionService:
         self,
         checkpoint_path: str | Path | None = None,
         feature_pipeline: DraftFeaturePipeline | None = None,
-        action_threshold: float = DEFAULT_ACTION_THRESHOLD,
-        high_threshold: float = DEFAULT_HIGH_THRESHOLD,
+        action_threshold: float | None = None,
+        high_threshold: float | None = None,
         manifest_path: str | Path | None = None,
         history_provider=None,
     ) -> None:
         self.checkpoint_path = Path(checkpoint_path) if checkpoint_path else None
         self.feature_pipeline = feature_pipeline or DraftFeaturePipeline(matchup_tracker=LaneMatchupTracker())
-        self.action_threshold = float(action_threshold)
-        self.high_threshold = float(high_threshold)
-        if not (0 <= self.action_threshold <= self.high_threshold <= 0.5):
-            raise ContractError('Thresholds must satisfy 0 <= action <= high <= 0.5')
+        # Explicit thresholds win; otherwise the manifest's declared policy applies once loaded.
+        self._set_thresholds(
+            DEFAULT_ACTION_THRESHOLD if action_threshold is None else action_threshold,
+            DEFAULT_HIGH_THRESHOLD if high_threshold is None else high_threshold,
+        )
         self.contract = FeatureContract('nnriot.players14.v1')
         self.manifest = None
         self.manifest_path = manifest_path
@@ -62,16 +97,28 @@ class PredictionService:
 
         self._lock = threading.Lock()
         self._model = None
-        self._lgb_model = None
         self._temperature: float = 1.0
         self._is_calibrated: bool = False
         self._verified_calibration = None
         self._verified_manifest = None
         self._verified_decision_policy = None
-        self._blend_weights: dict[str, float] = {"nn": 1.0, "lgb": 0.0}
+        self._identity = None
+        self._artifact_paths: list[Path] = []
+        self._artifact_stamp: tuple = ()
 
         if self.checkpoint_path:
             self._load_artifacts()
+            policy = self.manifest.get('decision_policy')
+            if isinstance(policy, dict):
+                self._set_thresholds(
+                    policy.get('action_threshold', self.action_threshold) if action_threshold is None else action_threshold,
+                    policy.get('high_threshold', self.high_threshold) if high_threshold is None else high_threshold,
+                )
+
+    def _set_thresholds(self, action_threshold, high_threshold) -> None:
+        policy = serving_decision_policy(action_threshold, high_threshold)
+        self.action_threshold = policy['action_threshold']
+        self.high_threshold = policy['high_threshold']
 
     def _load_artifacts(self) -> None:
         """Load the manifest-bound neural model and verified winner calibration."""
@@ -82,6 +129,8 @@ class PredictionService:
         if not self.manifest_path:
             self.manifest_path = get_model_manifest_path(checkpoint_path=self.checkpoint_path)
         self.manifest = load_model_manifest(self.manifest_path, checkpoint_path=self.checkpoint_path)
+        self._artifact_paths = _manifest_artifact_paths(self.manifest, self.manifest_path, self.checkpoint_path)
+        self._artifact_stamp = _stamp(self._artifact_paths)
         self.contract = FeatureContract(self.manifest['feature_contract'])
         if self.contract.dim == 18 and self.history_provider is None:
             raise ContractError('18D serving requires an explicit pre-match timeline history provider')
@@ -122,9 +171,14 @@ class PredictionService:
         )
         # Feature contracts v1 fix the global history window for serving/evaluation.
         history_limit = getattr(self.history_provider, 'history_limit', None)
-        history_compatible = self.history_provider is None or (
-            type(history_limit) is int and history_limit == HISTORY_WINDOW_LIMIT
-        )
+        if self.history_provider is not None:
+            history_compatible = type(history_limit) is int and history_limit == HISTORY_WINDOW_LIMIT
+        else:
+            # Without a history source every player gets cold-start defaults, unlike the
+            # evaluated cohort; only caller-supplied result-ordered priors qualify.
+            history_compatible = (
+                isinstance(priors_provenance, dict) and priors_provenance.get('policy') == HISTORY_POLICY
+            )
         if priors_provenance is not None and 'history_window_limit' in priors_provenance:
             supplied_limit = priors_provenance['history_window_limit']
             history_compatible = history_compatible and (
@@ -137,11 +191,30 @@ class PredictionService:
         validation = (
             deepcopy(self.manifest['serving_validation']) if validated else {
                 'status': 'unverified' if self.manifest else 'in_memory_unverified',
-                'reason': 'independent evidence unavailable or effective configuration changed',
+                'reason': 'independent evidence unavailable, history source unavailable, '
+                          'or effective configuration changed',
             }
         )
         return {'calibrated': calibrated, 'validated': validated,
                 'serving_validation': validation, 'decision_policy': policy}
+
+    @staticmethod
+    def _validate_outputs(preds) -> None:
+        """Model output faults are service errors, never client feature-contract errors."""
+        try:
+            if not isinstance(preds, dict) or 'winner' not in preds:
+                raise ContractError('Inference returned no winner head')
+            validate_probabilities(preds['winner'], 'winner')
+            raw_draft = preds.get('draft_advantage')
+            if raw_draft is not None and len(np.shape(raw_draft)) >= 2:
+                validate_probabilities(raw_draft, 'draft_advantage')
+            raw_uncertainty = preds.get('winner_uncertainty')
+            if raw_uncertainty is not None:
+                value = float(np.asarray(raw_uncertainty).reshape(-1)[0])
+                if not np.isfinite(value) or not 0 <= value <= 1:
+                    raise ContractError('winner_uncertainty must be a finite value in [0, 1]')
+        except ContractError as exc:
+            raise ModelOutputError(str(exc)) from exc
 
     def predict_match(
         self,
@@ -157,6 +230,8 @@ class PredictionService:
         Returns:
             Structured prediction dictionary including probabilities, conviction,
             tier, actionability, and draft composition metadata.
+            winner.probability_basis states whether winner probabilities are
+            calibrated or raw (uncalibrated models expose raw values there).
             shapley_credits are raw neural leave-one-player-out effects (negative
             means helpful to that player's team), not additive Shapley values.
             epistemic_uncertainty is the raw Dirichlet head, or None for legacy
@@ -186,28 +261,21 @@ class PredictionService:
         # 2. Neural model prediction
         with self._lock:
             preds = self._model.predict(x_nn, verbose=0)
-            if not isinstance(preds, dict) or 'winner' not in preds:
-                raise ContractError('Inference returned no winner head')
-            validate_probabilities(preds['winner'], 'winner')
+            self._validate_outputs(preds)
             shapley_credits = compute_counterfactual_shapley(
                 self._model, x_nn["team_a"], x_nn["team_b"],
             )
 
-        if not isinstance(preds, dict) or 'winner' not in preds:
-            raise ContractError('Inference returned no winner head')
-        validate_probabilities(preds['winner'], 'winner')
         raw_uncertainty = preds.get("winner_uncertainty")
         epistemic_uncertainty = (
             float(np.asarray(raw_uncertainty).reshape(-1)[0])
             if raw_uncertainty is not None else None
         )
 
-        raw_winner = preds.get("winner")
-        p_b_raw = float(raw_winner[0, 1])
+        p_b_raw = float(preds["winner"][0, 1])
 
         raw_draft = preds.get("draft_advantage")
         if raw_draft is not None and len(raw_draft.shape) >= 2:
-            validate_probabilities(raw_draft, 'draft_advantage')
             p_draft_a = float(raw_draft[0, 0])
             p_draft_b = float(raw_draft[0, 1])
             favored = (
@@ -238,8 +306,6 @@ class PredictionService:
             action_threshold=tau,
             high_threshold=self.high_threshold,
         )
-        if epistemic_uncertainty is not None and (not np.isfinite(epistemic_uncertainty) or not 0 <= epistemic_uncertainty <= 1):
-            raise ContractError('winner_uncertainty must be a finite value in [0, 1]')
         if not calibrated:
             sel = sel._replace(prediction='abstain', tier='UNCALIBRATED', is_actionable=False)
         elif not validated:
@@ -271,6 +337,7 @@ class PredictionService:
             "winner": {
                 "team_a": round(p_a, 4),
                 "team_b": round(p_b, 4),
+                "probability_basis": "calibrated" if calibrated else "raw_uncalibrated",
                 "predicted": sel.prediction,
                 "confidence": round(max(p_a, p_b), 4),
             },
@@ -309,21 +376,62 @@ class PredictionService:
 
 
 _GLOBAL_SERVICE: PredictionService | None = None
+_SERVICE_LOCK = threading.Lock()
+_LAST_FAILURE: tuple | None = None
+LOAD_FAILURE_RETRY_SECONDS = 60.0
+NONBLOCKING_WAIT_SECONDS = 1.0
 
 
-def get_prediction_service(checkpoint_path: str | Path | None = None, *, db_path=None, manifest_path=None) -> PredictionService:
-    """Return shared global PredictionService singleton."""
-    global _GLOBAL_SERVICE
-    from core import config
-    checkpoint_path = Path(config.get_checkpoint_path(checkpoint_path, require_exists=True))
-    manifest_path = Path(config.get_model_manifest_path(manifest_path, checkpoint_path=checkpoint_path))
-    identity = (str(checkpoint_path), str(manifest_path), str(db_path))
-    if _GLOBAL_SERVICE is None or getattr(_GLOBAL_SERVICE, '_identity', None) != identity:
-        manifest = load_model_manifest(manifest_path, checkpoint_path=checkpoint_path)
-        provider = None
-        if db_path is not None or manifest['feature_contract'] == 'nnriot.players18.v1':
-            from core.pre_match_history import DatabaseHistoryProvider
-            provider = DatabaseHistoryProvider(config.get_db_path(db_path, require_exists=True))
-        _GLOBAL_SERVICE = PredictionService(checkpoint_path=checkpoint_path, manifest_path=manifest_path, history_provider=provider)
-        _GLOBAL_SERVICE._identity = identity
-    return _GLOBAL_SERVICE
+def _declared_contract(manifest_path: Path) -> str | None:
+    """Read only the declared contract; PredictionService performs full verification."""
+    try:
+        return json.loads(Path(manifest_path).read_text(encoding='utf-8')).get('feature_contract')
+    except (OSError, ValueError, AttributeError) as exc:
+        raise ContractError(f'Invalid model manifest {manifest_path}: {exc}') from exc
+
+
+def get_prediction_service(checkpoint_path: str | Path | None = None, *, db_path=None, manifest_path=None,
+                           blocking: bool = True) -> PredictionService:
+    """Return the shared PredictionService, reloading when its artifacts change on disk.
+
+    One lock serializes loading so concurrent requests never load the model twice.
+    With ``blocking=False`` a caller waits at most NONBLOCKING_WAIT_SECONDS, then
+    gets ``ServiceLoading``. A failed load is replayed for LOAD_FAILURE_RETRY_SECONDS
+    unless the checkpoint, manifest or their sidecars change.
+    """
+    global _GLOBAL_SERVICE, _LAST_FAILURE
+    acquired = _SERVICE_LOCK.acquire() if blocking else _SERVICE_LOCK.acquire(timeout=NONBLOCKING_WAIT_SECONDS)
+    if not acquired:
+        raise ServiceLoading('Prediction model is loading')
+    try:
+        from core import config
+        checkpoint_path = Path(config.get_checkpoint_path(checkpoint_path, require_exists=True))
+        manifest_path = Path(config.get_model_manifest_path(manifest_path, checkpoint_path=checkpoint_path))
+        identity = (str(checkpoint_path), str(manifest_path), str(db_path))
+        service = _GLOBAL_SERVICE
+        if (service is not None and service._identity == identity
+                and _stamp(service._artifact_paths) == service._artifact_stamp):
+            return service
+        # Changed artifacts must never keep serving the previously verified model.
+        _GLOBAL_SERVICE = None
+        failure_key = (identity, _stamp(_sidecar_paths(checkpoint_path, manifest_path)))
+        if (_LAST_FAILURE is not None and _LAST_FAILURE[0] == failure_key
+                and time.monotonic() - _LAST_FAILURE[1] < LOAD_FAILURE_RETRY_SECONDS):
+            raise ContractError(_LAST_FAILURE[2])
+        try:
+            provider = None
+            if db_path is not None or _declared_contract(manifest_path) == 'nnriot.players18.v1':
+                from core.pre_match_history import DatabaseHistoryProvider
+                from core.serving_history import CachedHistoryProvider
+                provider = CachedHistoryProvider(DatabaseHistoryProvider(config.get_db_path(db_path, require_exists=True)))
+            service = PredictionService(checkpoint_path=checkpoint_path, manifest_path=manifest_path,
+                                        history_provider=provider)
+        except Exception as exc:
+            _LAST_FAILURE = (failure_key, time.monotonic(), f'{exc} (cached load failure; retried when artifacts change)')
+            raise
+        _LAST_FAILURE = None
+        service._identity = identity
+        _GLOBAL_SERVICE = service
+        return service
+    finally:
+        _SERVICE_LOCK.release()

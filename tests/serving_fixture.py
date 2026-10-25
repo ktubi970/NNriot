@@ -23,12 +23,17 @@ def custom_match():
             for key,tid in (('blue_team',100),('red_team',200))}
 
 
-def install_serving_fixture(monkeypatch, raw, tmp_path, *, calibrated=True, validated=True, temperature=1.0):
-    """Load real manifest/calibration evidence, replacing only neural inference."""
+def install_serving_fixture(monkeypatch, raw, tmp_path, *, calibrated=True, validated=True, temperature=1.0,
+                            history=True):
+    """Load real manifest/calibration evidence, replacing only neural inference.
+
+    ``history`` attaches an empty result-ordered history source; without one the
+    facade scores cold-start defaults and never claims serving validation.
+    """
     import tensorflow as tf
     import core.prediction_service as serving
     from app.routes import api
-    from tests.serving_artifact_fixture import build_serving_artifacts
+    from tests.serving_artifact_fixture import EmptyHistoryProvider, build_serving_artifacts
 
     artifacts = build_serving_artifacts(
         tmp_path, calibrated=calibrated, validated=validated,
@@ -47,8 +52,9 @@ def install_serving_fixture(monkeypatch, raw, tmp_path, *, calibrated=True, vali
         model_patch.setattr(tf.keras.models, 'load_model', lambda *args, **kwargs: Model())
         service = serving.PredictionService(
             checkpoint_path=artifacts['checkpoint'], manifest_path=artifacts['manifest'],
+            history_provider=EmptyHistoryProvider() if history else None,
         )
+    # app.core.get_prediction_service delegates to this at call time.
     monkeypatch.setattr(serving,'get_prediction_service',lambda **kwargs:service)
-    monkeypatch.setattr(api,'get_prediction_service',lambda **kwargs:service)
     monkeypatch.setattr(api.database,'get_stale_puuids',lambda *args,**kwargs:[])
     return service

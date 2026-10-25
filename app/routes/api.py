@@ -27,7 +27,6 @@ from core.collection.service import (
     DEFAULT_REGIONS,
 )
 from core import riot_api
-from core import json_utils
 from core.task_runner import global_task_runner
 from ..services.player_service import PlayerService
 from core.repository import PlayerRepository
@@ -36,15 +35,6 @@ from ..services.system_service import SystemService
 def _system_service():
     from core.repository import SystemRepository
     return SystemService(SystemRepository(db_path=current_app.config["NNRIOT_DB_PATH"]))
-from core.feature_labels import VECTOR_DIM
-from core.calibration import UncalibratedModelError
-from core.pre_match_dataset import to_pre_match_features
-
-
-def get_prediction_service(**kwargs):
-    """Load TensorFlow only when the serving facade is actually requested."""
-    from core.prediction_service import get_prediction_service as get_service
-    return get_service(**kwargs)
 
 from .. import core
 
@@ -70,11 +60,14 @@ def api_status():
         "trainer_loaded": bool(core.tf_available and core.global_trainer is not None),
         "output_classes": 2,
     }
+    from core.serving_guards import ServiceLoading
     try:
-        service = get_prediction_service(
+        # Status polls never queue behind a model load; they report it instead.
+        service = core.get_prediction_service(
             db_path=current_app.config["NNRIOT_DB_PATH"],
             checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
             manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+            blocking=False,
         )
         manifest = service.manifest or {}
         verification = service.verification_status()
@@ -91,6 +84,9 @@ def api_status():
                 not verification["calibrated"] or not verification["validated"]
             ) else "Loaded; independently validated",
         })
+    except ServiceLoading as exc:
+        result.update({"model_loaded": False, "input_dimension": None,
+                       "status": "Model loading", "error_code": "model_loading", "error": str(exc)})
     except Exception as exc:
         result.update({"model_loaded": False, "input_dimension": None,
                        "status": "Model unavailable", "error_code": "model_contract", "error": str(exc)})
@@ -415,8 +411,8 @@ def api_predict():
         # Make final prediction
         result = core.final_predict_match_outcome(match_data, db_path=current_app.config["NNRIOT_DB_PATH"], checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"), manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"))
 
-        if "error" in result:
-            return jsonify(result), (400 if result.get("error_code") == "feature_contract" else 503)
+        if not result.get("success"):
+            return jsonify(result), core.prediction_http_status(result)
 
         return jsonify(result)
 
@@ -490,21 +486,14 @@ def api_predict_custom():
 
         # Construct a synthetic match structure for pre-match feature extraction
         participants = []
-        for i, p in enumerate(blue_team_data):
-            participants.append({
-                "teamId": 100,
-                "championName": p.get("champion_name") or p.get("championName"),
-                "teamPosition": p.get("role") or "UNKNOWN",
-                "puuid": p.get("puuid"),
-            })
-
-        for i, p in enumerate(red_team_data):
-            participants.append({
-                "teamId": 200,
-                "championName": p.get("champion_name") or p.get("championName"),
-                "teamPosition": p.get("role") or "UNKNOWN",
-                "puuid": p.get("puuid"),
-            })
+        for team_id, team_data in ((100, blue_team_data), (200, red_team_data)):
+            for p in team_data:
+                participants.append({
+                    "teamId": team_id,
+                    "championName": p.get("champion_name") or p.get("championName"),
+                    "teamPosition": p.get("role") or "UNKNOWN",
+                    "puuid": p.get("puuid"),
+                })
 
         match_data = {
             "info": {
@@ -513,65 +502,54 @@ def api_predict_custom():
             }
         }
 
-        from core.pre_match_history import to_serving_features
-        from core.serving_contract import ContractError, FeatureUnavailableError
-        try:
-            service = get_prediction_service(
-                checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
-                manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
-                db_path=current_app.config["NNRIOT_DB_PATH"],
-            )
-        except (ContractError, ValueError, OSError) as exc:
-            return jsonify({"success": False, "error": str(exc), "error_code": "model_contract"}), 503
-        try:
-            result = service.predict_match(to_serving_features(match_data))
-        except FeatureUnavailableError as exc:
-            return jsonify({"success": False, "error": str(exc), "error_code": "feature_unavailable", "is_actionable": False}), 503
-        except ContractError as exc:
-            return jsonify({"success": False, "error": str(exc), "error_code": "feature_contract"}), 400
-        if result.get("success"):
-            blue_prob_nn = result["winner"]["team_a"]
-            red_prob_nn = result["winner"]["team_b"]
+        result = core.final_predict_match_outcome(
+            match_data,
+            db_path=current_app.config["NNRIOT_DB_PATH"],
+            checkpoint_path=current_app.config.get("NNRIOT_CHECKPOINT_PATH"),
+            manifest_path=current_app.config.get("NNRIOT_MODEL_MANIFEST_PATH"),
+        )
+        if not result.get("success"):
+            return jsonify(result), core.prediction_http_status(result)
 
-            response_data = {
-                "success": True,
-                "nn_results": {
-                    "blue_win_probability": blue_prob_nn,
-                    "red_win_probability": red_prob_nn,
-                },
-                "predicted_winner": result["winner"]["predicted"].upper()
-                    if "predicted" in result["winner"] else ("BLUE" if blue_prob_nn > red_prob_nn else "RED"),
-                "confidence": result["winner"].get("confidence", round(max(blue_prob_nn, red_prob_nn), 4)),
+        blue_prob_nn = result["winner"]["team_a"]
+        red_prob_nn = result["winner"]["team_b"]
+
+        response_data = {
+            "success": True,
+            "nn_results": {
                 "blue_win_probability": blue_prob_nn,
                 "red_win_probability": red_prob_nn,
-                "blue_win_prob": blue_prob_nn,
-                "red_win_prob": red_prob_nn,
-                "explanation": "Multi-head NN analysis complete (PredictionService).",
-                "llm_active": False,
-                # Structured outputs from PredictionService
-                "model": result.get("model"),
-                "probabilities_raw": result.get("probabilities_raw"),
-                "probabilities_calibrated": result.get("probabilities_calibrated"),
-                "calibration": result.get("calibration"),
-                "draft_advantage": result.get("draft_advantage"),
-                "priors_provenance": result.get("priors_provenance"),
+            },
+            "predicted_winner": result["winner"]["predicted"].upper()
+                if "predicted" in result["winner"] else ("BLUE" if blue_prob_nn > red_prob_nn else "RED"),
+            "confidence": result["winner"].get("confidence", round(max(blue_prob_nn, red_prob_nn), 4)),
+            # blue/red probabilities below are calibrated only when this says so.
+            "probability_basis": result["winner"].get("probability_basis"),
+            "blue_win_probability": blue_prob_nn,
+            "red_win_probability": red_prob_nn,
+            "blue_win_prob": blue_prob_nn,
+            "red_win_prob": red_prob_nn,
+            "explanation": "Multi-head NN analysis complete (PredictionService).",
+            "llm_active": False,
+            # Structured outputs from PredictionService
+            "model": result.get("model"),
+            "probabilities_raw": result.get("probabilities_raw"),
+            "probabilities_calibrated": result.get("probabilities_calibrated"),
+            "calibration": result.get("calibration"),
+            "draft_advantage": result.get("draft_advantage"),
+            "priors_provenance": result.get("priors_provenance"),
+            "selective_decision": result.get("selective_decision"),
+            "shapley_credits": result.get("shapley_credits"),
+            "draft_composition": result.get("draft_composition"),
+            "epistemic_uncertainty": result.get("epistemic_uncertainty"),
+            # Legacy multi_output key for backward compatibility
+            "multi_output": {
+                "winner": result["winner"],
                 "selective_decision": result.get("selective_decision"),
-                "shapley_credits": result.get("shapley_credits"),
-                "draft_composition": result.get("draft_composition"),
-                "epistemic_uncertainty": result.get("epistemic_uncertainty"),
-                # Legacy multi_output key for backward compatibility
-                "multi_output": {
-                    "winner": result["winner"],
-                    "selective_decision": result.get("selective_decision"),
-                },
-            }
-        else:
-            return jsonify(result), 503
-
+            },
+        }
         return jsonify(response_data)
 
-    except UncalibratedModelError as e:
-        return jsonify({"error": str(e), "uncalibrated": True}), 503
     except Exception as e:
         logger.error(f"Custom prediction error: {e}", exc_info=True)
         return jsonify({"error": str(e)}), 500

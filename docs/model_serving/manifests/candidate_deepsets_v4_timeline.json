@@ -74,6 +74,7 @@
     "independent_evaluation_report": null
   },
   "limitations": [
+    "runtime_feature_sources re-bound on 2026-10-25 after edits to core/deepsets_layers.py (docstring) and core/equivariant_model.py (blue_win_prior default 0.525 -> 0.5, neutral side-bias init); the checkpoint was not retrained or re-evaluated against these sources",
     "Historical training feature provenance/PIT availability is not established by tensor shape or current source code"
   ]
 }

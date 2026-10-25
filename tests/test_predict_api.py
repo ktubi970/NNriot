@@ -305,3 +305,13 @@ def test_predict_endpoints_share_calibrated_winner_transform(client, monkeypatch
     assert a['model']['serving_validation']['status'] == 'validated'
     assert not a['selective_decision']['abstained']
     assert not b['selective_decision']['abstained']
+
+
+@pytest.mark.parametrize('calibrated, basis', [(True, 'calibrated'), (False, 'raw_uncalibrated')])
+def test_responses_label_the_probability_basis(client, monkeypatch, tmp_path, calibrated, basis):
+    from tests.serving_fixture import custom_match, install_serving_fixture
+    install_serving_fixture(monkeypatch, _fake_preds(), tmp_path / basis, calibrated=calibrated)
+    direct = client.post('/api/predict', json=_sample_match_payload()).get_json()
+    custom = client.post('/api/predict/custom', json=custom_match()).get_json()
+    assert direct['winner']['probability_basis'] == basis
+    assert custom['probability_basis'] == custom['multi_output']['winner']['probability_basis'] == basis

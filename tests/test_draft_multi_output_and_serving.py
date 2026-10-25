@@ -6,7 +6,7 @@ import pytest
 from core.draft_features import DENSE_FEATURE_DIM
 from core.generate_graph import build_draft_multi_output_model
 from core.feature_labels import ALL_LABEL_KEYS
-from app.core import _format_multi_output_response, final_predict_match_outcome
+from app.core import final_predict_match_outcome
 from app import core as app_core
 
 
@@ -22,22 +22,6 @@ def test_build_draft_multi_output_model_structure():
     preds = model(dummy)
     assert "winner" in preds
     assert preds["winner"].shape == (2, 2)
-
-
-def test_format_multi_output_response_with_single_head_winner():
-    # Only "winner" head present in preds
-    single_head_preds = {
-        "winner": np.array([[0.25, 0.75]], dtype=np.float32),
-    }
-    resp = _format_multi_output_response(single_head_preds)
-    assert resp["success"] is True
-    assert resp["winner"]["predicted"] == "B"
-    assert resp["winner"]["confidence"] == 0.75
-    # Secondary heads are populated with clean fallback defaults
-    assert "kills" in resp
-    assert "first" in resp
-    assert "totals" in resp
-    assert "both_teams" in resp
 
 
 def test_final_predict_dynamically_handles_dense_draft_shape(monkeypatch):

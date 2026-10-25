@@ -74,6 +74,26 @@ test('calibrated probabilities are displayed while raw probabilities remain avai
   assert.equal(result.selectiveDecision.conviction, 0.05);
 });
 
+test('result-ordered history provenance reports history availability', async () => {
+  const withHistory = apiWith(async () => ok(response({
+    priors_provenance: { policy: 'result_end_strictly_before_start.v1', history_matches: 3 },
+  })));
+  assert.equal((await withHistory.predictMatch(lineup('blue'), lineup('red'))).historyAvailable, true);
+  const empty = apiWith(async () => ok(response({
+    priors_provenance: { policy: 'result_end_strictly_before_start.v1', history_matches: 0 },
+  })));
+  assert.equal((await empty.predictMatch(lineup('blue'), lineup('red'))).historyAvailable, false);
+  const cold = apiWith(async () => ok(response({
+    priors_provenance: { policy: 'declared_cold_start_defaults', history_available: false },
+  })));
+  assert.equal((await cold.predictMatch(lineup('blue'), lineup('red'))).historyAvailable, false);
+});
+
+test('invalid model output has its own message', async () => {
+  const api = apiWith(async () => ({ ok: false, status: 503, json: async () => ({ success: false, error: 'winner must contain normalized finite probabilities', error_code: 'model_output' }) }));
+  await assert.rejects(api.predictMatch(lineup('blue'), lineup('red')), /sortie invalide/);
+});
+
 test('missing selective contract fails closed even when the service winner is confident', async () => {
   const api = apiWith(async () => ok(response({ selective_decision: undefined })));
   const result = await api.predictMatch(lineup('blue'), lineup('red'));

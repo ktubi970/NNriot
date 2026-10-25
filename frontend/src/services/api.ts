@@ -18,6 +18,7 @@ async function requestJson(url: string, options?: RequestInit): Promise<unknown>
   if (!response.ok || fields.success === false) {
     const messages: Record<string, string> = {
       model_contract: 'Le modèle est indisponible pour cette draft.',
+      model_output: 'Le modèle a produit une sortie invalide.',
       feature_unavailable: 'Les données historiques nécessaires sont indisponibles.',
       feature_contract: 'Cette draft ne satisfait pas les conditions du modèle.',
     };
@@ -137,7 +138,9 @@ export async function predictMatch(
     modelId: string(object(data.model).id) ?? null,
     draftAdvantage: data.draft_advantage == null ? null : probabilities(data.draft_advantage),
     features: [], explanationMethod: null,
-    historyAvailable: priors.history_available === true, priorPolicy: string(priors.policy) ?? null,
+    // Result-ordered provenance reports history_matches; only cold defaults set history_available.
+    historyAvailable: priors.history_available === true || (number(priors.history_matches) ?? 0) > 0,
+    priorPolicy: string(priors.policy) ?? null,
     latencyMs: Math.round(performance.now() - start), modelType: 'neural_tf', timestamp: new Date().toLocaleTimeString('fr-FR'),
   };
 }

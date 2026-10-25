@@ -8,7 +8,7 @@ import pytest
 from core.calibration import sha256_file
 from core.prediction_service import PredictionService
 from core.serving_contract import ContractError, load_model_manifest
-from tests.serving_artifact_fixture import build_serving_artifacts, write_json
+from tests.serving_artifact_fixture import EmptyHistoryProvider, build_serving_artifacts, write_json
 
 
 class FixedWinnerModel:
@@ -30,6 +30,7 @@ def match():
 
 def load_service(monkeypatch, artifacts, **kwargs):
     # Deserialization is slow/external to these gates; verification remains real.
+    kwargs.setdefault('history_provider', EmptyHistoryProvider())
     with monkeypatch.context() as context:
         context.setattr('tensorflow.keras.models.load_model', lambda *a, **k: FixedWinnerModel())
         return PredictionService(checkpoint_path=artifacts['checkpoint'],
@@ -199,3 +200,65 @@ def test_explicit_unchanged_threshold_preserves_verified_serving_status(tmp_path
     result = service.predict_match(match(), action_threshold=.04)
     assert result['model']['serving_validation']['status'] == 'validated'
     assert result['selective_decision']['is_actionable']
+
+
+def test_service_without_history_source_cannot_claim_validation(tmp_path, monkeypatch):
+    service = load_service(monkeypatch, build_serving_artifacts(tmp_path), history_provider=None)
+    result = service.predict_match(match())
+    assert result['probabilities_calibrated'] is not None
+    assert result['priors_provenance']['policy'] == 'declared_cold_start_defaults'
+    assert result['selective_decision']['tier'] == 'UNVALIDATED_MODEL'
+    assert result['selective_decision']['abstained']
+    assert not service.verification_status()['validated']
+
+
+def test_supplied_result_ordered_priors_can_be_validated_without_provider(tmp_path, monkeypatch):
+    from core.pre_match_history import ResultOrderedHistory
+    service = load_service(monkeypatch, build_serving_artifacts(tmp_path), history_provider=None)
+    value = match()
+    value['prediction_time_ms'] = 100_000
+    enriched = ResultOrderedHistory().enrich(value, include_timeline=False, as_of_ms=100_000)
+    result = service.predict_match(enriched)
+    assert result['model']['serving_validation']['status'] == 'validated'
+    assert result['selective_decision']['is_actionable']
+
+
+def test_service_adopts_manifest_decision_policy(tmp_path, monkeypatch):
+    service = load_service(monkeypatch, build_serving_artifacts(tmp_path, action_threshold=.06, high_threshold=.1))
+    assert (service.action_threshold, service.high_threshold) == (.06, .1)
+    result = service.predict_match(match())
+    assert result['selective_decision']['threshold_applied'] == .06
+    assert result['selective_decision']['high_threshold'] == .1
+    assert result['model']['serving_validation']['status'] == 'validated'
+    assert result['selective_decision']['is_actionable']
+
+
+def test_explicit_thresholds_override_manifest_policy(tmp_path, monkeypatch):
+    artifacts = build_serving_artifacts(tmp_path, action_threshold=.06, high_threshold=.1)
+    service = load_service(monkeypatch, artifacts, action_threshold=.04, high_threshold=.08)
+    result = service.predict_match(match())
+    assert result['selective_decision']['threshold_applied'] == .04
+    assert result['selective_decision']['tier'] == 'UNVALIDATED_MODEL'
+
+
+def test_malformed_manifest_policy_fails_closed(tmp_path, monkeypatch):
+    artifacts = build_serving_artifacts(tmp_path, calibrated=False, validated=False)
+    manifest = json.loads(artifacts['manifest'].read_text())
+    manifest['decision_policy'] = {'action_threshold': .3, 'high_threshold': .1}
+    write_json(artifacts['manifest'], manifest)
+    with pytest.raises(ContractError, match='Thresholds'):
+        load_service(monkeypatch, artifacts)
+
+
+@pytest.mark.parametrize('output', [
+    {'winner': np.array([[.7, .7]])},
+    {'pick': np.array([[.5, .5]])},
+    {'winner': np.array([[.4, .6]]), 'winner_uncertainty': np.array([[1.5]])},
+    {'winner': np.array([[.4, .6]]), 'draft_advantage': np.array([[.9, .9]])},
+])
+def test_invalid_model_output_is_reported_as_model_output(tmp_path, monkeypatch, output):
+    from core.serving_guards import ModelOutputError
+    service = load_service(monkeypatch, build_serving_artifacts(tmp_path))
+    service._model.predict = lambda inputs, verbose=0: output
+    with pytest.raises(ModelOutputError):
+        service.predict_match(match())

@@ -4,15 +4,30 @@ from pathlib import Path
 
 from core.calibration import save_calibration_artifact, sha256_file
 from core.experiment import build_manifest
-from core.serving_contract import runtime_feature_sources
+from core.pre_match_history import build_target_history
+from core.serving_contract import HISTORY_WINDOW_LIMIT, runtime_feature_sources
 
 
 def write_json(path, data):
     Path(path).write_text(json.dumps(data, allow_nan=False), encoding='utf-8')
 
 
+
+class EmptyHistoryProvider:
+    """A real result-ordered history source that simply has no prior matches."""
+    history_limit = HISTORY_WINDOW_LIMIT
+
+    def enrich(self, match, *, include_timeline):
+        as_of = match.get('prediction_time_ms') or 1_700_000_000_000
+        history = build_target_history([], match, as_of_ms=as_of)
+        enriched = history.enrich(match, include_timeline=include_timeline, as_of_ms=as_of)
+        enriched['priors_provenance']['history_window_limit'] = self.history_limit
+        return enriched
+
+
 def build_serving_artifacts(tmp_path, *, calibrated=True, validated=True,
-                            temperature=1.0, output_heads=None):
+                            temperature=1.0, output_heads=None,
+                            action_threshold=.04, high_threshold=.08):
     """Build artifacts whose hashes are really checked; callers fake only Keras I/O."""
     root = Path(tmp_path)
     root.mkdir(parents=True, exist_ok=True)
@@ -35,8 +50,8 @@ def build_serving_artifacts(tmp_path, *, calibrated=True, validated=True,
             'optimizer_success': True, 'boundary_hit': False,
             'log_loss_before': .69, 'log_loss_after': .65,
         }, input_dim=14)
-    policy = {'rule': 'nnriot.conviction.v1', 'action_threshold': .04,
-              'high_threshold': .08}
+    policy = {'rule': 'nnriot.conviction.v1', 'action_threshold': action_threshold,
+              'high_threshold': high_threshold}
     manifest_data = {
         'schema_version': 1, 'model_id': 'synthetic-serving-test',
         'checkpoint': {'path': str(checkpoint.resolve()), 'sha256': sha256_file(checkpoint)},

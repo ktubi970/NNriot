@@ -121,7 +121,7 @@ def test_api_status_rechecks_loaded_evidence(client, monkeypatch, tmp_path, chan
         unverified._model = service._model
         unverified._is_calibrated = True
         service = unverified
-        monkeypatch.setattr(api, "get_prediction_service", lambda **kwargs: service)
+        monkeypatch.setattr(app_core, "get_prediction_service", lambda **kwargs: service)
     elif change == "temperature":
         service._temperature = 2.0
     else:
