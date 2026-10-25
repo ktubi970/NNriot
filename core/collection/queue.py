@@ -1,12 +1,17 @@
 """CrawlQueueRepository for managing persistent player crawl queues."""
 
 import logging
+import time
 from typing import Optional
 
 from core import config, database
 from core.collection.models import CrawlItem
 
 logger = logging.getLogger(__name__)
+
+
+def _now_ms() -> int:
+    return int(time.time() * 1000)
 
 
 class CrawlQueueRepository:
@@ -107,7 +112,7 @@ class CrawlQueueRepository:
         ]
 
     def mark_processed(self, puuid: str, region: Optional[str] = None) -> None:
-        """Set is_processed = 1, processed_at = CURRENT_TIMESTAMP WHERE puuid = ?."""
+        """Set is_processed = 1, processed_at = now (UTC ms) WHERE puuid = ?."""
         if not puuid:
             return
         with database.get_connection(self.db_path) as conn:
@@ -115,32 +120,43 @@ class CrawlQueueRepository:
                 conn.execute(
                     """
                     UPDATE crawl_queue
-                    SET is_processed = 1, processed_at = CURRENT_TIMESTAMP
+                    SET is_processed = 1, processed_at = ?
                     WHERE puuid = ? AND region = ?
                     """,
-                    (puuid, region),
+                    (_now_ms(), puuid, region),
                 )
             else:
                 conn.execute(
                     """
                     UPDATE crawl_queue
-                    SET is_processed = 1, processed_at = CURRENT_TIMESTAMP
+                    SET is_processed = 1, processed_at = ?
                     WHERE puuid = ?
                     """,
-                    (puuid,),
+                    (_now_ms(), puuid),
                 )
 
     def mark_processed_by_id(self, queue_id: int) -> None:
-        """Set is_processed = 1, processed_at = CURRENT_TIMESTAMP WHERE id = ?."""
+        """Set is_processed = 1, processed_at = now (UTC ms) WHERE id = ?."""
         with database.get_connection(self.db_path) as conn:
             conn.execute(
                 """
                 UPDATE crawl_queue
-                SET is_processed = 1, processed_at = CURRENT_TIMESTAMP
+                SET is_processed = 1, processed_at = ?
                 WHERE id = ?
                 """,
-                (queue_id,),
+                (_now_ms(), queue_id),
             )
+
+    def unqueued(self, puuids: list[Optional[str]]) -> set[str]:
+        """The PUUIDs among *puuids* that have no crawl_queue entry yet."""
+        wanted = sorted({p for p in puuids if p})
+        known: set[str] = set()
+        with database.get_connection(self.db_path) as conn:
+            for start in range(0, len(wanted), 500):
+                chunk = wanted[start:start + 500]
+                known.update(r[0] for r in conn.execute(
+                    f"SELECT puuid FROM crawl_queue WHERE puuid IN ({','.join('?' for _ in chunk)})", chunk))
+        return set(wanted) - known
 
     def get_stats(self) -> dict[str, int]:
         """Return queue metrics: total, processed, pending."""

@@ -7,6 +7,9 @@ Responsible for:
 4. Persisting raw matches to MatchRepository and training records to TrainingRepository.
 5. Systematic timeline fetching and spatial embedding extraction via core.spatial_rnn.extract_and_store_timeline_embeddings.
 6. Returning IngestionResult with counts and discovered participant PUUIDs for snowballing.
+7. Recording availability (match_facts.ingested_at, fetched_by_puuid), every sighting of a
+   match, and keeping matches that predate an anchor's selection on rank out of the
+   database (discovery-only, see core.collection.anchors).
 """
 
 from __future__ import annotations
@@ -17,11 +20,15 @@ from pathlib import Path
 from typing import Any, Optional
 
 from core import config, database, json_utils
+from core.collection.anchors import AnchorRepository
 from core.collection.models import IngestionResult, MatchQualityFilter
 from core.feature_labels import extract_labels
 from core.repository import MatchRepository, TrainingRepository
 
 logger = logging.getLogger(__name__)
+
+# Recorded in training_dataset.feature_extractor for every row this ingestor writes.
+PRE_MATCH_FEATURE_EXTRACTOR = "json_utils.extract_pre_match_features"
 
 
 class MatchIngestor:
@@ -33,6 +40,7 @@ class MatchIngestor:
         quality_filter: Optional[MatchQualityFilter] = None,
         match_repo: Optional[MatchRepository] = None,
         train_repo: Optional[TrainingRepository] = None,
+        anchor_repo: Optional[AnchorRepository] = None,
     ):
         self.db_path = config.get_db_path(db_path, require_exists=False)
         if not Path(self.db_path).is_file():
@@ -41,6 +49,49 @@ class MatchIngestor:
         self.filter = quality_filter or MatchQualityFilter()
         self.match_repo = match_repo if match_repo is not None else MatchRepository(self.db_path)
         self.train_repo = train_repo if train_repo is not None else TrainingRepository(self.db_path)
+        self.anchor_repo = anchor_repo if anchor_repo is not None else AnchorRepository(self.db_path)
+        self._schema_ready = False
+
+    def _ensure_schema(self) -> None:
+        """Migrate an existing database before the first write, never on read-only use."""
+        if not self._schema_ready:
+            database.init_db(self.db_path)
+            self._schema_ready = True
+
+    @staticmethod
+    def _participant_puuids(details: dict, info: dict) -> set[str]:
+        puuids: set[str] = set()
+        for p in info.get("participants", []):
+            if isinstance(p, dict):
+                p_puuid = p.get("puuid")
+                if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
+                    puuids.add(p_puuid.strip())
+        metadata = details.get("metadata", {}) if isinstance(details, dict) else {}
+        if isinstance(metadata, dict):
+            for p_puuid in metadata.get("participants", []):
+                if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
+                    puuids.add(p_puuid.strip())
+        return puuids
+
+    @staticmethod
+    def is_discovery_only(
+        creation_ms: Any,
+        participant_puuids: set[str],
+        rank_selection_ms: dict[str, int],
+    ) -> bool:
+        """True when a participant was selected on rank after this match was created.
+
+        Such an anchor was selected *because* it won its recent matches, so they
+        over-represent its wins (54.3 % before entry vs 49.6 % after, audit of
+        25 Oct 2026). The rule follows participation, not the fetching anchor:
+        those matches also come back through the match lists of other players.
+        """
+        cutoffs = [rank_selection_ms[p] for p in participant_puuids if p in rank_selection_ms]
+        if not cutoffs:
+            return False
+        if type(creation_ms) is not int:
+            return True  # Cannot be shown to follow the selection.
+        return creation_ms < max(cutoffs)
 
     def build_training_record(
         self, match_id: str, details: dict, region: Optional[str] = None
@@ -110,18 +161,40 @@ class MatchIngestor:
         region: str,
         max_workers: int = 5,
         verbose: bool = False,
+        *,
+        fetched_by_puuid: Optional[str] = None,
     ) -> IngestionResult:
-        """Download, validate, extract features/timelines, and persist new matches."""
+        """Download, validate, extract features/timelines, and persist new matches.
+
+        ``fetched_by_puuid`` is the anchor whose match list returned *match_ids*. A
+        match is discovery-only when a participant was selected on rank after it was
+        created: it becomes neither a training target nor history, only its
+        participants are returned, and it is never downloaded again. Every returned
+        match is recorded in match_sightings with what was done with it.
+        """
         result = IngestionResult()
         if not match_ids:
             return result
 
+        self._ensure_schema()
         # Deduplicate incoming match IDs while preserving order
         unique_mids = list(dict.fromkeys(match_ids))
+        dispositions: dict[str, str] = {}
+        result = self._ingest(unique_mids, api, region, max_workers, verbose, fetched_by_puuid, dispositions)
+        self.match_repo.record_sightings(
+            [(mid, fetched_by_puuid, dispositions.get(mid, "missing")) for mid in unique_mids]
+        )
+        return result
 
-        new_mids = [mid for mid in unique_mids if not self.match_repo.match_exists(mid)]
-        already_existing_count = len(unique_mids) - len(new_mids)
-        result.skipped += already_existing_count
+    def _ingest(self, unique_mids, api, region, max_workers, verbose, fetched_by_puuid, dispositions):
+        result = IngestionResult()
+        for mid in unique_mids:
+            if self.match_repo.match_exists(mid):
+                dispositions[mid] = "already_stored"
+        known = self.match_repo.discovery_only_ids([m for m in unique_mids if m not in dispositions])
+        dispositions.update(dict.fromkeys(known, "discovery_only"))
+        new_mids = [mid for mid in unique_mids if mid not in dispositions]
+        result.skipped += len(unique_mids) - len(new_mids)
 
         if not new_mids:
             return result
@@ -147,6 +220,7 @@ class MatchIngestor:
         matches_batch: list[tuple[str, dict]] = []
         training_batch: list[tuple] = []
         discovered_puuids_set: set[str] = set()
+        valid: list[tuple[str, dict, dict, tuple, set[str]]] = []
 
         for mid in new_mids:
             details = details_map.get(mid)
@@ -161,31 +235,36 @@ class MatchIngestor:
 
             record = self.build_training_record(mid, details, region=region)
             if not record:
+                dispositions[mid] = "rejected"
                 result.skipped += 1
                 continue
 
-            matches_batch.append((mid, details))
-            training_batch.append(record)
-
             # Discover participants for snowballing from info.participants and metadata.participants
-            for p in info.get("participants", []):
-                if isinstance(p, dict):
-                    p_puuid = p.get("puuid")
-                    if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
-                        discovered_puuids_set.add(p_puuid.strip())
+            puuids = self._participant_puuids(details, info)
+            discovered_puuids_set.update(puuids)
+            valid.append((mid, details, info, record, puuids))
 
-            metadata = details.get("metadata", {}) if isinstance(details, dict) else {}
-            if isinstance(metadata, dict):
-                for p_puuid in metadata.get("participants", []):
-                    if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
-                        discovered_puuids_set.add(p_puuid.strip())
+        if valid:
+            rank_selections = self.anchor_repo.rank_selection_ms(
+                p for *_, puuids in valid for p in puuids
+            )
+            for mid, details, info, record, puuids in valid:
+                if self.is_discovery_only(info.get("gameCreation"), puuids, rank_selections):
+                    dispositions[mid] = "discovery_only"
+                    result.discovery_only += 1
+                    continue
+                matches_batch.append((mid, details))
+                training_batch.append(record)
 
         if matches_batch:
-            self.match_repo.save_matches_batch(matches_batch)
+            self.match_repo.save_matches_batch(matches_batch, fetched_by_puuid=fetched_by_puuid)
             result.matches_saved = len(matches_batch)
+            dispositions.update(dict.fromkeys((mid for mid, _ in matches_batch), "stored"))
 
         if training_batch:
-            self.train_repo.save_training_records_batch(training_batch)
+            self.train_repo.save_training_records_batch(
+                training_batch, feature_extractor=PRE_MATCH_FEATURE_EXTRACTOR
+            )
             result.records_saved = len(training_batch)
 
         # Systematic timeline collection

@@ -13,7 +13,7 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-MERGE_SCHEMA_VERSION = 15
+MERGE_SCHEMA_VERSION = 17
 
 
 def database(path, schema_version=MERGE_SCHEMA_VERSION):
@@ -60,20 +60,30 @@ def raw(match_id="EUW1_1", date=1000):
     }}
 
 
-def add_match(path, match_id="EUW1_1", payload=None, compressed=False, training_id=None):
+def add_match(path, match_id="EUW1_1", payload=None, compressed=False, training_id=None,
+              ingested_at=None, fetched_by_puuid=None, facts=None, v16_availability=(None, None)):
+    """Store a match; with availability (or *facts*), also its match_facts row as the writers would.
+
+    *v16_availability* fills the deprecated (ingested_at, fetched_by_puuid) columns of matches.
+    """
+    from core.database import _facts_row
     payload = raw(match_id) if payload is None else payload
     encoded = json.dumps(payload) if not isinstance(payload, str) else payload
     if compressed:
         encoded = base64.b64encode(gzip.compress(encoded.encode())).decode()
     with sqlite3.connect(path) as conn:
-        conn.execute("INSERT INTO matches VALUES (?,?,?,?,?,?)",
-                     (match_id, encoded, "CLASSIC", 1000, 1500, 16))
+        conn.execute("INSERT INTO matches VALUES (?,?,?,?,?,?,?,?)",
+                     (match_id, encoded, "CLASSIC", 1000, 1500, 16, *v16_availability))
+        if facts is None and (ingested_at is not None or fetched_by_puuid is not None):
+            facts = list(_facts_row(match_id, payload["info"], ingested_at, None))
+            facts[7] = fetched_by_puuid  # as stored, coherent or not
+        if facts is not None:
+            conn.execute("INSERT INTO match_facts VALUES (?,?,?,?,?,?,?,?)", tuple(facts))
         if training_id is not None:
             conn.execute("""INSERT INTO training_dataset
-                (id,match_id,feature_json,winner_label,is_trained,last_trained_at,
-                 llm_summary,llm_tags,llm_embedding,labels_json)
-                VALUES (?,?,?,1,1,'yesterday','useful','["tag"]',?,?)""",
-                         (training_id, match_id, '{"stale":true}', b"embedding", '{}'))
+                (id,match_id,feature_json,winner_label,labels_json,feature_extractor)
+                VALUES (?,?,?,1,?,'legacy')""", (training_id, match_id, '{"stale":true}', '{}'))
+            conn.execute("INSERT INTO trained_records VALUES (?, 1000)", (training_id,))
 
 
 def run(tmp_path, source, target, suffix="", **kwargs):
@@ -103,17 +113,17 @@ def test_merge_contract_tracks_the_application_schema():
 def test_older_schema_inputs_are_refused_with_migration_guidance(tmp_path, stale):
     paths = {name: database(tmp_path / f"{name}.db", 12 if name == stale else MERGE_SCHEMA_VERSION)
              for name in ("source", "target")}
-    with pytest.raises(ValueError, match="only schema version 15 is supported.*migrate a copy"):
+    with pytest.raises(ValueError, match="only schema version 17 is supported.*migrate a copy"):
         run(tmp_path, paths["source"], paths["target"])
     assert not (tmp_path / "merged.db").exists()
 
 
-def test_report_declares_v15_and_counts_spatial_embeddings(tmp_path):
+def test_report_declares_v17_and_counts_spatial_embeddings(tmp_path):
     source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
     add_match(target)
     embed(target, "EUW1_1", "real-puuid-0")
     report = run(tmp_path, source, target)
-    assert report["schema_version"] == 15
+    assert report["schema_version"] == 17
     assert report["before"]["target"]["player_spatial_embeddings"] == 1
     assert report["after"]["player_spatial_embeddings"] == 1
     assert "player_spatial_embeddings" in report["inputs"]["target"]["tables"]
@@ -227,12 +237,15 @@ def test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable(tmp_
     training = rows(merged, "training_dataset")
     assert training[0] == canonical[0]
     assert training[1]["id"] > 8
-    assert training[1]["is_trained"] == 0
-    assert training[1]["last_trained_at"] is None
-    assert training[1]["llm_summary"] == "useful"
-    assert training[1]["llm_embedding"] == b"embedding"
     assert json.loads(training[1]["labels_json"])["winner"] == 0
-    assert len(json.loads(training[1]["feature_json"])["team_a"]) == 5
+    # Imported features use the ingestor's pre-match extractor: no final KDA or gold.
+    team_a = json.loads(training[1]["feature_json"])["team_a"]
+    assert len(team_a) == 5 and not any({"kda", "gold"} & set(p) for p in team_a)
+    assert training[1]["feature_extractor"] == "json_utils.extract_pre_match_features"
+    # Trainer state is the target's own: the source's is never imported.
+    assert rows(merged, "trained_records") == rows(target, "trained_records")
+    assert any(e.get("table") == "trained_records" and e["reason"] == "trainer_state_not_merged"
+               for e in archived(report))
     assert len(rows(merged, "match_participants")) == 10
     assert report["classification"] == {"existing": 1, "imported": 1, "archived": 0}
     assert report["target_preservation"]["ok"] is True
@@ -290,12 +303,15 @@ def test_identity_precedence_alias_conflicts_and_aggregate_stats(tmp_path):
             ("real-puuid-0", "alias-player")])
         conn.executemany("INSERT INTO champions VALUES (?)", [("Zed",), ("UNKNOWN",)])
     report = run(tmp_path, source, target)
+    from core.database import get_player_stats
     players = {r["puuid"]: r for r in rows(tmp_path / "merged.db", "players")}
     assert players["real-puuid-0"]["game_name"] == "Newest"
     assert players["real-puuid-1"]["game_name"] == "Canonical"
-    assert players["real-puuid-0"]["total_matches"] == 2
-    assert players["real-puuid-0"]["avg_kda"] == 9
-    assert players["real-puuid-0"]["avg_gold"] == 11000
+    # Statistics are no longer stored: they are derived from the merged participants.
+    stats = get_player_stats("real-puuid-0", db_path=str(tmp_path / "merged.db"))
+    assert (stats["total_matches"], stats["avg_kda"], stats["avg_gold"]) == (2, 9.0, 11000)
+    # Identities created by the merge were never refreshed from Riot.
+    assert players["real-puuid-2"]["updated_at"] is None
     assert "UNKNOWN" not in players
     aliases = rows(tmp_path / "merged.db", "player_aliases")
     assert len(aliases) <= 1
@@ -510,47 +526,108 @@ def test_logical_fingerprint_is_independent_of_sqlite_insertion_order(tmp_path):
     assert left['algorithm'] == 'sha256-sorted-row-sha256-v1'
 
 
-def test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic(tmp_path, monkeypatch):
+def test_imported_matches_keep_a_coherent_source_availability_record(tmp_path):
     source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
-    samples = [
-        ("EUW1_1", "player-b", 8, 0, 3, 12000, 3000),
-        ("EUW1_2", "player-a", None, None, 4, 10000, 1000),
-        ("EUW1_3", "player-b", 2, 2, 1, None, 1000),
-        ("EUW1_4", "player-a", 6, 1, None, 18000, 4000),
-        ("EUW1_5", "player-zero", None, None, None, None, 2000),
-        ("EUW1_6", "__UNKNOWN_M6_1", 100, 1, 100, 99999, 5000),
-    ]
-    for match_id, *_ in samples:
-        add_match(target, match_id)
-    with sqlite3.connect(target) as conn:
-        conn.executemany("INSERT INTO match_participants "
-            "(match_id,puuid,kills,deaths,assists,gold_earned,game_creation_time) "
-            "VALUES (?,?,?,?,?,?,?)", samples)
-        conn.execute("INSERT INTO players(puuid,total_matches,avg_kda,avg_gold) "
-                     "VALUES ('__UNKNOWN_M6_1',99,99,99)")
-    original = api()._merge_identities
-    observed_plan = []
-
-    def capture_stats_plan(src, out, archive):
-        statements = []
-        out.set_trace_callback(statements.append)
-        try:
-            original(src, out, archive)
-        finally:
-            out.set_trace_callback(None)
-        statement = next(sql for sql in statements if sql.startswith("CREATE TEMP TABLE merge_stats AS SELECT"))
-        select = statement.split(" AS ", 1)[1]
-        observed_plan.extend(row[3] for row in out.execute("EXPLAIN QUERY PLAN " + select))
-
-    monkeypatch.setattr(api(), "_merge_identities", capture_stats_plan)
+    add_match(source, "EUW1_1", ingested_at=5000, fetched_by_puuid="real-puuid-3")
+    add_match(source, "EUW1_2")  # ingested before v16: availability unknown
     report = run(tmp_path, source, target)
-    players = {row["puuid"]: row for row in rows(tmp_path / "merged.db", "players")}
-    for puuid, expected in {
-        "player-a": (2, 10.0, 14000.0),
-        "player-b": (2, 7.0, 6000.0),
-        "player-zero": (1, 0.0, 0.0),
-        "__UNKNOWN_M6_1": (0, 0.0, 0.0),
-    }.items():
-        assert tuple(players[puuid][key] for key in ("total_matches", "avg_kda", "avg_gold")) == expected
-    assert report["target_preservation"]["ok"]
-    assert observed_plan == ["SCAN match_participants", "USE TEMP B-TREE FOR GROUP BY"]
+    merged = {r["match_id"]: r for r in rows(tmp_path / "merged.db", "match_facts")}
+    assert (merged["EUW1_1"]["ingested_at"], merged["EUW1_1"]["fetched_by_puuid"]) == (5000, "real-puuid-3")
+    # Facts are derived from the raw match even when the source had none; availability stays unknown.
+    assert merged["EUW1_2"] == {"match_id": "EUW1_2", "queue_id": None, "game_start_at": None,
+                                "game_end_at": None, "game_version": "16.18.1", "platform": "EUW1",
+                                "ingested_at": None, "fetched_by_puuid": None}
+    assert not any(e.get("table") in ("matches", "match_facts") for e in archived(report))
+
+
+@pytest.mark.parametrize("ingested_at, fetched_by_puuid, cleared", [
+    (999, "real-puuid-3", "ingested_at"),       # before the match was created
+    ("2026-10-25", "real-puuid-3", "ingested_at"),
+    (True, "real-puuid-3", "ingested_at"),
+    (5000, "stranger", "fetched_by_puuid"),     # did not play the match it fetched
+])
+def test_incoherent_source_availability_is_cleared_and_archived(tmp_path, ingested_at, fetched_by_puuid, cleared):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(source, "EUW1_1", ingested_at=ingested_at, fetched_by_puuid=fetched_by_puuid)
+    report = run(tmp_path, source, target)
+    merged = rows(tmp_path / "merged.db", "match_facts")[0]
+    original = {"ingested_at": ingested_at, "fetched_by_puuid": fetched_by_puuid}
+    assert merged[cleared] is None
+    kept = ({"ingested_at", "fetched_by_puuid"} - {cleared}).pop()
+    assert merged[kept] == original[kept]
+    entries = [e for e in archived(report) if e.get("table") == "match_facts"]
+    assert [(e["reason"], e["row"][cleared]) for e in entries] == [("normalized_metadata", original[cleared])]
+
+
+def test_target_availability_wins_and_the_source_record_is_archived(tmp_path):
+    # A later ingestion time can only remove history rows, never leak one.
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(target, "EUW1_1", ingested_at=9000, fetched_by_puuid="real-puuid-1")
+    add_match(source, "EUW1_1", ingested_at=2000, fetched_by_puuid="real-puuid-2")
+    report = run(tmp_path, source, target)
+    assert rows(tmp_path / "merged.db", "match_facts") == rows(target, "match_facts")
+    assert report["target_preservation"]["ok"] is True
+    entries = [e for e in archived(report) if e.get("table") == "match_facts"]
+    assert [(e["reason"], e["row"]["ingested_at"]) for e in entries] == [("canonical_precedence", 2000)]
+
+
+def test_source_availability_fills_a_target_match_that_had_none(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(target, "EUW1_1")
+    add_match(source, "EUW1_1", ingested_at=2000, fetched_by_puuid="real-puuid-2")
+    report = run(tmp_path, source, target)
+    assert rows(tmp_path / "merged.db", "match_facts") == rows(source, "match_facts")
+    assert report["target_preservation"]["ok"] is True
+
+
+def test_anchor_selections_are_unioned_with_fresh_ids(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    shared = ("real-puuid-0", "EUW", "ladder_seed", 1000, '{"leaguePoints": 1500}')
+    with sqlite3.connect(target) as conn:
+        conn.execute("INSERT INTO anchor_selections (puuid,region,source,selected_at,rank_json) VALUES (?,?,?,?,?)", shared)
+    with sqlite3.connect(source) as conn:
+        conn.executemany("INSERT INTO anchor_selections (puuid,region,source,selected_at,rank_json) VALUES (?,?,?,?,?)", [
+            ("UNKNOWN", "EUW", "ladder_seed", 1000, None), shared,
+            ("real-puuid-1", "KR", "pro_import", 3000, None), ("real-puuid-2", "EUW", "vibes", 3000, None),
+            ("real-puuid-3", "EUW", "top_leagues", 0, None), ("real-puuid-4", "MARS", "top_leagues", 3000, None),
+            ("real-puuid-5", "EUW", "top_leagues", 3000, "not-json")])
+    report = run(tmp_path, source, target)
+    merged = rows(tmp_path / "merged.db", "anchor_selections")
+    assert [(r["id"], r["puuid"]) for r in merged] == [(1, "real-puuid-0"), (2, "real-puuid-1")]
+    reasons = sorted((e["row"]["puuid"], e["reason"]) for e in archived(report) if e.get("table") == "anchor_selections")
+    assert reasons == [("UNKNOWN", "invalid_anchor_selection"), ("real-puuid-1", "regenerated_anchor_id"),
+                       ("real-puuid-2", "invalid_anchor_selection"), ("real-puuid-3", "invalid_anchor_selection"),
+                       ("real-puuid-4", "invalid_anchor_selection"), ("real-puuid-5", "invalid_anchor_selection")]
+    assert report["target_preservation"]["ok"] is True
+
+
+def test_match_sightings_are_unioned_including_matches_never_stored(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    shared = ("EUW1_1", "real-puuid-0", 1000, "stored")
+    with sqlite3.connect(target) as conn:
+        conn.execute("INSERT INTO match_sightings VALUES (?,?,?,?)", shared)
+    with sqlite3.connect(source) as conn:
+        conn.executemany("INSERT INTO match_sightings VALUES (?,?,?,?)", [
+            shared, ("EUW1_SEED", "real-puuid-1", 2000, "discovery_only"),
+            ("EUW1_2", "__TOMBSTONE__", 2000, "stored"), ("EUW1_3", None, -5, "missing")])
+    report = run(tmp_path, source, target)
+    merged = sorted(tuple(r.values()) for r in rows(tmp_path / "merged.db", "match_sightings"))
+    assert merged == [shared, ("EUW1_SEED", "real-puuid-1", 2000, "discovery_only")]
+    assert sorted(e["row"]["match_id"] for e in archived(report) if e.get("table") == "match_sightings") == [
+        "EUW1_2", "EUW1_3"]
+
+
+@pytest.mark.parametrize("v16_availability, expected", [
+    ((5000, "real-puuid-3"), (5000, "real-puuid-3")),
+    ((999, "real-puuid-3"), (None, "real-puuid-3")),   # before creation: impossible
+    ((5000, "stranger"), (5000, None)),                # did not play the match
+])
+def test_v16_availability_of_a_source_without_facts_is_carried(tmp_path, v16_availability, expected):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(source, "EUW1_1", v16_availability=v16_availability)
+    run(tmp_path, source, target)
+    facts = rows(tmp_path / "merged.db", "match_facts")[0]
+    assert (facts["ingested_at"], facts["fetched_by_puuid"]) == expected
+    # The deprecated columns themselves are copied verbatim.
+    merged = rows(tmp_path / "merged.db", "matches")[0]
+    assert (merged["ingested_at"], merged["fetched_by_puuid"]) == v16_availability

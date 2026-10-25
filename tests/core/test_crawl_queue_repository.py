@@ -77,9 +77,10 @@ def test_migration_14_schema_and_data_preservation(tmp_path):
         assert faker["is_processed"] == 0
         assert faker["region"] == "EUW"
 
-        # Verify indices exist
+        # Verify an index covers puuid (the UNIQUE constraint's own index since v17)
         indices = [row["name"] for row in conn.execute("PRAGMA index_list(crawl_queue)").fetchall()]
-        assert any("puuid" in idx for idx in indices)
+        indexed = {r["name"] for idx in indices for r in conn.execute(f"PRAGMA index_info({idx})")}
+        assert "puuid" in indexed
 
 
 def test_enqueue_puuids_and_conflict_resolution(test_db):
@@ -187,3 +188,26 @@ def test_get_stats(test_db):
 
     repo.mark_processed(puuid="p1")
     assert repo.get_stats() == {"total": 3, "processed": 1, "pending": 2}
+
+
+def test_queue_times_are_utc_milliseconds(test_db):
+    import time
+    repo = CrawlQueueRepository(test_db)
+    before = int(time.time() * 1000)
+    repo.enqueue_puuids(["p1", "p2"], region="EUW")
+    repo.mark_processed("p1")
+    item = repo.pop_next(limit=1)[0]
+    repo.mark_processed_by_id(item.id)
+    with sqlite3.connect(test_db) as conn:
+        rows = conn.execute("SELECT created_at, processed_at FROM crawl_queue ORDER BY id").fetchall()
+    for created, processed in rows:
+        assert type(created) is int and type(processed) is int
+        assert before - 1000 <= created <= processed
+
+
+def test_unqueued_returns_puuids_absent_from_the_queue(test_db):
+    repo = CrawlQueueRepository(test_db)
+    repo.enqueue_puuids(["queued", "done"], region="EUW")
+    repo.mark_processed("done")
+    assert repo.unqueued(["queued", "done", "new", "", None, "new"]) == {"new"}
+    assert repo.unqueued([f"p{i}" for i in range(2500)]) == {f"p{i}" for i in range(2500)}

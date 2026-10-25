@@ -47,11 +47,19 @@ def test_collectors_write_only_selected_database(tmp_path, monkeypatch, collecto
     elif collector == "top": module.collect_top_leagues_data(regions=["EUW"], **kwargs)
     elif collector == "puuid": module.collect_by_puuid([{"puuid": "p0", "server": "EUW"}], **kwargs)
     else: module.collect_batch_with_smurfs([("Player", "EUW")], [], **kwargs)
-    for table in ("players", "matches", "training_dataset", "match_timelines"):
+    stored = ("matches", "training_dataset", "match_timelines")
+    # Top-league anchors only discover the frontier: their matches predate their
+    # selection on rank, so nothing is stored, but the anchor and its frontier are.
+    written = ("players", "crawl_queue") if collector == "top" else ("players", *stored)
+    for table in ("players", "crawl_queue", *stored):
         with sqlite3.connect(default) as conn:
             assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] == 0
         with sqlite3.connect(selected) as conn:
-            assert conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0] > 0
+            count = conn.execute(f"SELECT count(*) FROM {table}").fetchone()[0]
+        if table in written:
+            assert count > 0
+        elif collector == "top":
+            assert count == 0
 
 
 @pytest.mark.parametrize("route", ["seed", "players", "batch", "lolpros", "warmup", "spectator"])

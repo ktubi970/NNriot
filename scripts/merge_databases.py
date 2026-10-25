@@ -1,4 +1,4 @@
-"""Offline schema-v15 merge. Inputs are read-only; outputs are never overwritten.
+"""Offline schema-v17 merge. Inputs are read-only; outputs are never overwritten.
 
 The gzip JSONL archive is also the classification manifest. ``kind=source_row``
 preserves exact SQLite values discarded by canonical precedence or regeneration;
@@ -9,6 +9,16 @@ Crawl queue entries match on PUUID (legacy rows without one: Riot ID and region)
 the target wins and imported entries receive fresh ids. Source spatial embeddings
 are archived, never imported: they are derived data, legacy rows have no recorded
 encoder, and the staged output can be recomputed with the pinned encoder.
+
+match_facts are derived from the raw match. Their availability (``ingested_at``,
+``fetched_by_puuid``) follows the match: the target's record wins, and an imported
+match keeps the source's record when it is coherent (ingested at or after
+creation, fetched by a participant); otherwise it becomes NULL (unknown) and the
+original row is archived. A source match without facts contributes the
+deprecated schema-v16 availability columns of its matches row, which are copied
+verbatim. Collection provenance (anchor_selections,
+match_sightings) is append-only and unioned. Trainer state (trained_records) is
+never imported, and imported training rows use the ingestor's pre-match features.
 """
 from __future__ import annotations
 
@@ -23,35 +33,47 @@ import logging
 from pathlib import Path
 import sqlite3
 
+from core.collection.anchors import SOURCES as ANCHOR_SOURCES
+from core.collection.ingestor import PRE_MATCH_FEATURE_EXTRACTOR
 from core.collection.regions import TAG_TO_REGION
+from core.database import SIGHTING_DISPOSITIONS, _coherent_ingested_at, _facts_row
 from core.feature_labels import extract_labels, extract_timeline_labels
-from core.json_utils import extract_match_features
+from core.json_utils import extract_pre_match_features
 from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _valid_timestamp
 
 
 logger = logging.getLogger(__name__)
 
 
-SCHEMA_VERSION = 15
-TABLES = ("schema_version", "matches", "training_dataset", "match_participants",
-          "match_timelines", "players", "player_aliases", "champions", "crawl_queue",
-          "player_spatial_embeddings")
-KEYS = {"matches": ("match_id",), "training_dataset": ("match_id",),
+SCHEMA_VERSION = 17
+TABLES = ("schema_version", "matches", "match_facts", "training_dataset", "trained_records",
+          "match_participants", "match_timelines", "match_sightings", "players", "player_aliases",
+          "anchor_selections", "champions", "crawl_queue", "player_spatial_embeddings")
+KEYS = {"matches": ("match_id",), "match_facts": ("match_id",), "training_dataset": ("match_id",),
+        "trained_records": ("training_id",),
         "match_participants": ("match_id", "puuid"), "match_timelines": ("match_id",),
-        "players": ("puuid",), "player_aliases": ("alias_puuid",),
+        "match_sightings": ("match_id", "fetched_by_puuid", "seen_at", "disposition"),
+        "players": ("puuid",), "player_aliases": ("alias_puuid",), "anchor_selections": ("id",),
         "champions": ("name",), "crawl_queue": ("id",),
         "player_spatial_embeddings": ("match_id", "puuid")}
+FACT_COLUMNS = ("match_id", "queue_id", "game_start_at", "game_end_at", "game_version", "platform",
+                "ingested_at", "fetched_by_puuid")
 REQUIRED = {
     "schema_version": {"version"},
-    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id"},
-    "training_dataset": {"id", "match_id", "feature_json", "winner_label", "is_trained",
-        "last_trained_at", "llm_summary", "llm_tags", "llm_embedding", "labels_json"},
+    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id",
+        "ingested_at", "fetched_by_puuid"},
+    "match_facts": set(FACT_COLUMNS),
+    "training_dataset": {"id", "match_id", "feature_json", "winner_label", "labels_json", "feature_extractor"},
+    "trained_records": {"training_id", "trained_at"},
     "match_participants": {"match_id", "puuid", "champion_name", "team_position", "win",
         "kills", "deaths", "assists", "total_cs", "gold_earned", "game_creation_time",
-        "game_duration", "game_mode", "items_json"},
+        "game_duration", "game_mode", "items_json", "team_id"},
     "match_timelines": {"match_id", "timeline_json"},
-    "players": {"puuid", "game_name", "tag_line", "last_updated", "avg_kda", "avg_gold", "total_matches"},
-    "player_aliases": {"alias_puuid", "canonical_puuid"}, "champions": {"name"},
+    "match_sightings": {"match_id", "fetched_by_puuid", "seen_at", "disposition"},
+    "players": {"puuid", "game_name", "tag_line", "updated_at"},
+    "player_aliases": {"alias_puuid", "canonical_puuid"},
+    "anchor_selections": {"id", "puuid", "region", "source", "selected_at", "rank_json"},
+    "champions": {"name"},
     "crawl_queue": {"id", "puuid", "region", "game_name", "tag_line", "priority", "is_processed",
         "created_at", "processed_at"},
     "player_spatial_embeddings": {"match_id", "puuid", "game_creation_time", "embedding_blob", "encoder_id"},
@@ -184,12 +206,22 @@ def _validate(row):
             if type(p.get(key, 0)) is not int or not 0 <= p.get(key, 0) <= 10_000_000:
                 return None, "invalid_participant_metrics"
     try:
-        features, labels = extract_match_features(data), extract_labels(data)
+        features, labels = extract_pre_match_features(data), extract_labels(data)
         if not _valid_features(features) or not labels or not _valid_labels(labels, labels["winner"]):
             return None, "invalid_extracted_training"
     except (ValueError, TypeError, OverflowError):
         return None, "invalid_extracted_training"
     return (data, features, labels), None
+
+
+def _facts(match_id, info, source_facts):
+    """match_facts derived from the raw match, keeping the source's availability when coherent.
+
+    Coherent: ingested at or after creation, fetched by one of its participants.
+    """
+    ingested = _coherent_ingested_at(source_facts["ingested_at"], info) if source_facts else None
+    fetched = source_facts["fetched_by_puuid"] if source_facts else None
+    return dict(zip(FACT_COLUMNS, _facts_row(match_id, info, ingested, fetched)))
 
 
 def _insert(conn, table, row):
@@ -240,7 +272,7 @@ def _participants(row, data):
             "total_cs": p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
             "gold_earned": p.get("goldEarned", 0), "game_creation_time": info["gameCreation"],
             "game_duration": info.get("gameDuration"), "game_mode": "CLASSIC",
-            "items_json": json.dumps([p.get(f"item{i}", 0) for i in range(7)])}
+            "items_json": json.dumps([p.get(f"item{i}", 0) for i in range(7)]), "team_id": p["teamId"]}
 
 
 def _compatible_timeline(row, match):
@@ -283,14 +315,13 @@ def _merge_matches(source, target, out, archive):
                 if normalized != row:
                     archive.row("matches", row, "normalized_metadata")
                 _insert(out, "matches", normalized)
+                # Without facts, the deprecated v16 columns of the source row hold its availability.
+                _insert(out, "match_facts", _facts(row["match_id"], info, _lookup(source, "match_facts", row) or row))
                 for participant in _participants(row, data):
                     _insert(out, "match_participants", participant)
                 training = {"match_id": row["match_id"], "feature_json": _json(features),
                     "winner_label": labels["winner"], "labels_json": _json(labels),
-                    "is_trained": 0, "last_trained_at": None}
-                old_training = _lookup(source, "training_dataset", row)
-                if old_training:
-                    training.update({k: old_training[k] for k in ("llm_summary", "llm_tags", "llm_embedding")})
+                    "feature_extractor": PRE_MATCH_FEATURE_EXTRACTOR}
                 _insert(out, "training_dataset", training)
         counts[category] += 1
         if reason:
@@ -300,9 +331,33 @@ def _merge_matches(source, target, out, archive):
     return dict(counts), dict(reasons)
 
 
+def _merge_facts(row, status, existing, out, archive):
+    """True when the source facts row is accounted for (kept, recomputed or archived)."""
+    if status[0] == "imported":
+        # Recomputed by _merge_matches; the differing original is kept in the archive.
+        archive.row("match_facts", row, "normalized_metadata")
+        return True
+    if status[0] == "existing" and existing is None and status[1]:
+        # The target never recorded this match's availability: the source's fills it.
+        data = _decode(_lookup(out, "matches", row)["raw_json"])
+        info = data.get("info") if isinstance(data, dict) else None
+        if isinstance(info, dict) and _valid_timestamp(info.get("gameCreation")) \
+                and isinstance(info.get("participants"), list) and all(isinstance(p, dict) for p in info["participants"]):
+            facts = _facts(row["match_id"], info, row)
+            _insert(out, "match_facts", facts)
+            if facts != row:
+                archive.row("match_facts", row, "normalized_metadata")
+            return True
+    if status[0] == "existing":
+        archive.row("match_facts", row, "canonical_precedence")
+        return True
+    return False
+
+
 def _merge_relationships(source, out, archive):
     logger.info("Merging and archiving source relationships")
-    for table in ("match_timelines", "training_dataset", "match_participants", "player_spatial_embeddings"):
+    for table in ("match_timelines", "match_facts", "training_dataset", "match_participants",
+                  "player_spatial_embeddings"):
         for item in source.execute(f'SELECT * FROM "{table}"'):
             row = dict(item)
             status = out.execute("SELECT category,same_raw FROM merge_status WHERE match_id=?", (row["match_id"],)).fetchone()
@@ -311,6 +366,8 @@ def _merge_relationships(source, out, archive):
                 continue
             existing = _lookup(out, table, row)
             if existing == row:
+                continue
+            if table == "match_facts" and _merge_facts(row, status, existing, out, archive):
                 continue
             if table == "match_timelines" and existing is None and status and status[0] != "archived" and status[1]:
                 match = _lookup(out, "matches", row)
@@ -379,17 +436,8 @@ def _merge_identities(source, out, archive):
             out.execute("UPDATE players SET game_name=?,tag_line=? WHERE puuid=?", (
                 existing["game_name"] if _text(existing["game_name"]) else row["game_name"],
                 existing["tag_line"] if _text(existing["tag_line"]) else row["tag_line"], row["puuid"]))
-        # Recomputed stats and precedence may discard old metadata: preserve the original.
-        archive.row("players", row, "identity_metadata_and_stats_provenance")
-    # The puuid index does not cover these metrics; scan rows sequentially and
-    # sort the grouping keys instead of fetching payloads in scattered index order.
-    out.execute("CREATE TEMP TABLE merge_stats AS SELECT puuid,COUNT(*) AS n,"
-        "(SUM(COALESCE(kills,0))+SUM(COALESCE(assists,0)))*1.0/MAX(1,SUM(COALESCE(deaths,0))) AS kda,"
-        "SUM(COALESCE(gold_earned,0))*1.0/COUNT(*) AS gold FROM match_participants NOT INDEXED WHERE merge_valid_puuid(puuid) GROUP BY puuid")
-    out.execute("CREATE UNIQUE INDEX merge_stats_puuid ON merge_stats(puuid)")
-    out.execute("UPDATE players SET total_matches=0,avg_kda=0,avg_gold=0")
-    out.execute("""UPDATE players SET total_matches=s.n,avg_kda=s.kda,avg_gold=s.gold
-                   FROM merge_stats AS s WHERE players.puuid=s.puuid""")
+        # Precedence may discard old metadata: preserve the original.
+        archive.row("players", row, "identity_metadata_provenance")
     # One edge per alias. The graph is small; avoid any repeated full SQL scans.
     edges = {r[0]: r[1] for r in out.execute("SELECT alias_puuid,canonical_puuid FROM player_aliases")}
     for item in source.execute("SELECT * FROM player_aliases ORDER BY alias_puuid"):
@@ -440,6 +488,45 @@ def _valid_queue_entry(row):
             and type(row["priority"]) is int and row["is_processed"] in (0, 1))
 
 
+def _valid_rank_json(value):
+    if value is None:
+        return True
+    try:
+        return isinstance(json.loads(value), dict)
+    except (TypeError, ValueError):
+        return False
+
+
+def _merge_provenance(source, out, archive):
+    """Union the append-only collection provenance; the target's rows never change."""
+    logger.info("Merging collection provenance")
+    for item in source.execute("SELECT * FROM anchor_selections ORDER BY id"):
+        row = dict(item)
+        content = {k: v for k, v in row.items() if k != "id"}
+        if out.execute("SELECT 1 FROM anchor_selections WHERE " + " AND ".join(f'"{k}" IS ?' for k in content),
+                       tuple(content.values())).fetchone():
+            continue
+        if not (_puuid(row["puuid"]) and row["source"] in ANCHOR_SOURCES and _valid_timestamp(row["selected_at"])
+                and (row["region"] is None or row["region"] in REGIONS) and _valid_rank_json(row["rank_json"])):
+            archive.row("anchor_selections", row, "invalid_anchor_selection")
+            continue
+        if _insert(out, "anchor_selections", content).lastrowid != row["id"]:
+            archive.row("anchor_selections", row, "regenerated_anchor_id")
+    for item in source.execute("SELECT * FROM match_sightings"):
+        row = dict(item)
+        if _lookup(out, "match_sightings", row):
+            continue
+        if not (_text(row["match_id"]) and _valid_timestamp(row["seen_at"])
+                and row["disposition"] in SIGHTING_DISPOSITIONS
+                and (row["fetched_by_puuid"] is None or _puuid(row["fetched_by_puuid"]))):
+            archive.row("match_sightings", row, "invalid_sighting")
+            continue
+        _insert(out, "match_sightings", row)
+    for item in source.execute("SELECT * FROM trained_records"):
+        # Source training ids are not the staged output's: trainer state is never imported.
+        archive.row("trained_records", dict(item), "trainer_state_not_merged")
+
+
 def _merge_registries(source, out, archive):
     for item in source.execute("SELECT * FROM champions"):
         row = dict(item)
@@ -475,7 +562,7 @@ def _preservation(out, target_path):
         keys = KEYS[table]
         fields = REQUIRED[table]
         if table == "players":
-            fields = {"puuid", "last_updated"}
+            fields = {"puuid", "updated_at"}
         join = " AND ".join(f't."{k}" IS m."{k}"' for k in keys)
         changed = " OR ".join(f't."{k}" IS NOT m."{k}"' for k in sorted(fields))
         if table == "players":
@@ -485,7 +572,7 @@ def _preservation(out, target_path):
                             f'WHERE m."{keys[0]}" IS NULL OR ({changed})').fetchone()[0]
         violations[table] = count
     return {"ok": not any(violations.values()), "changed_or_missing_rows": violations,
-            "players_exception": "missing identity fields filled; statistics recomputed from participants"}
+            "players_exception": "missing identity fields filled"}
 
 
 def merge_databases(*, source, target, output, report, dry_run=False):
@@ -545,7 +632,6 @@ def merge_databases(*, source, target, output, report, dry_run=False):
             out = stack.enter_context(closing(sqlite3.connect(output.as_uri() + "?mode=rw", uri=True)))
             out.row_factory = sqlite3.Row
             out.create_function("merge_valid_identity", 1, _text, deterministic=True)
-            out.create_function("merge_valid_puuid", 1, _puuid, deterministic=True)
             out.execute("PRAGMA cache_size=-262144")
             out.execute("PRAGMA temp.cache_size=-65536")
             logger.info("Backing up canonical target into %s", output)
@@ -563,6 +649,7 @@ def merge_databases(*, source, target, output, report, dry_run=False):
             _merge_relationships(src, out, archive)
             _merge_identities(src, out, archive)
             _merge_registries(src, out, archive)
+            _merge_provenance(src, out, archive)
             out.commit()
             logger.info("Verifying integrity and canonical row preservation")
             result["after"] = _counts(out)

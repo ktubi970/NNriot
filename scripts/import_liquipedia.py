@@ -173,7 +173,9 @@ def import_from_liquipedia(stats_url, matches_per_player=50):
             print(f"  [*] Collecting metadata and {matches_per_player} matches for {len(accounts_to_collect)} accounts...")
             try:
                 service = CollectionService()
-                service.collect_by_puuid_accounts(accounts_to_collect, matches_per_player=matches_per_player)
+                service.collect_by_puuid_accounts(
+                    accounts_to_collect, matches_per_player=matches_per_player, selection_source="pro_import"
+                )
             except Exception as e:
                 print(f"  [!] Collection failed: {e}")
 

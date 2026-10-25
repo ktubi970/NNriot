@@ -5,6 +5,11 @@ Coordinates:
 - MatchIngestor for leak-free match and timeline ingestion
 - CollectionTracker for thread-safe progress monitoring
 - PlayerRepository, MatchRepository, TrainingRepository for persistent storage
+
+Every entry point records its anchors in anchor_selections before fetching their
+match lists. Anchors chosen on rank (ladder seeds, top leagues, pro imports) only
+discover the frontier: their matches played before they were selected are never
+stored. Their later matches arrive through the snowball.
 """
 
 from __future__ import annotations
@@ -16,6 +21,7 @@ import time
 from typing import Any, Callable, Optional
 
 from core import config, database, riot_api
+from core.collection.anchors import AnchorRepository, rank_snapshot
 from core.collection.ingestor import MatchIngestor
 from core.collection.models import CrawlItem, IngestionResult
 from core.collection.queue import CrawlQueueRepository
@@ -44,6 +50,7 @@ class CollectionService:
         queue_repo: Optional[CrawlQueueRepository] = None,
         ingestor: Optional[MatchIngestor] = None,
         api_factory: Optional[Callable[[str], Any]] = None,
+        anchor_repo: Optional[AnchorRepository] = None,
     ) -> None:
         self.db_path = config.get_db_path(db_path, require_exists=False)
         if not Path(self.db_path).is_file():
@@ -53,10 +60,12 @@ class CollectionService:
         self.player_repo = player_repo or PlayerRepository(self.db_path)
         self.train_repo = train_repo or TrainingRepository(self.db_path)
         self.queue_repo = queue_repo or CrawlQueueRepository(self.db_path)
+        self.anchor_repo = anchor_repo or AnchorRepository(self.db_path)
         self.ingestor = ingestor or MatchIngestor(
             db_path=self.db_path,
             match_repo=self.match_repo,
             train_repo=self.train_repo,
+            anchor_repo=self.anchor_repo,
         )
         self.tracker = tracker or get_default_tracker()
         self.api_factory = api_factory or (lambda r: riot_api.RiotAPI(r))
@@ -69,7 +78,10 @@ class CollectionService:
         start_time: Optional[int] = None,
         queue: int = 420,
     ) -> IngestionResult:
-        """Fetch and ingest recent matches for a single player by PUUID."""
+        """Fetch and ingest recent matches for a single player by PUUID.
+
+        Callers that select the player record it in anchor_selections first.
+        """
         canon_region = resolve_region(region)
         try:
             api = self.api_factory(canon_region)
@@ -79,10 +91,9 @@ class CollectionService:
             if not match_ids:
                 return IngestionResult()
 
-            result = self.ingestor.ingest_match_ids(match_ids, api=api, region=canon_region)
-            if result.records_saved > 0:
-                self.player_repo.increment_player_matches(puuid, result.records_saved)
-            return result
+            return self.ingestor.ingest_match_ids(
+                match_ids, api=api, region=canon_region, fetched_by_puuid=puuid
+            )
         except Exception as e:
             logger.error("Error collecting matches for %s (%s): %s", puuid[:12] if puuid else "?", canon_region, e)
             res = IngestionResult()
@@ -94,8 +105,12 @@ class CollectionService:
         seed_players: list[tuple[str, str]],
         matches_per_player: int = 10,
         days_back: Optional[int] = None,
+        selection_source: str = "manual_seed",
     ) -> IngestionResult:
-        """Collect match history for a list of (name, tag) seeds."""
+        """Collect match history for a list of (name, tag) seeds.
+
+        ``selection_source`` says why they were chosen (see core.collection.anchors).
+        """
         total_res = IngestionResult()
         start_time = int(time.time()) - (days_back * 86400) if days_back else None
         self.tracker.set_running(total=len(seed_players), player="Seeds Batch")
@@ -112,6 +127,7 @@ class CollectionService:
                     continue
 
                 self.player_repo.save_player(puuid, name, tag)
+                self.anchor_repo.record([puuid], source=selection_source, region=region)
                 sub_res = self.collect_player_matches(
                     puuid, region=region, count=matches_per_player, start_time=start_time
                 )
@@ -120,6 +136,7 @@ class CollectionService:
                 total_res.timelines_saved += sub_res.timelines_saved
                 total_res.embeddings_computed += sub_res.embeddings_computed
                 total_res.skipped += sub_res.skipped
+                total_res.discovery_only += sub_res.discovery_only
                 total_res.errors += sub_res.errors
                 total_res.discovered_puuids.extend(sub_res.discovered_puuids)
 
@@ -138,8 +155,13 @@ class CollectionService:
         self,
         accounts: list[dict],
         matches_per_player: int = 20,
+        selection_source: str = "puuid_accounts",
     ) -> dict[str, int]:
-        """Collect match history for accounts where PUUID is known (e.g. lolpros)."""
+        """Collect match history for accounts where PUUID is known (e.g. lolpros).
+
+        Pro imports pass ``selection_source="pro_import"``: chosen on rank, their
+        matches played before the import are discovery-only.
+        """
         stats = {"processed": 0, "saved": 0, "skipped": 0, "errors": 0}
         self.tracker.set_running(total=len(accounts), player="PUUID Accounts")
 
@@ -158,6 +180,7 @@ class CollectionService:
             self.tracker.set_player(f"{name}#{tag}")
             try:
                 self.player_repo.save_player(puuid, name, tag)
+                self.anchor_repo.record([puuid], source=selection_source, region=region)
                 res = self.collect_player_matches(
                     puuid, region=region, count=matches_per_player
                 )
@@ -176,6 +199,36 @@ class CollectionService:
         self.tracker.set_completed()
         return stats
 
+    def _select_ladder(self, entries: list[dict], *, region: str, source: str) -> list[str]:
+        """Record ladder entries as selected on rank now, with their ladder snapshot."""
+        entries = [e for e in entries if isinstance(e, dict) and e.get("puuid")]
+        puuids = [e["puuid"] for e in entries]
+        self.anchor_repo.record(
+            puuids, source=source, region=region,
+            ranks={e["puuid"]: rank_snapshot(e) for e in entries},
+        )
+        return puuids
+
+    def _seed_from_ladder(self, entries: list[dict], *, region: str, priority: int) -> None:
+        """Queue ladder players the crawler has never queued, recording them as selected.
+
+        A player already in crawl_queue is not fetched again, so this ladder read cannot
+        bias which of its matches enter the database: it is not recorded as selected.
+        """
+        entries = [e for e in entries if isinstance(e, dict) and e.get("puuid")]
+        fresh = self.queue_repo.unqueued([e["puuid"] for e in entries])
+        puuids = self._select_ladder([e for e in entries if e["puuid"] in fresh],
+                                     region=region, source="ladder_seed")
+        self.queue_repo.enqueue_puuids(puuids, region=region, priority=priority)
+
+    def _enqueue_discovered(self, discovered_puuids: list[tuple[str, str]]) -> None:
+        """Snowballing: enqueue newly discovered participants."""
+        discovered_by_region: dict[str, list[str]] = {}
+        for p, r in discovered_puuids:
+            discovered_by_region.setdefault(r, []).append(p)
+        for r, plist in discovered_by_region.items():
+            self.queue_repo.enqueue_puuids(plist, region=r, priority=0)
+
     def collect_top_leagues(
         self,
         regions: list[str] = ["KR"],
@@ -183,7 +236,12 @@ class CollectionService:
         matches_per_player: int = 10,
         days_back: int = 30,
     ) -> IngestionResult:
-        """Fetch top league players (Challenger/GM/Master) across regions and collect their matches."""
+        """Discover the frontier from top league players (Challenger/GM/Master).
+
+        The players are selected on rank when the ladder is read: that selection is
+        recorded, so their matches fetched here (all earlier) are discovery-only, and
+        stay so when other players' lists return them. Their participants are enqueued.
+        """
         total_res = IngestionResult()
         all_entries: list[dict[str, Any]] = []
 
@@ -192,10 +250,11 @@ class CollectionService:
             api = self.api_factory(canon)
             try:
                 entries = api.get_top_players(total_count=total_players_per_region)
+                entries = [e for e in entries if isinstance(e, dict)]
+                self._select_ladder(entries, region=canon, source="top_leagues")
                 for entry in entries:
-                    if isinstance(entry, dict):
-                        entry["_region"] = canon
-                        all_entries.append(entry)
+                    entry["_region"] = canon
+                    all_entries.append(entry)
             except Exception as e:
                 logger.error("Error fetching top league entries for %s: %s", canon, e)
 
@@ -221,11 +280,13 @@ class CollectionService:
                 sub_res = self.collect_player_matches(
                     puuid, region=region, count=matches_per_player, start_time=start_time
                 )
+                self._enqueue_discovered(sub_res.discovered_puuids)
                 total_res.matches_saved += sub_res.matches_saved
                 total_res.records_saved += sub_res.records_saved
                 total_res.timelines_saved += sub_res.timelines_saved
                 total_res.embeddings_computed += sub_res.embeddings_computed
                 total_res.skipped += sub_res.skipped
+                total_res.discovery_only += sub_res.discovery_only
                 total_res.errors += sub_res.errors
                 total_res.discovered_puuids.extend(sub_res.discovered_puuids)
             except Exception as e:
@@ -259,6 +320,7 @@ class CollectionService:
                     continue
 
                 self.player_repo.save_player(main_puuid, name, tag)
+                self.anchor_repo.record([main_puuid], source="manual_batch", region=region)
                 accounts = [{"puuid": main_puuid, "server": region, "gamename": name, "tagline": tag}]
 
                 for acc in accounts:
@@ -270,6 +332,7 @@ class CollectionService:
                     total_res.timelines_saved += sub_res.timelines_saved
                     total_res.embeddings_computed += sub_res.embeddings_computed
                     total_res.skipped += sub_res.skipped
+                    total_res.discovery_only += sub_res.discovery_only
                     total_res.errors += sub_res.errors
                     total_res.discovered_puuids.extend(sub_res.discovered_puuids)
             except Exception as e:
@@ -305,8 +368,7 @@ class CollectionService:
                     api = self.api_factory(canon)
                     try:
                         entries = api.get_top_players(total_count=ladder_depth)
-                        puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
-                        self.queue_repo.enqueue_puuids(puuids, region=canon, priority=10)
+                        self._seed_from_ladder(entries, region=canon, priority=10)
                     except Exception as e:
                         logger.warning("Failed seeding top players for %s: %s", canon, e)
 
@@ -328,8 +390,7 @@ class CollectionService:
                         api = self.api_factory(canon)
                         try:
                             entries = api.get_top_players(total_count=ladder_depth)
-                            puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
-                            self.queue_repo.enqueue_puuids(puuids, region=canon, priority=5)
+                            self._seed_from_ladder(entries, region=canon, priority=5)
                         except Exception:
                             pass
 
@@ -369,17 +430,12 @@ class CollectionService:
                 total_res.timelines_saved += sub_res.timelines_saved
                 total_res.embeddings_computed += sub_res.embeddings_computed
                 total_res.skipped += sub_res.skipped
+                total_res.discovery_only += sub_res.discovery_only
                 total_res.errors += sub_res.errors
                 total_res.discovered_puuids.extend(sub_res.discovered_puuids)
                 self.tracker.step(sub_res.matches_saved)
 
-                # Snowballing: enqueue newly discovered participants
-                if sub_res.discovered_puuids:
-                    discovered_by_region: dict[str, list[str]] = {}
-                    for p, r in sub_res.discovered_puuids:
-                        discovered_by_region.setdefault(r, []).append(p)
-                    for r, plist in discovered_by_region.items():
-                        self.queue_repo.enqueue_puuids(plist, region=r, priority=0)
+                self._enqueue_discovered(sub_res.discovered_puuids)
 
                 batch_counter += 1
                 if batch_counter % 10 == 0:

@@ -11,10 +11,10 @@ Usage:
 
 Notes
 -----
-- We sample from is_trained=1 records (the trainer marks rows after training
-  on them, so this is "training set" not a true holdout — see the report
-  for caveats). When is_trained=0 records exist they are used as a true
-  holdout instead.
+- We sample from trained records (the trainer records them in
+  trained_records after training on them, so this is "training set" not a
+  true holdout — see the report for caveats). When untrained records exist
+  they are used as a true holdout instead.
 - Regression MAE is reported in **raw units** (kills, towers, etc.), i.e.
   after un-normalizing the model output via REGRESSION_STATS.
 """

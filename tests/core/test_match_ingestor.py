@@ -1,3 +1,6 @@
+import sqlite3
+import time
+
 import pytest
 from unittest.mock import MagicMock, patch
 from core import database
@@ -244,3 +247,122 @@ def test_ingest_match_ids_isolates_timeline_embedding_failure(ingestor):
     # Second match still computed successfully despite first match failing
     assert result.embeddings_computed == 1
 
+
+
+# --- v17 provenance, anchors and sightings ------------------------------------------------------
+
+from core.collection.anchors import AnchorRepository
+
+CREATION_MS = 1700000000000  # 2023-11-14 22:13:20 UTC, the payload's gameCreation
+
+
+def _api_for(details):
+    api = MagicMock()
+    api.get_match_details_batch.side_effect = lambda ids, **_: {m: details[m] for m in ids if m in details}
+    api.get_match_timelines_batch.return_value = {}
+    return api
+
+
+def _stored(db, table, match_id):
+    with sqlite3.connect(db) as conn:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute(f"SELECT * FROM {table} WHERE match_id = ?", (match_id,)).fetchone()
+    return dict(row) if row else None
+
+
+def _sightings(db):
+    with sqlite3.connect(db) as conn:
+        return conn.execute("SELECT match_id, fetched_by_puuid, disposition FROM match_sightings "
+                            "ORDER BY rowid").fetchall()
+
+
+def test_ingested_match_records_fetching_anchor_and_ingestion_time(ingestor):
+    before = int(time.time() * 1000)
+    result = ingestor.ingest_match_ids(["EUW1_1"], api=_api_for({"EUW1_1": _make_match_payload()}),
+                                       region="EUW", fetched_by_puuid="puuid_3")
+    after = int(time.time() * 1000)
+
+    facts = _stored(ingestor.db_path, "match_facts", "EUW1_1")
+    assert result.matches_saved == 1
+    assert facts["fetched_by_puuid"] == "puuid_3" and facts["queue_id"] == 420
+    assert before <= facts["ingested_at"] <= after
+    training = _stored(ingestor.db_path, "training_dataset", "EUW1_1")
+    assert training["feature_extractor"] == "json_utils.extract_pre_match_features"
+
+
+@pytest.mark.parametrize("source, selected_at, discovery_only", [
+    ("ladder_seed", CREATION_MS + 1000, True),          # seed selected after the match
+    ("top_leagues", CREATION_MS + 1, True),
+    ("pro_import", CREATION_MS + 86_400_000, True),
+    ("legacy_crawl_queue", CREATION_MS + 1000, True),
+    ("ladder_seed", CREATION_MS, False),                # selected at the match's creation
+    ("manual_seed", CREATION_MS + 1000, False),         # not selected on rank
+    ("legacy_players_last_saved", CREATION_MS + 1000, False),
+])
+def test_a_participant_selected_on_rank_after_the_match_makes_it_discovery_only(
+        ingestor, source, selected_at, discovery_only):
+    # The match comes from another player's list: the bias follows the anchor's participation.
+    AnchorRepository(ingestor.db_path).record(["puuid_8"], source=source, region="EUW", selected_at=selected_at)
+
+    result = ingestor.ingest_match_ids(["EUW1_1"], api=_api_for({"EUW1_1": _make_match_payload()}),
+                                       region="EUW", fetched_by_puuid="puuid_1")
+
+    assert result.discovery_only == int(discovery_only)
+    assert (_stored(ingestor.db_path, "matches", "EUW1_1") is None) is discovery_only
+    assert len(result.discovered_puuids) == 10
+    assert _sightings(ingestor.db_path) == [
+        ("EUW1_1", "puuid_1", "discovery_only" if discovery_only else "stored")]
+
+
+@pytest.mark.parametrize("arrangement", ["original", "teams_swapped", "players_permuted"])
+def test_discovery_only_decision_ignores_team_order_and_player_order(ingestor, arrangement):
+    payload = _make_match_payload()
+    parts = payload["info"]["participants"]
+    if arrangement == "teams_swapped":
+        for p in parts:
+            p["teamId"] = 300 - p["teamId"]
+        payload["info"]["teams"] = [{"teamId": 100, "win": True}, {"teamId": 200, "win": False}]
+    elif arrangement == "players_permuted":
+        parts.reverse()
+    AnchorRepository(ingestor.db_path).record(["puuid_2"], source="ladder_seed", selected_at=CREATION_MS + 1)
+
+    result = ingestor.ingest_match_ids(["EUW1_1"], api=_api_for({"EUW1_1": payload}), region="EUW")
+
+    assert result.discovery_only == 1
+    assert result.matches_saved == 0
+
+
+def test_discovery_only_matches_are_not_downloaded_again_by_a_later_process(ingestor):
+    AnchorRepository(ingestor.db_path).record(["puuid_0"], source="ladder_seed", selected_at=CREATION_MS + 1)
+    api = _api_for({"EUW1_OLD": _make_match_payload()})
+    first = ingestor.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW", fetched_by_puuid="puuid_0")
+    later = MatchIngestor(db_path=ingestor.db_path)
+    second = later.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW", fetched_by_puuid="puuid_1")
+
+    assert first.discovery_only == 1
+    assert second.skipped == 1 and second.discovery_only == 0
+    assert api.get_match_details_batch.call_count == 1
+    assert _sightings(ingestor.db_path) == [("EUW1_OLD", "puuid_0", "discovery_only"),
+                                            ("EUW1_OLD", "puuid_1", "discovery_only")]
+
+
+def test_every_returned_match_is_sighted_with_what_was_done(ingestor):
+    ingestor.match_repo.save_match("EUW1_KNOWN", _make_match_payload())
+    api = _api_for({"EUW1_NEW": _make_match_payload(), "EUW1_ARAM": _make_match_payload(game_mode="ARAM")})
+
+    ingestor.ingest_match_ids(["EUW1_KNOWN", "EUW1_NEW", "EUW1_ARAM", "EUW1_GONE"], api=api,
+                              region="EUW", fetched_by_puuid="puuid_4")
+
+    assert sorted(_sightings(ingestor.db_path)) == [
+        ("EUW1_ARAM", "puuid_4", "rejected"), ("EUW1_GONE", "puuid_4", "missing"),
+        ("EUW1_KNOWN", "puuid_4", "already_stored"), ("EUW1_NEW", "puuid_4", "stored")]
+
+
+def test_a_failed_download_is_sighted_as_missing(ingestor):
+    api = MagicMock()
+    api.get_match_details_batch.side_effect = RuntimeError("Riot API timeout")
+
+    result = ingestor.ingest_match_ids(["EUW1_1", "EUW1_2"], api=api, region="EUW")
+
+    assert result.errors == 2
+    assert _sightings(ingestor.db_path) == [("EUW1_1", None, "missing"), ("EUW1_2", None, "missing")]

@@ -25,11 +25,13 @@ from typing import Iterable, Mapping, Optional
 LADDER_SEED_MIN_PRIORITY = 5
 
 
-def parse_sqlite_timestamp_ms(text: Optional[str]) -> Optional[int]:
-    """Convert a SQLite CURRENT_TIMESTAMP string (UTC) to epoch milliseconds."""
-    if not text:
+def parse_sqlite_timestamp_ms(value: Optional[str | int]) -> Optional[int]:
+    """UTC epoch milliseconds from a schema-v17 integer or a legacy CURRENT_TIMESTAMP string."""
+    if type(value) is int:
+        return value
+    if not value:
         return None
-    parsed = datetime.strptime(text[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
+    parsed = datetime.strptime(value[:19], "%Y-%m-%d %H:%M:%S").replace(tzinfo=timezone.utc)
     return int(parsed.timestamp() * 1000)
 
 
@@ -144,10 +146,16 @@ def match_provenance(
 
 
 def load_crawl_registry(db_path: str) -> CrawlRegistry:
-    """Read crawl_queue and players through a read-only connection."""
+    """Read crawl_queue and players through a read-only connection.
+
+    Works on schema v17 (integer UTC ms, ``players.updated_at``) and on older
+    databases (CURRENT_TIMESTAMP text, ``players.last_updated``).
+    """
     uri = Path(db_path).resolve().as_uri() + "?mode=ro"
     with closing(sqlite3.connect(uri, uri=True)) as conn:
         conn.execute("PRAGMA query_only=ON")
+        player_columns = {r[1] for r in conn.execute("PRAGMA table_info(players)")}
+        saved_column = "updated_at" if "updated_at" in player_columns else "last_updated"
         seeds: dict[str, int] = {}
         crawled: dict[str, Optional[int]] = {}
         for puuid, priority, processed, created_at, processed_at in conn.execute(
@@ -159,7 +167,7 @@ def load_crawl_registry(db_path: str) -> CrawlRegistry:
                 crawled[puuid] = parse_sqlite_timestamp_ms(processed_at)
         anchors = {
             puuid: parse_sqlite_timestamp_ms(saved)
-            for puuid, saved in conn.execute("SELECT puuid, last_updated FROM players")
+            for puuid, saved in conn.execute(f"SELECT puuid, {saved_column} FROM players")
             if puuid not in seeds and saved
         }
     return CrawlRegistry(

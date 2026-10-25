@@ -117,7 +117,7 @@ def test_weight_generation_is_deterministic_for_a_seed():
 def test_schema_v15_records_the_encoder_of_each_embedding(tmp_path):
     path = str(tmp_path / "schema.db")
     database.init_db(path)
-    assert database.SCHEMA_VERSION == 15
+    assert database.SCHEMA_VERSION >= 15
     with sqlite3.connect(path) as conn:
         columns = [r[1] for r in conn.execute("PRAGMA table_info(player_spatial_embeddings)")]
     assert columns == ["match_id", "puuid", "game_creation_time", "embedding_blob", "encoder_id"]

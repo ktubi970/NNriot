@@ -163,7 +163,7 @@ def api_lolpros_import():
                         )
                     service = CollectionService(db_path=db_path)
                     result = service.collect_by_puuid_accounts(
-                        accs_payload, matches_per_player=20
+                        accs_payload, matches_per_player=20, selection_source="pro_import"
                     )
                     logger.info(f"lolpros collection done: {result}")
                     with core.collection_lock:

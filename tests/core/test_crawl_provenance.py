@@ -109,28 +109,40 @@ def test_as_row_uses_flat_team_suffixed_columns(registry):
 
 def test_parse_sqlite_timestamp_is_utc_milliseconds():
     assert parse_sqlite_timestamp_ms("2026-10-11 09:25:52") == 1_791_710_752_000
+    assert parse_sqlite_timestamp_ms(1_791_710_752_000) == 1_791_710_752_000
     assert parse_sqlite_timestamp_ms(None) is None
 
 
-@pytest.fixture
-def crawl_db(tmp_path):
+@pytest.fixture(params=["v17", "v15"])
+def crawl_db(tmp_path, request):
+    # The diagnostic reads the operational database at either schema.
     db_file = str(tmp_path / "provenance.db")
-    database.init_db(db_file)
+    if request.param == "v17":
+        database.init_db(db_file)
+        stamp, saved_column = parse_sqlite_timestamp_ms, "updated_at"
+    else:
+        with sqlite3.connect(db_file) as conn:
+            for from_version, statements in database._MIGRATIONS:
+                if from_version >= 15:
+                    break
+                for sql in statements:
+                    conn.execute(sql)
+        stamp, saved_column = (lambda text: text), "last_updated"
     with sqlite3.connect(db_file) as conn:
         conn.executemany(
             "INSERT INTO crawl_queue (puuid, region, priority, is_processed, created_at, processed_at) VALUES (?, ?, ?, ?, ?, ?)",
             [
-                ("ladder10", "EUW", 10, 1, "2026-10-11 09:25:52", "2026-10-11 09:27:36"),
-                ("ladder5", "KR", 5, 0, "2026-10-12 00:00:00", None),
-                ("snow_done", "NA", 0, 1, "2026-10-11 10:00:00", "2026-10-11 10:47:05"),
-                ("snow_pending", "NA", 0, 0, "2026-10-11 10:00:00", None),
+                ("ladder10", "EUW", 10, 1, stamp("2026-10-11 09:25:52"), stamp("2026-10-11 09:27:36")),
+                ("ladder5", "KR", 5, 0, stamp("2026-10-12 00:00:00"), None),
+                ("snow_done", "NA", 0, 1, stamp("2026-10-11 10:00:00"), stamp("2026-10-11 10:47:05")),
+                ("snow_pending", "NA", 0, 0, stamp("2026-10-11 10:00:00"), None),
             ],
         )
         conn.executemany(
-            "INSERT INTO players (puuid, game_name, tag_line, last_updated) VALUES (?, ?, ?, ?)",
+            f"INSERT INTO players (puuid, game_name, tag_line, {saved_column}) VALUES (?, ?, ?, ?)",
             [
-                ("ladder10", "Seed", "EUW", "2026-05-01 00:00:00"),
-                ("pro", "Pro", "KR1", "2026-05-02 12:00:00"),
+                ("ladder10", "Seed", "EUW", stamp("2026-05-01 00:00:00")),
+                ("pro", "Pro", "KR1", stamp("2026-05-02 12:00:00")),
             ],
         )
     return db_file
