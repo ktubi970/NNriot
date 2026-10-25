@@ -1,0 +1,11 @@
+{
+  "features": {
+    "path": "C:/Users/ktubi/AppData/Local/Temp/claude/D--projet-NNriot/258d7aff-7434-4008-8f99-8c3cd5d16913/scratchpad/feat_v4m.npz",
+    "sha256": "16190e876446a580b7bc4e40ce8bddeaf8abc76ca3a99a086f7b7951ce3e2b4f"
+  },
+  "provenance": {
+    "path": "D:/projet/NNriot/runs/crawl_provenance_20261025/crawl_provenance.csv",
+    "sha256": "cabc934917f3c3750b4726d18f197e519852d1dece84c19f731fa1096e130380"
+  },
+  "script_sha256": "ca0df6bc57bcd114c409631b11e138d600242497727f29e0abecef2d24fe3490"
+}

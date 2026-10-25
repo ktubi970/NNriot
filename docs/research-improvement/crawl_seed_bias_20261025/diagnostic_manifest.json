@@ -1,0 +1,33 @@
+{
+  "created_utc": "2026-10-25T07:13:10.492665+00:00",
+  "kind": "nnriot.crawl_provenance.v1",
+  "dataset_dir": "D:\\projet\\NNriot\\runs\\aligned_dataset_20261023_prospective",
+  "dataset_sha256": "a28d1e010f6e0cd43bbd3e1b94c11779988238a20bd6eca5928b68acbe402e72",
+  "split_sha256": "30e1cef5df9a356f9c689142f93043bccfb5755fc4fcf251be9b386ba62cc681",
+  "inputs": {
+    "train.json": "021c8e03054aef4278ea4f3fd04927ddc3a43ca66ce2ea3d3d45582943f46074",
+    "validation.json": "1074e968e3d0ac0cce157fff8541b4e346a80d6ca5f90b77b510692e0d8019b7"
+  },
+  "db": "D:\\projet\\NNriot\\training_data.db",
+  "cutoff_ms": 1792237430958,
+  "rows": 123600,
+  "registry": {
+    "ladder_seeds": 150,
+    "ladder_seed_entry_utc": [
+      "2026-10-11T09:25:52+00:00",
+      "2026-10-11T09:25:55+00:00"
+    ],
+    "ladder_seeds_sha256": "b99b2244445a8bb056fcbbf3112225d819b9e92d9e7cad8da490b94178cdb041",
+    "legacy_anchors": 6800,
+    "crawled": 21763
+  },
+  "sources": {
+    "core/collection/provenance.py": "35f96e5bd3274b8041fe32e80bc7fed8d456900e81ffc65c133b312d42d87434",
+    "scripts/diagnose_crawl_seed_bias.py": "91a5ff1c3a2942f0867b563f0b6b781533546d599b763245d1f8a430c6f58fc3"
+  },
+  "files": {
+    "crawl_provenance.csv": "cabc934917f3c3750b4726d18f197e519852d1dece84c19f731fa1096e130380",
+    "report.json": "f991cfd38ad9b55c41204b9e89d32d56b498f03e44657dbea4a4a9b3adcf465a",
+    "registry.json": "2d9326d7a30923369ad310b7c25aab9ed36ca2f1c68bb0b5ea077b4b1c33c338"
+  }
+}
