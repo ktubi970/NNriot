@@ -12,7 +12,6 @@ import base64
 import os
 import time
 import logging
-import datetime as _dt
 from contextlib import closing, contextmanager
 from pathlib import Path
 
@@ -71,6 +70,36 @@ def get_connection(db_path: str = DB_PATH):
 # ---------------------------------------------------------------------------
 # Schema initialisation & migrations
 # ---------------------------------------------------------------------------
+
+# SQL for "now" in UTC epoch milliseconds, usable in a CREATE TABLE default.
+_NOW_MS_SQL = "CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)"
+
+
+def _text_to_ms(column: str) -> str:
+    """SQL converting a legacy CURRENT_TIMESTAMP text (UTC) to epoch ms; unparsable -> NULL."""
+    return (
+        f"(CASE WHEN typeof({column}) IN ('integer', 'real') THEN CAST({column} AS INTEGER) "
+        f"ELSE CAST(strftime('%s', {column}) AS INTEGER) * 1000 END)"
+    )
+
+
+def _rebuild(table: str, create_sql: str, columns: str, select_sql: str) -> list[str]:
+    """SQLite's table-rebuild procedure, keeping the AUTOINCREMENT sequence of *table*.
+
+    Rows are copied verbatim (``select_sql`` may convert values). Run with foreign
+    keys off when another table references *table* (see _FOREIGN_KEYS_OFF_STEPS).
+    """
+    new = f"{table}_v16"
+    return [
+        create_sql.format(name=new),
+        f"INSERT INTO {new} ({columns}) {select_sql}",
+        # Carry the old sequence so ids of deleted rows are never reused.
+        f"DELETE FROM sqlite_sequence WHERE name = '{new}'",
+        f"UPDATE sqlite_sequence SET name = '{new}' WHERE name = '{table}'",
+        f"DROP TABLE {table}",
+        f"ALTER TABLE {new} RENAME TO {table}",
+    ]
+
 
 # Each entry is (from_version, sql_statements_list).
 # Migrations are applied in order until the DB reaches SCHEMA_VERSION.
@@ -312,17 +341,149 @@ _MIGRATIONS = [
             "UPDATE schema_version SET version = 15",
         ],
     ),
-    # v15 -> v16 : record when each match became available (UTC epoch ms) and
-    # whose match list returned it (NULL = ingested before v16, unknown)
+    # v15 -> v16 : collection provenance and schema clean-up.
+    # - match_facts: narrow 1:1 facts read without touching raw_json pages (columns added to
+    #   matches would sit after raw_json), including availability: ingested_at (UTC ms of the
+    #   first insert) and fetched_by_puuid. Matches stored before v16 have no row until
+    #   scripts/backfill_match_facts.py derives one, with ingested_at left unknown.
+    # - match_sightings: every time a match list returned a match, and what was done with it.
+    # - anchor_selections: who was picked as a collection anchor, why and when (append-only).
+    # - trained_records: trainer bookkeeping, moved out of training_dataset.
+    # - Times become INTEGER UTC ms; derived player statistics and unused llm_* columns go.
     (
         15,
         [
-            "ALTER TABLE matches ADD COLUMN ingested_at INTEGER",
-            "ALTER TABLE matches ADD COLUMN fetched_by_puuid TEXT",
+            """
+            CREATE TABLE IF NOT EXISTS match_facts (
+                match_id         TEXT PRIMARY KEY,
+                queue_id         INTEGER,
+                game_start_at    INTEGER,
+                game_end_at      INTEGER,
+                game_version     TEXT,
+                platform         TEXT,
+                ingested_at      INTEGER,
+                fetched_by_puuid TEXT,
+                FOREIGN KEY(match_id) REFERENCES matches(match_id)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS match_sightings (
+                match_id         TEXT NOT NULL,
+                fetched_by_puuid TEXT,
+                seen_at          INTEGER NOT NULL,
+                disposition      TEXT NOT NULL CHECK (disposition IN
+                    ('stored', 'already_stored', 'discovery_only', 'rejected', 'missing'))
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_match_sightings_match ON match_sightings(match_id, disposition)",
+            """
+            CREATE TABLE IF NOT EXISTS anchor_selections (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                puuid       TEXT NOT NULL,
+                region      TEXT,
+                source      TEXT NOT NULL,
+                selected_at INTEGER NOT NULL,
+                rank_json   TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_anchor_selections_puuid ON anchor_selections(puuid, selected_at)",
+            # Legacy anchors, as the 25 Oct 2026 audit defined them: crawl_queue priority >= 5
+            # (ladder seeds), then other players rows at their last save.
+            f"""
+            INSERT INTO anchor_selections (puuid, region, source, selected_at)
+            SELECT puuid, region, 'legacy_crawl_queue', {_text_to_ms('created_at')} FROM crawl_queue
+            WHERE puuid IS NOT NULL AND priority >= 5 AND {_text_to_ms('created_at')} IS NOT NULL
+            ORDER BY id
+            """,
+            f"""
+            INSERT INTO anchor_selections (puuid, source, selected_at)
+            SELECT puuid, 'legacy_players_last_saved', {_text_to_ms('last_updated')} FROM players
+            WHERE {_text_to_ms('last_updated')} IS NOT NULL
+              AND puuid NOT IN (SELECT puuid FROM crawl_queue WHERE puuid IS NOT NULL AND priority >= 5)
+            ORDER BY puuid
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS trained_records (
+                training_id INTEGER PRIMARY KEY,
+                trained_at  INTEGER,
+                FOREIGN KEY(training_id) REFERENCES training_dataset(id)
+            )
+            """,
+            f"""
+            INSERT INTO trained_records (training_id, trained_at)
+            SELECT id, {_text_to_ms('last_trained_at')} FROM training_dataset WHERE is_trained = 1
+            """,
+            *_rebuild(
+                "training_dataset",
+                """
+                CREATE TABLE {name} (
+                    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    match_id          TEXT UNIQUE,
+                    feature_json      TEXT,
+                    winner_label      INTEGER,
+                    labels_json       TEXT,
+                    feature_extractor TEXT,
+                    FOREIGN KEY(match_id) REFERENCES matches(match_id)
+                )
+                """,
+                "id, match_id, feature_json, winner_label, labels_json, feature_extractor",
+                # Plain-JSON rows with a "kda" key were written by the merger's post-game
+                # extractor; other legacy writers are unknown (NULL).
+                """
+                SELECT id, match_id, feature_json, winner_label, labels_json,
+                       CASE WHEN feature_json LIKE '{%' AND feature_json LIKE '%"kda"%'
+                            THEN 'json_utils.extract_match_features' END
+                FROM training_dataset ORDER BY id
+                """,
+            ),
+            "CREATE INDEX IF NOT EXISTS idx_training_winner ON training_dataset(winner_label)",
+            *_rebuild(
+                "crawl_queue",
+                f"""
+                CREATE TABLE {{name}} (
+                    id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                    puuid        TEXT UNIQUE,
+                    region       TEXT NOT NULL,
+                    game_name    TEXT,
+                    tag_line     TEXT,
+                    priority     INTEGER DEFAULT 0,
+                    is_processed INTEGER DEFAULT 0,
+                    created_at   INTEGER DEFAULT ({_NOW_MS_SQL}),
+                    processed_at INTEGER
+                )
+                """,
+                "id, puuid, region, game_name, tag_line, priority, is_processed, created_at, processed_at",
+                f"""
+                SELECT id, puuid, region, game_name, tag_line, priority, is_processed,
+                       {_text_to_ms('created_at')}, {_text_to_ms('processed_at')}
+                FROM crawl_queue ORDER BY id
+                """,
+            ),
+            "CREATE INDEX IF NOT EXISTS idx_crawl_queue_lookup ON crawl_queue(is_processed, priority DESC, id ASC)",
+            *_rebuild(
+                "players",
+                """
+                CREATE TABLE {name} (
+                    puuid      TEXT PRIMARY KEY,
+                    game_name  TEXT,
+                    tag_line   TEXT,
+                    updated_at INTEGER
+                )
+                """,
+                "puuid, game_name, tag_line, updated_at",
+                f"SELECT puuid, game_name, tag_line, {_text_to_ms('last_updated')} FROM players",
+            ),
+            "ALTER TABLE match_participants ADD COLUMN team_id INTEGER",
+            # Duplicates the index SQLite already builds for the PRIMARY KEY.
+            "DROP INDEX IF EXISTS idx_timelines_match",
             "UPDATE schema_version SET version = 16",
         ],
     ),
 ]
+
+# Steps that rebuild a table other tables reference (players, training_dataset) run with
+# foreign keys off, as SQLite's rebuild procedure requires; rows are copied verbatim.
+_FOREIGN_KEYS_OFF_STEPS = frozenset({15})
 
 
 def _get_schema_version(conn) -> int:
@@ -354,8 +515,22 @@ def migrate_db(db_path: str = DB_PATH):
                     from_version,
                     from_version + 1,
                 )
-                for sql in statements:
-                    conn.execute(sql)
+                # One transaction per step: a failure leaves the previous version intact.
+                conn.commit()
+                keys_off = from_version in _FOREIGN_KEYS_OFF_STEPS
+                if keys_off:
+                    conn.execute("PRAGMA foreign_keys=OFF")
+                try:
+                    conn.execute("BEGIN")
+                    for sql in statements:
+                        conn.execute(sql)
+                    conn.commit()
+                except Exception:
+                    conn.rollback()
+                    raise
+                finally:
+                    if keys_off:
+                        conn.execute("PRAGMA foreign_keys=ON")
                 current += 1
 
         logger.info("Database schema migrated to version %d.", current)
@@ -376,33 +551,25 @@ def init_db(db_path: str = DB_PATH):
 
 
 def save_player(puuid: str, name: str, tag: str, db_path: str = DB_PATH):
-    """Insert or replace a player record."""
+    """Insert or refresh a player record; ``updated_at`` is the refresh time (UTC ms).
+
+    Who was selected as a collection anchor, and when, is in anchor_selections.
+    """
     if not puuid:
         raise ValueError("puuid must not be empty.")
     with get_connection(db_path) as conn:
         conn.execute(
             """
-            INSERT INTO players (puuid, game_name, tag_line, last_updated)
-            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+            INSERT INTO players (puuid, game_name, tag_line, updated_at)
+            VALUES (?, ?, ?, ?)
             ON CONFLICT(puuid) DO UPDATE SET
-                game_name    = excluded.game_name,
-                tag_line     = excluded.tag_line,
-                last_updated = excluded.last_updated
+                game_name  = excluded.game_name,
+                tag_line   = excluded.tag_line,
+                updated_at = excluded.updated_at
             """,
-            (puuid, name, tag),
+            (puuid, name, tag, _now_ms()),
         )
     logger.debug("Saved player %s#%s (%s).", name, tag, puuid)
-
-
-def increment_player_matches(puuid: str, count: int, db_path: str = DB_PATH):
-    """Increment the total_matches counter for a specific player."""
-    if count <= 0:
-        return
-    with get_connection(db_path) as conn:
-        conn.execute(
-            "UPDATE players SET total_matches = total_matches + ? WHERE puuid = ?",
-            (count, puuid),
-        )
 
 
 def _now_ms() -> int:
@@ -419,6 +586,69 @@ def _fetching_participant(info: dict, fetched_by_puuid: str | None) -> str | Non
     return None
 
 
+def _int_or_none(value):
+    return value if type(value) is int else None
+
+
+def _facts_row(match_id: str, info: dict, ingested_at: int, fetched_by_puuid: str | None) -> tuple:
+    version = info.get("gameVersion")
+    platform = info.get("platformId") or (match_id.split("_", 1)[0] if "_" in match_id else None)
+    return (
+        match_id,
+        _int_or_none(info.get("queueId")),
+        _int_or_none(info.get("gameStartTimestamp")),
+        _int_or_none(info.get("gameEndTimestamp")),
+        version if isinstance(version, str) else None,
+        platform,
+        ingested_at,
+        _fetching_participant(info, fetched_by_puuid),
+    )
+
+
+def _participant_row(match_id: str, info: dict, p: dict, c_name: str | None) -> tuple:
+    items = [p.get(f"item{i}", 0) for i in range(7)]
+    return (
+        match_id,
+        p["puuid"],
+        c_name or "Unknown",
+        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
+        1 if p.get("win") else 0,
+        p.get("kills", 0),
+        p.get("deaths", 0),
+        p.get("assists", 0),
+        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
+        p.get("goldEarned", 0),
+        info.get("gameCreation"),
+        info.get("gameDuration"),
+        info.get("gameMode", "CLASSIC"),
+        json.dumps(items),
+        _int_or_none(p.get("teamId")),
+    )
+
+
+_INSERT_PARTICIPANTS = """
+    INSERT OR IGNORE INTO match_participants
+        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
+         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json, team_id)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+"""
+_INSERT_FACTS = """
+    INSERT OR IGNORE INTO match_facts
+        (match_id, queue_id, game_start_at, game_end_at, game_version, platform,
+         ingested_at, fetched_by_puuid)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+"""
+
+
+def _stored_match_ids(conn, match_ids: list[str]) -> set[str]:
+    stored: set[str] = set()
+    for start in range(0, len(match_ids), 500):
+        chunk = match_ids[start:start + 500]
+        stored.update(r[0] for r in conn.execute(
+            f"SELECT match_id FROM matches WHERE match_id IN ({','.join('?' for _ in chunk)})", chunk))
+    return stored
+
+
 def save_match(
     match_id: str,
     raw_data: dict,
@@ -429,8 +659,9 @@ def save_match(
 ):
     """Insert a match record (silently ignored if it already exists).
 
-    ``ingested_at`` (UTC epoch ms, default: now) is when the row became available;
-    the first insert wins. ``fetched_by_puuid`` is the anchor whose match list returned it.
+    ``ingested_at`` (UTC epoch ms, default: now) is when the row became available and
+    ``fetched_by_puuid`` the anchor whose match list returned it; both go to match_facts
+    for a new match only, so the first insert wins.
     """
     if not match_id:
         raise ValueError("match_id must not be empty.")
@@ -447,12 +678,12 @@ def save_match(
         gzip.compress(json.dumps(raw_data).encode("utf-8"))
     ).decode("ascii")
     with get_connection(db_path) as conn:
+        is_new = not _stored_match_ids(conn, [match_id])
         conn.execute(
             """
             INSERT OR IGNORE INTO matches
-                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id,
-                 ingested_at, fetched_by_puuid)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             (
                 match_id,
@@ -461,10 +692,14 @@ def save_match(
                 info.get("gameCreation"),
                 info.get("gameDuration"),
                 season_id,
-                _now_ms() if ingested_at is None else ingested_at,
-                _fetching_participant(info, fetched_by_puuid),
             ),
         )
+        if is_new:
+            conn.execute(
+                _INSERT_FACTS,
+                _facts_row(match_id, info, _now_ms() if ingested_at is None else ingested_at,
+                           fetched_by_puuid),
+            )
 
         # Update champion registry and participant records
         participants = info.get("participants", [])
@@ -475,41 +710,11 @@ def save_match(
                 conn.execute(
                     "INSERT OR IGNORE INTO champions (name) VALUES (?)", (c_name,)
                 )
-            p_puuid = p.get("puuid")
-            if p_puuid:
-                items = [p.get(f"item{i}", 0) for i in range(7)]
-                p_rows.append(
-                    (
-                        match_id,
-                        p_puuid,
-                        c_name or "Unknown",
-                        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
-                        1 if p.get("win") else 0,
-                        p.get("kills", 0),
-                        p.get("deaths", 0),
-                        p.get("assists", 0),
-                        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
-                        p.get("goldEarned", 0),
-                        info.get("gameCreation"),
-                        info.get("gameDuration"),
-                        info.get("gameMode", "CLASSIC"),
-                        json.dumps(items),
-                    )
-                )
+            if p.get("puuid"):
+                p_rows.append(_participant_row(match_id, info, p, c_name))
 
         if p_rows:
-            try:
-                conn.executemany(
-                    """
-                    INSERT OR IGNORE INTO match_participants
-                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
-                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    p_rows,
-                )
-            except sqlite3.OperationalError:
-                pass
+            conn.executemany(_INSERT_PARTICIPANTS, p_rows)
 
     logger.debug("Saved match %s.", match_id)
 
@@ -524,10 +729,11 @@ def save_matches_batch(
     """
     Bulk-insert multiple matches and their champions in a single transaction.
     Each element of *matches* should be a (match_id, raw_data_dict).
-    ``ingested_at`` and ``fetched_by_puuid`` apply to every new row, as in save_match.
+    ``ingested_at`` and ``fetched_by_puuid`` apply to every new match, as in save_match.
     """
     ingested_at = _now_ms() if ingested_at is None else ingested_at
     rows = []
+    fact_rows = []
     unique_champions = set()
     all_p_rows = []
     for match_id, raw_data in matches:
@@ -553,69 +759,39 @@ def save_matches_batch(
                 info.get("gameCreation"),
                 info.get("gameDuration"),
                 season_id,
-                ingested_at,
-                _fetching_participant(info, fetched_by_puuid),
             )
         )
+        fact_rows.append(_facts_row(match_id, info, ingested_at, fetched_by_puuid))
 
         # Collect champions and participants for batch insert
         for p in info.get("participants", []):
             c_name = p.get("championName")
             if c_name:
                 unique_champions.add(c_name)
-            p_puuid = p.get("puuid")
-            if p_puuid:
-                items = [p.get(f"item{i}", 0) for i in range(7)]
-                all_p_rows.append(
-                    (
-                        match_id,
-                        p_puuid,
-                        c_name or "Unknown",
-                        p.get("teamPosition") or p.get("individualPosition", "UNKNOWN"),
-                        1 if p.get("win") else 0,
-                        p.get("kills", 0),
-                        p.get("deaths", 0),
-                        p.get("assists", 0),
-                        p.get("totalMinionsKilled", 0) + p.get("neutralMinionsKilled", 0),
-                        p.get("goldEarned", 0),
-                        info.get("gameCreation"),
-                        info.get("gameDuration"),
-                        info.get("gameMode", "CLASSIC"),
-                        json.dumps(items),
-                    )
-                )
+            if p.get("puuid"):
+                all_p_rows.append(_participant_row(match_id, info, p, c_name))
 
     if not rows:
         return
 
     with get_connection(db_path) as conn:
+        stored = _stored_match_ids(conn, [r[0] for r in rows])
         conn.executemany(
             """
             INSERT OR IGNORE INTO matches
-                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id,
-                 ingested_at, fetched_by_puuid)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id)
+            VALUES (?, ?, ?, ?, ?, ?)
             """,
             rows,
         )
+        conn.executemany(_INSERT_FACTS, [f for f in fact_rows if f[0] not in stored])
         if unique_champions:
             conn.executemany(
                 "INSERT OR IGNORE INTO champions (name) VALUES (?)",
                 [(c,) for c in unique_champions],
             )
         if all_p_rows:
-            try:
-                conn.executemany(
-                    """
-                    INSERT OR IGNORE INTO match_participants
-                        (match_id, puuid, champion_name, team_position, win, kills, deaths, assists,
-                         total_cs, gold_earned, game_creation_time, game_duration, game_mode, items_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    all_p_rows,
-                )
-            except sqlite3.OperationalError:
-                pass
+            conn.executemany(_INSERT_PARTICIPANTS, all_p_rows)
 
     logger.debug("Batch-saved %d matches and updated champions.", len(rows))
 
@@ -745,6 +921,7 @@ def save_training_record(
     winner_label: int,
     db_path: str = DB_PATH,
     labels: dict | None = None,
+    feature_extractor: str | None = None,
 ):
     """
     Insert a training record (silently ignored if it already exists).
@@ -754,6 +931,9 @@ def save_training_record(
     labels:
         Optional dict of multi-output labels (see ``feature_labels.extract_labels``).
         Stored gzipped+b64 in the ``labels_json`` column.  ``None`` stores SQL NULL.
+    feature_extractor:
+        The function that produced *feature_json*, e.g.
+        ``"json_utils.extract_pre_match_features"``; NULL when unknown.
     """
     if not match_id:
         raise ValueError("match_id must not be empty.")
@@ -767,14 +947,15 @@ def save_training_record(
         conn.execute(
             """
             INSERT OR IGNORE INTO training_dataset
-                (match_id, feature_json, winner_label, labels_json)
-            VALUES (?, ?, ?, ?)
+                (match_id, feature_json, winner_label, labels_json, feature_extractor)
+            VALUES (?, ?, ?, ?, ?)
             """,
             (
                 match_id,
                 compressed_feature,
                 winner_label,
                 compressed_labels,
+                feature_extractor,
             ),
         )
     logger.debug("Saved training record for match %s.", match_id)
@@ -783,9 +964,12 @@ def save_training_record(
 def save_training_records_batch(
     records: list[tuple],
     db_path: str = DB_PATH,
+    *,
+    feature_extractor: str | None = None,
 ):
     """
     Bulk-insert multiple training records in a single transaction.
+    ``feature_extractor`` names the function that produced every *feature_json*.
 
     Each element of *records* may be either:
     - a 3-tuple ``(match_id, feature_json_dict, winner_label)`` -- labels_json NULL.
@@ -823,6 +1007,7 @@ def save_training_records_batch(
                 compressed_feature,
                 winner_label,
                 compressed_labels,
+                feature_extractor,
             )
         )
 
@@ -833,8 +1018,8 @@ def save_training_records_batch(
         conn.executemany(
             """
             INSERT OR IGNORE INTO training_dataset
-                (match_id, feature_json, winner_label, labels_json)
-            VALUES (?, ?, ?, ?)
+                (match_id, feature_json, winner_label, labels_json, feature_extractor)
+            VALUES (?, ?, ?, ?, ?)
             """,
             rows,
         )
@@ -844,6 +1029,37 @@ def save_training_records_batch(
 # ---------------------------------------------------------------------------
 # Read helpers
 # ---------------------------------------------------------------------------
+
+
+SIGHTING_DISPOSITIONS = ("stored", "already_stored", "discovery_only", "rejected", "missing")
+
+
+def save_match_sightings(
+    sightings: list[tuple], db_path: str = DB_PATH, *, seen_at: int | None = None
+):
+    """Record that match lists returned matches: (match_id, fetched_by_puuid, disposition)."""
+    if not sightings:
+        return
+    seen_at = _now_ms() if seen_at is None else seen_at
+    with get_connection(db_path) as conn:
+        conn.executemany(
+            "INSERT INTO match_sightings (match_id, fetched_by_puuid, seen_at, disposition) "
+            "VALUES (?, ?, ?, ?)",
+            [(match_id, fetched_by, seen_at, disposition) for match_id, fetched_by, disposition in sightings],
+        )
+
+
+def discovery_only_match_ids(match_ids: list[str], db_path: str = DB_PATH) -> set[str]:
+    """The matches among *match_ids* already judged discovery-only (never stored)."""
+    wanted = sorted(set(match_ids))
+    found: set[str] = set()
+    with get_connection(db_path) as conn:
+        for start in range(0, len(wanted), 500):
+            chunk = wanted[start:start + 500]
+            found.update(r[0] for r in conn.execute(
+                f"SELECT DISTINCT match_id FROM match_sightings WHERE disposition = 'discovery_only' "
+                f"AND match_id IN ({','.join('?' for _ in chunk)})", chunk))
+    return found
 
 
 def match_exists(match_id: str, db_path: str = DB_PATH) -> bool:
@@ -978,6 +1194,29 @@ def get_matches_by_mode(
     return res
 
 
+# Player statistics are derived from match_participants on read, never stored:
+# KDA = (kills + assists) / max(1, deaths) over all matches, gold = mean gold.
+_MATCH_COUNT_SQL = "(SELECT COUNT(*) FROM match_participants mp WHERE mp.puuid = p.puuid)"
+
+
+def _participant_stats(conn, puuids: list[str]) -> dict:
+    placeholders = ",".join("?" for _ in puuids)
+    row = conn.execute(
+        f"""
+        SELECT COUNT(*) AS n, SUM(COALESCE(kills, 0)) AS k, SUM(COALESCE(deaths, 0)) AS d,
+               SUM(COALESCE(assists, 0)) AS a, SUM(COALESCE(gold_earned, 0)) AS g
+        FROM match_participants WHERE puuid IN ({placeholders})
+        """,
+        tuple(puuids),
+    ).fetchone()
+    n = row["n"] or 0
+    return {
+        "total_matches": n,
+        "avg_kda": (row["k"] + row["a"]) / max(1, row["d"]) if n else 0.0,
+        "avg_gold": row["g"] // n if n else 0,
+    }
+
+
 def search_players(query: str, limit: int = 10, db_path: str = DB_PATH) -> list[dict]:
     """
     Search for players by game_name or tag_line.
@@ -986,29 +1225,24 @@ def search_players(query: str, limit: int = 10, db_path: str = DB_PATH) -> list[
     safe = query.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
     with get_connection(db_path) as conn:
         rows = conn.execute(
-            """
-            SELECT puuid, game_name, tag_line, total_matches, avg_kda, avg_gold
-            FROM players
+            f"""
+            SELECT puuid, game_name, tag_line
+            FROM players p
             WHERE game_name LIKE ? ESCAPE '\\' OR tag_line LIKE ? ESCAPE '\\'
-            ORDER BY total_matches DESC
+            ORDER BY {_MATCH_COUNT_SQL} DESC
             LIMIT ?
             """,
             (f"%{safe}%", f"%{safe}%", limit),
         ).fetchall()
-
-    results = []
-    for r in rows:
-        results.append(
+        return [
             {
                 "puuid": r["puuid"],
                 "game_name": r["game_name"],
                 "tag_line": r["tag_line"],
-                "total_matches": r["total_matches"] or 0,
-                "avg_kda": r["avg_kda"] or 0.0,
-                "avg_gold": r["avg_gold"] or 0,
+                **_participant_stats(conn, [r["puuid"]]),
             }
-        )
-    return results
+            for r in rows
+        ]
 
 
 def get_player_stats(puuid: str, db_path: str = DB_PATH) -> dict | None:
@@ -1032,35 +1266,19 @@ def get_player_stats(puuid: str, db_path: str = DB_PATH) -> dict | None:
 
         placeholders = ",".join(["?"] * len(puuids_to_check))
         rows = conn.execute(
-            f"SELECT puuid, game_name, tag_line, avg_kda, avg_gold, total_matches FROM players WHERE puuid IN ({placeholders})",
+            f"SELECT puuid, game_name, tag_line FROM players WHERE puuid IN ({placeholders})",
             tuple(puuids_to_check),
         ).fetchall()
-
-    if not rows:
-        return None
-
-    total_matches = 0
-    sum_kda = 0.0
-    sum_gold = 0.0
+        if not rows:
+            return None
+        stats = _participant_stats(conn, puuids_to_check)
 
     main_row = next((r for r in rows if r["puuid"] == target_puuid), rows[0])
-
-    for r in rows:
-        m = r["total_matches"] or 0
-        total_matches += m
-        sum_kda += (r["avg_kda"] or 0.0) * m
-        sum_gold += (r["avg_gold"] or 0) * m
-
-    avg_kda = sum_kda / total_matches if total_matches > 0 else 0.0
-    avg_gold = int(sum_gold / total_matches) if total_matches > 0 else 0
-
     return {
         "puuid": main_row["puuid"],
         "game_name": main_row["game_name"],
         "tag_line": main_row["tag_line"],
-        "avg_kda": avg_kda,
-        "avg_gold": avg_gold,
-        "total_matches": total_matches,
+        **stats,
     }
 
 
@@ -1073,15 +1291,15 @@ def get_player_by_name_tag(
     with get_connection(db_path) as conn:
         row = conn.execute(
             """
-            SELECT puuid, game_name, tag_line, total_matches, avg_kda, avg_gold
+            SELECT puuid, game_name, tag_line
             FROM players
             WHERE LOWER(game_name) = LOWER(?) AND LOWER(tag_line) = LOWER(?)
             LIMIT 1
             """,
             (game_name.strip(), tag_line.strip()),
         ).fetchone()
-    if row:
-        return dict(row)
+        if row:
+            return {**dict(row), **_participant_stats(conn, [row["puuid"]])}
     return None
 
 
@@ -1237,7 +1455,7 @@ def backfill_match_participants(limit: int = 500, db_path: str = DB_PATH, order_
 def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,
                     db_path: str = DB_PATH) -> list[str]:
     """
-    Given a list of puuids, return those whose `players.last_updated`
+    Given a list of puuids, return those whose `players.updated_at`
     is older than `stale_after_days` (or NULL / missing from the table).
 
     Used by the Custom Predictor warm-up: stale players get enqueued
@@ -1253,8 +1471,7 @@ def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,
     if not puuids:
         return []
 
-    cutoff = _dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=stale_after_days)
-    cutoff_str = cutoff.strftime("%Y-%m-%d %H:%M:%S")
+    cutoff_ms = _now_ms() - int(stale_after_days * 86_400_000)
 
     # Use SQL placeholders for the IN clause
     placeholders = ",".join(["?"] * len(puuids))
@@ -1263,9 +1480,9 @@ def get_stale_puuids(puuids: list[str], stale_after_days: int = 7,
             f"""
             SELECT puuid FROM players
             WHERE puuid IN ({placeholders})
-              AND (last_updated IS NULL OR last_updated < ?)
+              AND (updated_at IS NULL OR updated_at < ?)
             """,
-            tuple(puuids) + (cutoff_str,),
+            tuple(puuids) + (cutoff_ms,),
         ).fetchall()
 
     fresh_in_db = {p for p in puuids}
@@ -1326,10 +1543,10 @@ def get_top_players(limit: int = 10, db_path: str = DB_PATH) -> list[dict]:
     """
     with get_connection(db_path) as conn:
         rows = conn.execute(
-            """
-            SELECT puuid, game_name, tag_line, total_matches 
-            FROM players 
-            ORDER BY total_matches DESC 
+            f"""
+            SELECT puuid, game_name, tag_line, {_MATCH_COUNT_SQL} AS total_matches
+            FROM players p
+            ORDER BY total_matches DESC
             LIMIT ?
             """,
             (limit,),
@@ -1368,9 +1585,9 @@ def get_untrained_records(limit: int = 500, db_path: str = DB_PATH) -> list[dict
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, match_id, feature_json, winner_label, labels_json
-            FROM training_dataset
-            WHERE is_trained = 0
+            SELECT t.id, t.match_id, t.feature_json, t.winner_label, t.labels_json
+            FROM training_dataset t
+            WHERE NOT EXISTS (SELECT 1 FROM trained_records r WHERE r.training_id = t.id)
             LIMIT ?
             """,
             (limit,),
@@ -1396,9 +1613,9 @@ def get_random_trained_records(limit: int = 500, db_path: str = DB_PATH) -> list
     with get_connection(db_path) as conn:
         rows = conn.execute(
             """
-            SELECT id, match_id, feature_json, winner_label, labels_json
-            FROM training_dataset
-            WHERE is_trained = 1
+            SELECT t.id, t.match_id, t.feature_json, t.winner_label, t.labels_json
+            FROM training_dataset t
+            JOIN trained_records r ON r.training_id = t.id
             ORDER BY RANDOM()
             LIMIT ?
             """,
@@ -1423,23 +1640,25 @@ def mark_as_trained(record_ids: list[int], db_path: str = DB_PATH):
     """
     Mark a list of record IDs as 'trained' to prevent redundant training.
 
-    IDs are processed in chunks of 900 to stay within SQLite's
+    Trainer state lives in trained_records, keyed by training_dataset.id; unknown
+    ids are ignored. IDs are processed in chunks of 900 to stay within SQLite's
     SQLITE_MAX_VARIABLE_NUMBER limit (default 999).
     """
     if not record_ids:
         return
 
+    trained_at = _now_ms()
     with get_connection(db_path) as conn:
         for i in range(0, len(record_ids), _MARK_TRAINED_CHUNK):
             chunk = record_ids[i : i + _MARK_TRAINED_CHUNK]
             placeholders = ",".join(["?"] * len(chunk))
             conn.execute(
                 f"""
-                UPDATE training_dataset
-                SET is_trained = 1, last_trained_at = CURRENT_TIMESTAMP
-                WHERE id IN ({placeholders})
+                INSERT INTO trained_records (training_id, trained_at)
+                SELECT id, ? FROM training_dataset WHERE id IN ({placeholders})
+                ON CONFLICT(training_id) DO UPDATE SET trained_at = excluded.trained_at
                 """,
-                tuple(chunk),
+                (trained_at, *chunk),
             )
 
 
@@ -1496,9 +1715,7 @@ def get_db_stats(db_path: str = DB_PATH) -> dict:
         champs = conn.execute("SELECT COUNT(*) FROM champions").fetchone()[0]
 
         # New: count trained vs untrained for the dashboard
-        trained = conn.execute(
-            "SELECT COUNT(*) FROM training_dataset WHERE is_trained = 1"
-        ).fetchone()[0]
+        trained = conn.execute("SELECT COUNT(*) FROM trained_records").fetchone()[0]
 
     untrained = training - trained
     ratio = trained / training if training > 0 else 0
@@ -1553,8 +1770,8 @@ def mark_as_processed(game_name: str, tag_line: str, db_path: str = DB_PATH):
     """Mark a player as processed in the crawl queue."""
     with get_connection(db_path) as conn:
         conn.execute(
-            "UPDATE crawl_queue SET is_processed = 1, processed_at = CURRENT_TIMESTAMP WHERE game_name = ? AND tag_line = ?",
-            (game_name, tag_line),
+            "UPDATE crawl_queue SET is_processed = 1, processed_at = ? WHERE game_name = ? AND tag_line = ?",
+            (_now_ms(), game_name, tag_line),
         )
 
 

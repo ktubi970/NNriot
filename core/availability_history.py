@@ -3,9 +3,9 @@
 The default replay (``core.pre_match_history``) assumes a Riot result was
 observable at its result end. The 25 Oct 2026 audit found that assumption leaks:
 a player's history reaches the database only once that player is crawled, often
-after the target match. Schema v16 records ``matches.ingested_at``; these
+after the target match. Schema v16 records ``match_facts.ingested_at``; these
 providers drop every history row ingested at or after the target's start, and
-every row whose ingestion time is unknown (NULL before v16).
+every row whose ingestion time is unknown (stored before v16).
 
 This module composes ``core.pre_match_history`` and ``core.frozen_history``
 without modifying them: both are bound by SHA-256 in model manifests and frozen
@@ -35,18 +35,18 @@ _LOOKUP_CHUNK = 500
 
 
 def read_ingestion_times(db_path, match_ids: Iterable[str]) -> dict[str, Optional[int]]:
-    """``matches.ingested_at`` per match, read-only; all None before schema v16."""
+    """``match_facts.ingested_at`` per match, read-only; None when unknown or before schema v16."""
     wanted = sorted({m for m in match_ids if m})
     uri = Path(db_path).resolve().as_uri() + '?mode=ro'
     with closing(sqlite3.connect(uri, uri=True)) as conn:
         conn.execute('PRAGMA query_only=ON')
-        if 'ingested_at' not in {r[1] for r in conn.execute('PRAGMA table_info(matches)')}:
-            return dict.fromkeys(wanted)
         times: dict[str, Optional[int]] = dict.fromkeys(wanted)
+        if not conn.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='match_facts'").fetchone():
+            return times
         for start in range(0, len(wanted), _LOOKUP_CHUNK):
             chunk = wanted[start:start + _LOOKUP_CHUNK]
             times.update(conn.execute(
-                f'SELECT match_id, ingested_at FROM matches WHERE match_id IN ({",".join("?" for _ in chunk)})',
+                f'SELECT match_id, ingested_at FROM match_facts WHERE match_id IN ({",".join("?" for _ in chunk)})',
                 chunk).fetchall())
     return times
 

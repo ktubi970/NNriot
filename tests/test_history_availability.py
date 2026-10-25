@@ -75,7 +75,7 @@ def test_database_and_frozen_providers_apply_the_same_filter(tmp_path):
                                     ('EUW1_LEGACY', 1200, 3000)):
         database.save_matches_batch([(mid, _payload(mid, creation))], db_path=db, ingested_at=ingested)
     with sqlite3.connect(db) as conn:
-        conn.execute("UPDATE matches SET ingested_at = NULL WHERE match_id = 'EUW1_LEGACY'")
+        conn.execute("DELETE FROM match_facts WHERE match_id = 'EUW1_LEGACY'")  # stored before v16
     match = {'prediction_time_ms': 10_000,
              'team_a': [{'puuid': 'p0', 'champion': 'Ahri', 'role': 'MIDDLE'}],
              'team_b': [{'puuid': 'p5', 'champion': 'Ahri', 'role': 'MIDDLE'}]}

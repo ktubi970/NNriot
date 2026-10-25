@@ -3,7 +3,8 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-import datetime as _dt
+import time
+
 import pytest
 from core import database
 
@@ -23,7 +24,7 @@ def test_get_stale_puuids_treats_missing_as_stale(tmp_path):
 
 
 def test_get_stale_puuids_fresh_record_not_stale(tmp_path):
-    """A player with last_updated = now is NOT stale."""
+    """A player with updated_at = now is NOT stale."""
     db = str(tmp_path / "test.db")
     database.init_db(db)
     database.save_player("FRESH_PUUID", "Name", "Tag", db_path=db)
@@ -33,14 +34,14 @@ def test_get_stale_puuids_fresh_record_not_stale(tmp_path):
 
 
 def test_get_stale_puuids_old_record_is_stale(tmp_path):
-    """A player with last_updated > 7 days ago IS stale."""
+    """A player with updated_at > 7 days ago IS stale."""
     db = str(tmp_path / "test.db")
     database.init_db(db)
     database.save_player("OLD_PUUID", "Name", "Tag", db_path=db)
     # Manually backdate
-    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=10)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = int(time.time() * 1000) - 10 * 86_400_000
     with database.get_connection(db) as conn:
-        conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
+        conn.execute("UPDATE players SET updated_at = ? WHERE puuid = ?",
                      (old_date, "OLD_PUUID"))
 
     result = database.get_stale_puuids(["OLD_PUUID"], stale_after_days=7, db_path=db)
@@ -55,9 +56,9 @@ def test_get_stale_puuids_mixed(tmp_path):
     database.save_player("FRESH", "Name", "Tag", db_path=db)
     # Stale player
     database.save_player("STALE", "Name", "Tag", db_path=db)
-    old_date = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=30)).strftime("%Y-%m-%d %H:%M:%S")
+    old_date = int(time.time() * 1000) - 30 * 86_400_000
     with database.get_connection(db) as conn:
-        conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?", (old_date, "STALE"))
+        conn.execute("UPDATE players SET updated_at = ? WHERE puuid = ?", (old_date, "STALE"))
     # Missing player — not inserted
 
     result = database.get_stale_puuids(["FRESH", "STALE", "MISSING"], stale_after_days=7, db_path=db)
@@ -70,9 +71,9 @@ def test_get_stale_puuids_threshold_boundary(tmp_path):
     database.init_db(db)
     database.save_player("BOUNDARY", "Name", "Tag", db_path=db)
     # Set to 3 days ago — well within 7-day window
-    recent = (_dt.datetime.now(_dt.timezone.utc).replace(tzinfo=None) - _dt.timedelta(days=3)).strftime("%Y-%m-%d %H:%M:%S")
+    recent = int(time.time() * 1000) - 3 * 86_400_000
     with database.get_connection(db) as conn:
-        conn.execute("UPDATE players SET last_updated = ? WHERE puuid = ?",
+        conn.execute("UPDATE players SET updated_at = ? WHERE puuid = ?",
                      (recent, "BOUNDARY"))
 
     result = database.get_stale_puuids(["BOUNDARY"], stale_after_days=7, db_path=db)

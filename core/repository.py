@@ -33,6 +33,13 @@ class MatchRepository(BaseRepository):
             matches, db_path=self.db_path, fetched_by_puuid=fetched_by_puuid
         )
         
+    def record_sightings(self, sightings: list) -> None:
+        """(match_id, fetched_by_puuid, disposition) for each match a match list returned."""
+        return database.save_match_sightings(sightings, db_path=self.db_path)
+
+    def discovery_only_ids(self, match_ids: list) -> set:
+        return database.discovery_only_match_ids(match_ids, db_path=self.db_path)
+
     def save_match_timelines_batch(self, timelines: list) -> None:
         return database.save_match_timelines_batch(timelines, db_path=self.db_path)
         
@@ -51,8 +58,6 @@ class PlayerRepository(BaseRepository):
     def save_player(self, puuid: str, name: str, tag: str) -> None:
         return database.save_player(puuid, name, tag, db_path=self.db_path)
         
-    def increment_player_matches(self, puuid: str, count: int) -> None:
-        return database.increment_player_matches(puuid, count, db_path=self.db_path)
         
     def search_players(self, query: str, limit: int = 10) -> List[Dict]:
         return database.search_players(query, limit=limit, db_path=self.db_path)
@@ -78,8 +83,10 @@ class SystemRepository(BaseRepository):
 class TrainingRepository(BaseRepository):
     """Handles all database operations related to ML Training Data."""
     
-    def save_training_records_batch(self, records: list) -> None:
-        return database.save_training_records_batch(records, db_path=self.db_path)
+    def save_training_records_batch(self, records: list, *, feature_extractor: Optional[str] = None) -> None:
+        return database.save_training_records_batch(
+            records, db_path=self.db_path, feature_extractor=feature_extractor
+        )
         
     def get_untrained_records(self, limit: int = 500) -> List[Dict]:
         return database.get_untrained_records(limit=limit, db_path=self.db_path)

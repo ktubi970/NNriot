@@ -477,7 +477,7 @@ def api_predict_custom():
                         try:
                             service = CollectionService(db_path=db_path)
                             result = service.collect_by_puuid_accounts(
-                                accounts, matches_per_player=20
+                                accounts, matches_per_player=20, selection_source="prediction_warmup"
                             )
                             logger.info("Warm-up refresh complete: %s", result)
                         except Exception:
@@ -659,7 +659,7 @@ def api_spectator_active():
                     # Use seeds approach
                     seeds = [(p["name"], p["tag"]) for p in new_players]
                     service = CollectionService(db_path=db_path)
-                    service.collect_seed_players(seeds, matches_per_player=10)
+                    service.collect_seed_players(seeds, matches_per_player=10, selection_source="spectator")
                 except Exception as e:
                     logger.error(f"Auto-collection error: {e}", exc_info=True)
                     raise

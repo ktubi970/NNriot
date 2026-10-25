@@ -249,7 +249,9 @@ def test_ingest_match_ids_isolates_timeline_embedding_failure(ingestor):
 
 
 
-# --- v16 provenance and discovery-only seeds -------------------------------------------------
+# --- v16 provenance, anchors and sightings ------------------------------------------------------
+
+from core.collection.anchors import AnchorRepository
 
 CREATION_MS = 1700000000000  # 2023-11-14 22:13:20 UTC, the payload's gameCreation
 
@@ -268,10 +270,10 @@ def _stored(db, table, match_id):
     return dict(row) if row else None
 
 
-def _enqueue(db, puuid, priority, created_at):
+def _sightings(db):
     with sqlite3.connect(db) as conn:
-        conn.execute("INSERT INTO crawl_queue (puuid, region, priority, created_at) VALUES (?, 'EUW', ?, ?)",
-                     (puuid, priority, created_at))
+        return conn.execute("SELECT match_id, fetched_by_puuid, disposition FROM match_sightings "
+                            "ORDER BY rowid").fetchall()
 
 
 def test_ingested_match_records_fetching_anchor_and_ingestion_time(ingestor):
@@ -280,41 +282,27 @@ def test_ingested_match_records_fetching_anchor_and_ingestion_time(ingestor):
                                        region="EUW", fetched_by_puuid="puuid_3")
     after = int(time.time() * 1000)
 
-    row = _stored(ingestor.db_path, "matches", "EUW1_1")
+    facts = _stored(ingestor.db_path, "match_facts", "EUW1_1")
     assert result.matches_saved == 1
-    assert row["fetched_by_puuid"] == "puuid_3"
-    assert before <= row["ingested_at"] <= after
+    assert facts["fetched_by_puuid"] == "puuid_3" and facts["queue_id"] == 420
+    assert before <= facts["ingested_at"] <= after
+    training = _stored(ingestor.db_path, "training_dataset", "EUW1_1")
+    assert training["feature_extractor"] == "json_utils.extract_pre_match_features"
 
 
-def test_matches_predating_the_anchor_selection_are_discovery_only(ingestor):
-    at_selection = _make_match_payload()
-    at_selection["info"]["gameCreation"] = CREATION_MS + 1
-    api = _api_for({"EUW1_OLD": _make_match_payload(), "EUW1_AT": at_selection})
-
-    result = ingestor.ingest_match_ids(["EUW1_OLD", "EUW1_AT"], api=api, region="EUW",
-                                       fetched_by_puuid="puuid_0", discovery_before_ms=CREATION_MS + 1)
-
-    assert result.discovery_only == 1
-    assert result.matches_saved == result.records_saved == 1
-    assert _stored(ingestor.db_path, "matches", "EUW1_OLD") is None
-    assert _stored(ingestor.db_path, "training_dataset", "EUW1_OLD") is None
-    assert _stored(ingestor.db_path, "matches", "EUW1_AT") is not None
-    # Participants of discovery-only matches still feed the frontier.
-    assert {p for p, _ in result.discovered_puuids} == {f"puuid_{i}" for i in range(10)}
-    api.get_match_timelines_batch.assert_called_once_with(["EUW1_AT"], max_workers=5, verbose=False)
-
-
-@pytest.mark.parametrize("priority, entry, discovery_only", [
-    (10, "2023-11-14 22:13:21", True),    # ladder seed entered after the match
-    (5, "2023-11-15 00:00:00", True),     # deepened seed entered after the match
-    (10, "2023-11-14 22:13:20", False),   # entered at the match's creation
-    (0, "2023-11-15 00:00:00", False),    # snowball player, not selected on rank
+@pytest.mark.parametrize("source, selected_at, discovery_only", [
+    ("ladder_seed", CREATION_MS + 1000, True),          # seed selected after the match
+    ("top_leagues", CREATION_MS + 1, True),
+    ("pro_import", CREATION_MS + 86_400_000, True),
+    ("legacy_crawl_queue", CREATION_MS + 1000, True),
+    ("ladder_seed", CREATION_MS, False),                # selected at the match's creation
+    ("manual_seed", CREATION_MS + 1000, False),         # not selected on rank
+    ("legacy_players_last_saved", CREATION_MS + 1000, False),
 ])
-def test_a_seed_participant_entering_after_the_match_makes_it_discovery_only(
-        ingestor, priority, entry, discovery_only):
-    # The match comes from a snowball player's list, not from the seed's own: the
-    # selection bias follows the seed's participation, whoever fetched the match.
-    _enqueue(ingestor.db_path, "puuid_8", priority, entry)
+def test_a_participant_selected_on_rank_after_the_match_makes_it_discovery_only(
+        ingestor, source, selected_at, discovery_only):
+    # The match comes from another player's list: the bias follows the anchor's participation.
+    AnchorRepository(ingestor.db_path).record(["puuid_8"], source=source, region="EUW", selected_at=selected_at)
 
     result = ingestor.ingest_match_ids(["EUW1_1"], api=_api_for({"EUW1_1": _make_match_payload()}),
                                        region="EUW", fetched_by_puuid="puuid_1")
@@ -322,6 +310,8 @@ def test_a_seed_participant_entering_after_the_match_makes_it_discovery_only(
     assert result.discovery_only == int(discovery_only)
     assert (_stored(ingestor.db_path, "matches", "EUW1_1") is None) is discovery_only
     assert len(result.discovered_puuids) == 10
+    assert _sightings(ingestor.db_path) == [
+        ("EUW1_1", "puuid_1", "discovery_only" if discovery_only else "stored")]
 
 
 @pytest.mark.parametrize("arrangement", ["original", "teams_swapped", "players_permuted"])
@@ -334,7 +324,7 @@ def test_discovery_only_decision_ignores_team_order_and_player_order(ingestor, a
         payload["info"]["teams"] = [{"teamId": 100, "win": True}, {"teamId": 200, "win": False}]
     elif arrangement == "players_permuted":
         parts.reverse()
-    _enqueue(ingestor.db_path, "puuid_2", 10, "2023-11-15 00:00:00")
+    AnchorRepository(ingestor.db_path).record(["puuid_2"], source="ladder_seed", selected_at=CREATION_MS + 1)
 
     result = ingestor.ingest_match_ids(["EUW1_1"], api=_api_for({"EUW1_1": payload}), region="EUW")
 
@@ -342,12 +332,37 @@ def test_discovery_only_decision_ignores_team_order_and_player_order(ingestor, a
     assert result.matches_saved == 0
 
 
-def test_discovery_only_matches_are_not_downloaded_again(ingestor):
+def test_discovery_only_matches_are_not_downloaded_again_by_a_later_process(ingestor):
+    AnchorRepository(ingestor.db_path).record(["puuid_0"], source="ladder_seed", selected_at=CREATION_MS + 1)
     api = _api_for({"EUW1_OLD": _make_match_payload()})
-    first = ingestor.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW",
-                                      discovery_before_ms=CREATION_MS + 1)
-    second = ingestor.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW")
+    first = ingestor.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW", fetched_by_puuid="puuid_0")
+    later = MatchIngestor(db_path=ingestor.db_path)
+    second = later.ingest_match_ids(["EUW1_OLD"], api=api, region="EUW", fetched_by_puuid="puuid_1")
 
     assert first.discovery_only == 1
     assert second.skipped == 1 and second.discovery_only == 0
     assert api.get_match_details_batch.call_count == 1
+    assert _sightings(ingestor.db_path) == [("EUW1_OLD", "puuid_0", "discovery_only"),
+                                            ("EUW1_OLD", "puuid_1", "discovery_only")]
+
+
+def test_every_returned_match_is_sighted_with_what_was_done(ingestor):
+    ingestor.match_repo.save_match("EUW1_KNOWN", _make_match_payload())
+    api = _api_for({"EUW1_NEW": _make_match_payload(), "EUW1_ARAM": _make_match_payload(game_mode="ARAM")})
+
+    ingestor.ingest_match_ids(["EUW1_KNOWN", "EUW1_NEW", "EUW1_ARAM", "EUW1_GONE"], api=api,
+                              region="EUW", fetched_by_puuid="puuid_4")
+
+    assert sorted(_sightings(ingestor.db_path)) == [
+        ("EUW1_ARAM", "puuid_4", "rejected"), ("EUW1_GONE", "puuid_4", "missing"),
+        ("EUW1_KNOWN", "puuid_4", "already_stored"), ("EUW1_NEW", "puuid_4", "stored")]
+
+
+def test_a_failed_download_is_sighted_as_missing(ingestor):
+    api = MagicMock()
+    api.get_match_details_batch.side_effect = RuntimeError("Riot API timeout")
+
+    result = ingestor.ingest_match_ids(["EUW1_1", "EUW1_2"], api=api, region="EUW")
+
+    assert result.errors == 2
+    assert _sightings(ingestor.db_path) == [("EUW1_1", None, "missing"), ("EUW1_2", None, "missing")]
