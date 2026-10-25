@@ -7,6 +7,8 @@ Responsible for:
 4. Persisting raw matches to MatchRepository and training records to TrainingRepository.
 5. Systematic timeline fetching and spatial embedding extraction via core.spatial_rnn.extract_and_store_timeline_embeddings.
 6. Returning IngestionResult with counts and discovered participant PUUIDs for snowballing.
+7. Recording availability (matches.ingested_at, fetched_by_puuid) and keeping matches that
+   predate an anchor's selection on rank out of the database (discovery-only).
 """
 
 from __future__ import annotations
@@ -18,6 +20,7 @@ from typing import Any, Optional
 
 from core import config, database, json_utils
 from core.collection.models import IngestionResult, MatchQualityFilter
+from core.collection.queue import CrawlQueueRepository
 from core.feature_labels import extract_labels
 from core.repository import MatchRepository, TrainingRepository
 
@@ -33,6 +36,7 @@ class MatchIngestor:
         quality_filter: Optional[MatchQualityFilter] = None,
         match_repo: Optional[MatchRepository] = None,
         train_repo: Optional[TrainingRepository] = None,
+        queue_repo: Optional[CrawlQueueRepository] = None,
     ):
         self.db_path = config.get_db_path(db_path, require_exists=False)
         if not Path(self.db_path).is_file():
@@ -41,6 +45,54 @@ class MatchIngestor:
         self.filter = quality_filter or MatchQualityFilter()
         self.match_repo = match_repo if match_repo is not None else MatchRepository(self.db_path)
         self.train_repo = train_repo if train_repo is not None else TrainingRepository(self.db_path)
+        self.queue_repo = queue_repo if queue_repo is not None else CrawlQueueRepository(self.db_path)
+        # Matches judged discovery-only by this process; they are not downloaded again.
+        self._discovery_only: set[str] = set()
+        self._schema_ready = False
+
+    def _ensure_schema(self) -> None:
+        """Migrate an existing database before the first write, never on read-only use."""
+        if not self._schema_ready:
+            database.init_db(self.db_path)
+            self._schema_ready = True
+
+    @staticmethod
+    def _participant_puuids(details: dict, info: dict) -> set[str]:
+        puuids: set[str] = set()
+        for p in info.get("participants", []):
+            if isinstance(p, dict):
+                p_puuid = p.get("puuid")
+                if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
+                    puuids.add(p_puuid.strip())
+        metadata = details.get("metadata", {}) if isinstance(details, dict) else {}
+        if isinstance(metadata, dict):
+            for p_puuid in metadata.get("participants", []):
+                if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
+                    puuids.add(p_puuid.strip())
+        return puuids
+
+    @staticmethod
+    def is_discovery_only(
+        creation_ms: Any,
+        participant_puuids: set[str],
+        seed_entry_ms: dict[str, int],
+        discovery_before_ms: Optional[int] = None,
+    ) -> bool:
+        """True when a participant was selected on rank after this match was created.
+
+        Such an anchor was selected *because* it won its recent matches, so they
+        over-represent its wins (54.3 % before entry vs 49.6 % after, audit of
+        25 Oct 2026). The rule follows participation, not the fetching anchor:
+        those matches also come back through the match lists of other players.
+        """
+        cutoffs = [seed_entry_ms[p] for p in participant_puuids if p in seed_entry_ms]
+        if discovery_before_ms is not None:
+            cutoffs.append(discovery_before_ms)
+        if not cutoffs:
+            return False
+        if type(creation_ms) is not int:
+            return True  # Cannot be shown to follow the selection.
+        return creation_ms < max(cutoffs)
 
     def build_training_record(
         self, match_id: str, details: dict, region: Optional[str] = None
@@ -110,8 +162,18 @@ class MatchIngestor:
         region: str,
         max_workers: int = 5,
         verbose: bool = False,
+        *,
+        fetched_by_puuid: Optional[str] = None,
+        discovery_before_ms: Optional[int] = None,
     ) -> IngestionResult:
-        """Download, validate, extract features/timelines, and persist new matches."""
+        """Download, validate, extract features/timelines, and persist new matches.
+
+        ``fetched_by_puuid`` is the anchor whose match list returned *match_ids*.
+        ``discovery_before_ms`` is that anchor's selection time when it was chosen on
+        rank outside crawl_queue. Matches it predates, or that predate the entry of a
+        participating ladder seed, are discovery-only: they become neither training
+        targets nor history, and only their participants are returned.
+        """
         result = IngestionResult()
         if not match_ids:
             return result
@@ -119,7 +181,10 @@ class MatchIngestor:
         # Deduplicate incoming match IDs while preserving order
         unique_mids = list(dict.fromkeys(match_ids))
 
-        new_mids = [mid for mid in unique_mids if not self.match_repo.match_exists(mid)]
+        new_mids = [
+            mid for mid in unique_mids
+            if mid not in self._discovery_only and not self.match_repo.match_exists(mid)
+        ]
         already_existing_count = len(unique_mids) - len(new_mids)
         result.skipped += already_existing_count
 
@@ -147,6 +212,7 @@ class MatchIngestor:
         matches_batch: list[tuple[str, dict]] = []
         training_batch: list[tuple] = []
         discovered_puuids_set: set[str] = set()
+        valid: list[tuple[str, dict, dict, tuple, set[str]]] = []
 
         for mid in new_mids:
             details = details_map.get(mid)
@@ -164,24 +230,28 @@ class MatchIngestor:
                 result.skipped += 1
                 continue
 
-            matches_batch.append((mid, details))
-            training_batch.append(record)
-
             # Discover participants for snowballing from info.participants and metadata.participants
-            for p in info.get("participants", []):
-                if isinstance(p, dict):
-                    p_puuid = p.get("puuid")
-                    if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
-                        discovered_puuids_set.add(p_puuid.strip())
+            puuids = self._participant_puuids(details, info)
+            discovered_puuids_set.update(puuids)
+            valid.append((mid, details, info, record, puuids))
 
-            metadata = details.get("metadata", {}) if isinstance(details, dict) else {}
-            if isinstance(metadata, dict):
-                for p_puuid in metadata.get("participants", []):
-                    if p_puuid and isinstance(p_puuid, str) and p_puuid.strip():
-                        discovered_puuids_set.add(p_puuid.strip())
+        if valid:
+            self._ensure_schema()
+            seed_entries = self.queue_repo.seed_entry_ms(
+                p for *_, puuids in valid for p in puuids
+            )
+            for mid, details, info, record, puuids in valid:
+                if self.is_discovery_only(
+                    info.get("gameCreation"), puuids, seed_entries, discovery_before_ms
+                ):
+                    self._discovery_only.add(mid)
+                    result.discovery_only += 1
+                    continue
+                matches_batch.append((mid, details))
+                training_batch.append(record)
 
         if matches_batch:
-            self.match_repo.save_matches_batch(matches_batch)
+            self.match_repo.save_matches_batch(matches_batch, fetched_by_puuid=fetched_by_puuid)
             result.matches_saved = len(matches_batch)
 
         if training_batch:

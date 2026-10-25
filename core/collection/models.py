@@ -21,6 +21,8 @@ class IngestionResult:
     embeddings_computed: int = 0
     skipped: int = 0
     errors: int = 0
+    # Predate an anchor's selection on rank: participants discovered, match not stored.
+    discovery_only: int = 0
     discovered_puuids: list[tuple[str, str]] = field(default_factory=list)
 
 

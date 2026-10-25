@@ -22,12 +22,16 @@ class BaseRepository:
 class MatchRepository(BaseRepository):
     """Handles all database operations related to Matches."""
     
-    def save_match(self, match_id: str, raw_data: dict) -> None:
+    def save_match(self, match_id: str, raw_data: dict, *, fetched_by_puuid: Optional[str] = None) -> None:
         """Delegates to legacy database.py for now, can be overridden."""
-        return database.save_match(match_id, raw_data, db_path=self.db_path)
+        return database.save_match(
+            match_id, raw_data, db_path=self.db_path, fetched_by_puuid=fetched_by_puuid
+        )
         
-    def save_matches_batch(self, matches: list) -> None:
-        return database.save_matches_batch(matches, db_path=self.db_path)
+    def save_matches_batch(self, matches: list, *, fetched_by_puuid: Optional[str] = None) -> None:
+        return database.save_matches_batch(
+            matches, db_path=self.db_path, fetched_by_puuid=fetched_by_puuid
+        )
         
     def save_match_timelines_batch(self, timelines: list) -> None:
         return database.save_match_timelines_batch(timelines, db_path=self.db_path)

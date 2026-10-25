@@ -26,7 +26,7 @@ from core import config
 DB_PATH = config.DB_PATH
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -312,6 +312,16 @@ _MIGRATIONS = [
             "UPDATE schema_version SET version = 15",
         ],
     ),
+    # v15 -> v16 : record when each match became available (UTC epoch ms) and
+    # whose match list returned it (NULL = ingested before v16, unknown)
+    (
+        15,
+        [
+            "ALTER TABLE matches ADD COLUMN ingested_at INTEGER",
+            "ALTER TABLE matches ADD COLUMN fetched_by_puuid TEXT",
+            "UPDATE schema_version SET version = 16",
+        ],
+    ),
 ]
 
 
@@ -395,8 +405,33 @@ def increment_player_matches(puuid: str, count: int, db_path: str = DB_PATH):
         )
 
 
-def save_match(match_id: str, raw_data: dict, db_path: str = DB_PATH):
-    """Insert a match record (silently ignored if it already exists)."""
+def _now_ms() -> int:
+    return int(time.time() * 1000)
+
+
+def _fetching_participant(info: dict, fetched_by_puuid: str | None) -> str | None:
+    """The anchor is recorded only if it played the match, as Riot's match lists guarantee."""
+    if not fetched_by_puuid:
+        return None
+    participants = info.get("participants", [])
+    if any(isinstance(p, dict) and p.get("puuid") == fetched_by_puuid for p in participants):
+        return fetched_by_puuid
+    return None
+
+
+def save_match(
+    match_id: str,
+    raw_data: dict,
+    db_path: str = DB_PATH,
+    *,
+    fetched_by_puuid: str | None = None,
+    ingested_at: int | None = None,
+):
+    """Insert a match record (silently ignored if it already exists).
+
+    ``ingested_at`` (UTC epoch ms, default: now) is when the row became available;
+    the first insert wins. ``fetched_by_puuid`` is the anchor whose match list returned it.
+    """
     if not match_id:
         raise ValueError("match_id must not be empty.")
     info = raw_data.get("info", {})
@@ -415,8 +450,9 @@ def save_match(match_id: str, raw_data: dict, db_path: str = DB_PATH):
         conn.execute(
             """
             INSERT OR IGNORE INTO matches
-                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id,
+                 ingested_at, fetched_by_puuid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 match_id,
@@ -425,6 +461,8 @@ def save_match(match_id: str, raw_data: dict, db_path: str = DB_PATH):
                 info.get("gameCreation"),
                 info.get("gameDuration"),
                 season_id,
+                _now_ms() if ingested_at is None else ingested_at,
+                _fetching_participant(info, fetched_by_puuid),
             ),
         )
 
@@ -476,11 +514,19 @@ def save_match(match_id: str, raw_data: dict, db_path: str = DB_PATH):
     logger.debug("Saved match %s.", match_id)
 
 
-def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
+def save_matches_batch(
+    matches: list[tuple],
+    db_path: str = DB_PATH,
+    *,
+    fetched_by_puuid: str | None = None,
+    ingested_at: int | None = None,
+):
     """
     Bulk-insert multiple matches and their champions in a single transaction.
     Each element of *matches* should be a (match_id, raw_data_dict).
+    ``ingested_at`` and ``fetched_by_puuid`` apply to every new row, as in save_match.
     """
+    ingested_at = _now_ms() if ingested_at is None else ingested_at
     rows = []
     unique_champions = set()
     all_p_rows = []
@@ -507,6 +553,8 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
                 info.get("gameCreation"),
                 info.get("gameDuration"),
                 season_id,
+                ingested_at,
+                _fetching_participant(info, fetched_by_puuid),
             )
         )
 
@@ -544,8 +592,9 @@ def save_matches_batch(matches: list[tuple], db_path: str = DB_PATH):
         conn.executemany(
             """
             INSERT OR IGNORE INTO matches
-                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+                (match_id, raw_json, game_mode, game_creation_time, game_duration, season_id,
+                 ingested_at, fetched_by_puuid)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
             rows,
         )

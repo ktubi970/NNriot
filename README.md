@@ -4,7 +4,7 @@
 [![Playwright Tests](https://github.com/ktubi970/NNriot/actions/workflows/playwright.yml/badge.svg)](https://github.com/ktubi970/NNriot/actions/workflows/playwright.yml)
 [![Python 3.11 | 3.12](https://img.shields.io/badge/python-3.11%20%7C%203.12-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Schema](https://img.shields.io/badge/sqlite%20schema-v15-blueviolet.svg)](core/database.py)
+[![Schema](https://img.shields.io/badge/sqlite%20schema-v16-blueviolet.svg)](core/database.py)
 
 **NNriot** is a League of Legends competitive match collection, analytical mining, and deep learning platform. It combines automated Riot API match and timeline collection into SQLite, equivariant and Siamese DeepSets neural networks for pre-match draft and outcome forecasting, an anti-symmetric draft combat engine decoupled from Summoner's Rift map bias, a selective classification decision layer (Chow's rule), and a Flask REST API with a React cockpit and existing Jinja pages.
 
@@ -29,7 +29,7 @@
 - **Multi-Task Optimization with PCGrad**: Multi-objective training balancing primary heads (`winner`, `team_b_kill_lead`, `kill_handicap`) and auxiliary heads (`match_duration`, `first_blood_team`) by projecting conflicting gradients.
 - **Selective Classification (Chow's Rule)**: Conviction-based decision framework with measured risk diagnostics providing conviction scoring $C = |P - 0.5|$, Wilson score confidence intervals, and three-tier actionability gating (`Tier 1: High Conviction`, `Tier 2: Leaning`, `Tier 3: Abstain`).
 - **Prediction Facade**: Thread-safe `PredictionService` validating model manifests and feature compatibility, exposing raw/calibrated winner probabilities, and forcing abstention without calibration and independent validation. Legacy leave-one-player-out credits are diagnostic; the service does not silently activate ensemble weights.
-- **Data Engineering & Analytics Mart**: Schema v15 SQLite database with WAL mode and transaction isolation, high-throughput Riot crawler, timeline backfilling, and a separate retrospective analytics evidence mart.
+- **Data Engineering & Analytics Mart**: Schema v16 SQLite database with WAL mode and transaction isolation, high-throughput Riot crawler, timeline backfilling, and a separate retrospective analytics evidence mart.
 
 ---
 
@@ -231,11 +231,11 @@ python scripts/backfill_timelines.py --db runs/active.db --duration-hours 4
 
 ## Data & Analytics
 
-### SQLite Database (Schema v15)
+### SQLite Database (Schema v16)
 - **WAL Mode**: Write-Ahead Logging enabled for concurrent reader performance.
 - **Point-in-Time Bayesian Priors**: Streaming loader prevents lookahead data leakage by accumulating player history chronologically up to match time.
 - **Participant Indexing**: Fast indexed queries over `match_participants` and compressed timeline blobs.
-- **Database Merges**: Use `python scripts/merge_databases.py` to consolidate databases safely without duplicate rows or index corruption (see [`docs/database_merge.md`](docs/database_merge.md)). The merger accepts schema v15 inputs only (migrate a copy of older databases first); the target wins crawl-queue conflicts and source spatial embeddings are archived, never imported.
+- **Database Merges**: Use `python scripts/merge_databases.py` to consolidate databases safely without duplicate rows or index corruption (see [`docs/database_merge.md`](docs/database_merge.md)). The merger accepts schema v16 inputs only (migrate a copy of older databases first); the target wins crawl-queue conflicts, source spatial embeddings are archived, never imported, and match availability (`ingested_at`, `fetched_by_puuid`) follows its match.
 
 ### Retrospective Analytics Evidence Mart
 The analytics mart extracts post-match associations, meta snapshots, and champion performance profiles into an isolated database:
@@ -267,7 +267,7 @@ NNriot/
 │   ├── selective_classification.py # Chow's rule, Wilson intervals, abstention logic
 │   ├── selective_infer.py# Actionability tiers (Tier 1, Tier 2, Tier 3)
 │   ├── prediction_service.py # Production PredictionService Facade
-│   ├── database.py       # SQLite connection manager, schema v15 migrations
+│   ├── database.py       # SQLite connection manager, schema v16 migrations
 │   └── point_in_time_dataset.py # Leakage-free chronologically streaming dataset
 ├── frontend/             # Restored React/TypeScript cockpit and styles
 ├── e2e/                  # Restored Playwright browser tests

@@ -1,4 +1,4 @@
-"""Offline schema-v15 merge. Inputs are read-only; outputs are never overwritten.
+"""Offline schema-v16 merge. Inputs are read-only; outputs are never overwritten.
 
 The gzip JSONL archive is also the classification manifest. ``kind=source_row``
 preserves exact SQLite values discarded by canonical precedence or regeneration;
@@ -9,6 +9,11 @@ Crawl queue entries match on PUUID (legacy rows without one: Riot ID and region)
 the target wins and imported entries receive fresh ids. Source spatial embeddings
 are archived, never imported: they are derived data, legacy rows have no recorded
 encoder, and the staged output can be recomputed with the pinned encoder.
+
+Match availability (``ingested_at``, ``fetched_by_puuid``) follows its match:
+the target's record wins, and an imported match keeps the source's record when
+it is coherent (ingested at or after creation, fetched by a participant). An
+incoherent value becomes NULL (unknown) and the original row is archived.
 """
 from __future__ import annotations
 
@@ -32,7 +37,7 @@ from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _val
 logger = logging.getLogger(__name__)
 
 
-SCHEMA_VERSION = 15
+SCHEMA_VERSION = 16
 TABLES = ("schema_version", "matches", "training_dataset", "match_participants",
           "match_timelines", "players", "player_aliases", "champions", "crawl_queue",
           "player_spatial_embeddings")
@@ -43,7 +48,8 @@ KEYS = {"matches": ("match_id",), "training_dataset": ("match_id",),
         "player_spatial_embeddings": ("match_id", "puuid")}
 REQUIRED = {
     "schema_version": {"version"},
-    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id"},
+    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id",
+        "ingested_at", "fetched_by_puuid"},
     "training_dataset": {"id", "match_id", "feature_json", "winner_label", "is_trained",
         "last_trained_at", "llm_summary", "llm_tags", "llm_embedding", "labels_json"},
     "match_participants": {"match_id", "puuid", "champion_name", "team_position", "win",
@@ -192,6 +198,17 @@ def _validate(row):
     return (data, features, labels), None
 
 
+def _availability(row, info):
+    """The source's availability record when coherent with its match, else unknown."""
+    ingested = row["ingested_at"]
+    if not _valid_timestamp(ingested) or ingested < info["gameCreation"]:
+        ingested = None
+    fetched = row["fetched_by_puuid"]
+    if fetched not in {p["puuid"] for p in info["participants"]}:
+        fetched = None
+    return {"ingested_at": ingested, "fetched_by_puuid": fetched}
+
+
 def _insert(conn, table, row):
     cols = list(row)
     return conn.execute(f'INSERT INTO "{table}" ({",".join(cols)}) VALUES ({",".join("?" for _ in cols)})',
@@ -279,7 +296,8 @@ def _merge_matches(source, target, out, archive):
                 data, features, labels = validated
                 info = data["info"]
                 normalized = dict(row, game_mode="CLASSIC", game_creation_time=info["gameCreation"],
-                                  game_duration=info.get("gameDuration"), season_id=features.get("season_id"))
+                                  game_duration=info.get("gameDuration"), season_id=features.get("season_id"),
+                                  **_availability(row, info))
                 if normalized != row:
                     archive.row("matches", row, "normalized_metadata")
                 _insert(out, "matches", normalized)

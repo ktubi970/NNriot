@@ -1,12 +1,16 @@
 """CrawlQueueRepository for managing persistent player crawl queues."""
 
 import logging
-from typing import Optional
+from typing import Iterable, Optional
 
 from core import config, database
 from core.collection.models import CrawlItem
+from core.collection.provenance import LADDER_SEED_MIN_PRIORITY, parse_sqlite_timestamp_ms
 
 logger = logging.getLogger(__name__)
+
+# Stay below SQLite's historical 999 bound-parameter limit.
+_LOOKUP_CHUNK = 500
 
 
 class CrawlQueueRepository:
@@ -141,6 +145,48 @@ class CrawlQueueRepository:
                 """,
                 (queue_id,),
             )
+
+    def mark_pending_processed(self, puuids: list[str]) -> int:
+        """Mark pending entries as crawled; entries crawled earlier keep their processed_at."""
+        cleaned = [p for p in puuids if p]
+        if not cleaned:
+            return 0
+        with database.get_connection(self.db_path) as conn:
+            cursor = conn.executemany(
+                """
+                UPDATE crawl_queue
+                SET is_processed = 1, processed_at = CURRENT_TIMESTAMP
+                WHERE puuid = ? AND is_processed = 0
+                """,
+                [(p,) for p in cleaned],
+            )
+            return max(0, cursor.rowcount)
+
+    def seed_entry_ms(self, puuids: Iterable[Optional[str]]) -> dict[str, int]:
+        """Entry time (UTC epoch ms) of the ladder seeds among *puuids*.
+
+        Seeds are entries with priority >= LADDER_SEED_MIN_PRIORITY, the same
+        definition as ``core.collection.provenance``.
+        """
+        wanted = sorted({p for p in puuids if p})
+        entries: dict[str, int] = {}
+        if not wanted:
+            return entries
+        with database.get_connection(self.db_path) as conn:
+            for start in range(0, len(wanted), _LOOKUP_CHUNK):
+                chunk = wanted[start:start + _LOOKUP_CHUNK]
+                rows = conn.execute(
+                    f"""
+                    SELECT puuid, created_at FROM crawl_queue
+                    WHERE priority >= ? AND puuid IN ({",".join("?" for _ in chunk)})
+                    """,
+                    (LADDER_SEED_MIN_PRIORITY, *chunk),
+                ).fetchall()
+                for row in rows:
+                    entry = parse_sqlite_timestamp_ms(row["created_at"])
+                    if entry is not None:
+                        entries[row["puuid"]] = entry
+        return entries
 
     def get_stats(self) -> dict[str, int]:
         """Return queue metrics: total, processed, pending."""

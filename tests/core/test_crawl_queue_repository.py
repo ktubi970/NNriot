@@ -187,3 +187,48 @@ def test_get_stats(test_db):
 
     repo.mark_processed(puuid="p1")
     assert repo.get_stats() == {"total": 3, "processed": 1, "pending": 2}
+
+
+def _set_queue_times(db, puuid, created_at=None, processed_at=None):
+    with sqlite3.connect(db) as conn:
+        if created_at is not None:
+            conn.execute("UPDATE crawl_queue SET created_at = ? WHERE puuid = ?", (created_at, puuid))
+        if processed_at is not None:
+            conn.execute("UPDATE crawl_queue SET processed_at = ? WHERE puuid = ?", (processed_at, puuid))
+
+
+def test_seed_entry_ms_returns_ladder_seeds_and_their_entry_time(test_db):
+    repo = CrawlQueueRepository(test_db)
+    repo.enqueue_puuids(["seed_top"], region="EUW", priority=10)
+    repo.enqueue_puuids(["seed_deep"], region="KR", priority=5)
+    repo.enqueue_puuids(["snowball"], region="EUW", priority=0)
+    _set_queue_times(test_db, "seed_top", created_at="2026-10-11 09:25:00")
+    _set_queue_times(test_db, "seed_deep", created_at="2026-10-12 00:00:01")
+
+    entries = repo.seed_entry_ms(["seed_top", "seed_deep", "snowball", "unknown", None])
+
+    assert entries == {"seed_top": 1791710700000, "seed_deep": 1791763201000}
+    assert repo.seed_entry_ms([]) == {}
+
+
+def test_seed_entry_ms_handles_more_puuids_than_sqlite_variables(test_db):
+    repo = CrawlQueueRepository(test_db)
+    repo.enqueue_puuids(["seed_last"], region="EUW", priority=10)
+    many = [f"p{i}" for i in range(2500)] + ["seed_last"]
+
+    assert set(repo.seed_entry_ms(many)) == {"seed_last"}
+
+
+def test_mark_pending_processed_keeps_earlier_crawl_times(test_db):
+    repo = CrawlQueueRepository(test_db)
+    repo.enqueue_puuids(["done", "pending"], region="EUW", priority=0)
+    repo.mark_processed("done")
+    _set_queue_times(test_db, "done", processed_at="2026-10-01 00:00:00")
+
+    assert repo.mark_pending_processed(["done", "pending", "absent"]) == 1
+
+    with sqlite3.connect(test_db) as conn:
+        rows = dict(conn.execute("SELECT puuid, processed_at FROM crawl_queue").fetchall())
+    assert rows["done"] == "2026-10-01 00:00:00"
+    assert rows["pending"] is not None
+    assert repo.get_stats()["pending"] == 0

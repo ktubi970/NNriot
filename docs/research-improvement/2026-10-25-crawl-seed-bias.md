@@ -154,7 +154,7 @@ Lecture :
 3. **Rapporter systématiquement**, pour toute évaluation : l'ensemble, `balanced`, `strict_balanced` et le penchant crawlé. Le dev chronologique du train est lui-même contaminé : l'équipe la plus crawlée y gagne 59,1 %. Son chiffre global n'est donc pas une référence sans artefact.
 4. **Corriger à la source** (section suivante). Le plus gros artefact, le crawl postérieur au match, ne peut pas être neutralisé proprement après coup. Sans heure d'ingestion, on ne sait pas quelles parties de l'historique étaient disponibles avant le match.
 
-## Variante côté collecte (proposée, non implémentée)
+## Variante côté collecte (points 1 et 2 implémentés, voir « Mise en œuvre côté collecte »)
 
 1. **Enregistrer la disponibilité.** Ajouter `matches.ingested_at`, et idéalement `fetched_by_puuid`. Construire ensuite l'historique d'un match uniquement à partir des lignes ingérées avant son début. C'est la seule correction à la source du biais de crawl postérieur. Elle demande une migration v16, la mise à jour de la politique de `scripts/merge_databases.py` (qui fixe `SCHEMA_VERSION`) et le protocole de `docs/database_merge.md`. En attendant, l'heure d'ingestion d'un match de l'ère `crawl_queue` peut être approchée par le plus petit `processed_at` de ses participants crawlés après lui.
 2. **Seeds : découverte seulement.** Ne pas stocker comme cibles ni comme historique les parties d'une seed antérieures à son entrée : soit `start_time = created_at` pour les seeds, soit un marquage à l'ingestion. La seed sert alors à découvrir la frontière, et ses parties ultérieures arrivent par la boule de neige ; elles gagnent 49,6 %, sans biais mesurable. Même règle pour `collect_top_leagues` et les imports de pros.
@@ -179,3 +179,27 @@ Avec `.venv312`, depuis la racine du dépôt :
    - Durée : 20 à 30 minutes par variante LightGBM sur 10 threads.
    - Preuves agrégées versionnées, sans PUUID, à côté des scripts : `diagnostic_report.json`, `diagnostic_manifest.json`, `neutralize_results.json`, `neutralize_results_lr.json` et `neutralize_inputs.json`. Les hachages des sources enregistrés correspondent aux fichiers commités. La référence du run principal a été calculée par une version du script qui n'écrivait pas encore `inputs.json` ; sa logique est par ailleurs identique.
    - Le run principal a lu une version antérieure du CSV compagnon, sans les colonnes `crawled_after*`. Cette copie est conservée dans `runs/crawl_seed_bias_20261025/input_crawl_provenance.csv` (SHA-256 `f30f77d0…`). Ses valeurs sont identiques sur toutes les colonnes communes, vérifié ligne à ligne.
+
+## Mise en œuvre côté collecte (25 octobre 2026)
+
+Branche `claude/collection-ingest-time`, depuis `216132d`. `training_data.db` n'a été ni migré ni lu : les tests tournent sur des bases temporaires. **Aucun gain d'accuracy n'est mesuré ici** ; la correction ne vaut que pour les matchs collectés après la migration.
+
+- **Schéma v16.**
+  - `matches.ingested_at` : ms UTC du premier insert, NULL pour les lignes antérieures.
+  - `matches.fetched_by_puuid` : le participant dont l'historique a renvoyé le match, NULL s'il n'y a pas joué.
+  - Les écrivains de `core/database.py` les remplissent, et une nouvelle récupération ne les déplace pas.
+  - `scripts/merge_databases.py` passe en v16. Le target gagne. Un match importé garde la provenance de la source si elle est cohérente ; sinon elle devient NULL et la ligne d'origine est archivée (`normalized_metadata`). Détails dans `docs/database_merge.md`.
+- **Seeds : découverte seulement.** La règle est décidée à l'ingestion (`MatchIngestor.is_discovery_only`), par **participation** et non selon l'anchor qui a récupéré le match. Un match est écarté si l'un de ses participants est une seed (`crawl_queue.priority >= 5`) entrée après sa création, ou s'il précède l'heure de sélection donnée par l'appelant.
+  - Pourquoi la participation : la base contient 23 511 participations de seeds avant entrée, bien plus que les 3 750 matchs au plus que renvoient les listes des 150 seeds avec la taille de lot par défaut (25 ; la valeur du 11 octobre n'est pas enregistrée). L'essentiel est arrivé par d'autres chemins : historiques d'autres joueurs et collectes antérieures.
+  - Ces matchs ne sont écrits ni dans `matches`, ni dans `training_dataset`, ni dans `match_timelines`, mais leurs participants alimentent la file. Aucun lecteur (historique, cibles, analytics, fusion) n'a donc besoin de filtre.
+- **`collect_top_leagues`** applique la même règle, avec l'heure de lecture du ladder. Ses anchors sont enregistrés comme seeds (priorité 10) puis marqués crawlés, et leurs participants sont mis en file. La fonction ne stocke donc plus de match : elle découvre la frontière.
+- **Filtre de disponibilité (optionnel).** `core/availability_history.py` fournit deux fournisseurs d'historique, l'un sur la base, l'autre sur des lignes figées. Ils ne gardent que les lignes ingérées strictement avant le début de la cible ; les lignes à NULL sont exclues. Le filtre est opt-in et n'est pas branché au serving. Le module ne modifie ni `core/pre_match_history.py` ni `core/frozen_history.py`, car leur SHA-256 est lié aux manifestes de modèles et aux datasets figés.
+
+Limites :
+
+- **Dépendance à `crawl_queue`.** Purger les seeds de la file y laisserait revenir leurs matchs d'avant entrée.
+- **Anchor déjà en file.** Un anchor de `collect_top_leagues` déjà présent dans `crawl_queue` garde son entrée : seule sa propre liste est écartée.
+- **Hors périmètre.** Les imports de pros (`collect_by_puuid_accounts`), `collect_seed_players` et les lots manuels ne sont pas couverts.
+- **Re-téléchargement.** Un match écarté qui réapparaît est retéléchargé une fois par processus : le cache n'est qu'en mémoire.
+- **Données existantes.** Toutes leurs lignes ont `ingested_at` à NULL : le filtre de disponibilité y laisse les joueurs sans historique.
+- **Migration.** Le premier démarrage de l'app sur `training_data.db`, ou la première écriture d'un collecteur, appliquera la v16 (deux `ALTER TABLE ADD COLUMN`).

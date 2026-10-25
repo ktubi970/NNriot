@@ -13,7 +13,7 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-MERGE_SCHEMA_VERSION = 15
+MERGE_SCHEMA_VERSION = 16
 
 
 def database(path, schema_version=MERGE_SCHEMA_VERSION):
@@ -60,14 +60,16 @@ def raw(match_id="EUW1_1", date=1000):
     }}
 
 
-def add_match(path, match_id="EUW1_1", payload=None, compressed=False, training_id=None):
+def add_match(path, match_id="EUW1_1", payload=None, compressed=False, training_id=None,
+              ingested_at=None, fetched_by_puuid=None):
     payload = raw(match_id) if payload is None else payload
     encoded = json.dumps(payload) if not isinstance(payload, str) else payload
     if compressed:
         encoded = base64.b64encode(gzip.compress(encoded.encode())).decode()
     with sqlite3.connect(path) as conn:
-        conn.execute("INSERT INTO matches VALUES (?,?,?,?,?,?)",
-                     (match_id, encoded, "CLASSIC", 1000, 1500, 16))
+        conn.execute("""INSERT INTO matches (match_id,raw_json,game_mode,game_creation_time,
+            game_duration,season_id,ingested_at,fetched_by_puuid) VALUES (?,?,?,?,?,?,?,?)""",
+                     (match_id, encoded, "CLASSIC", 1000, 1500, 16, ingested_at, fetched_by_puuid))
         if training_id is not None:
             conn.execute("""INSERT INTO training_dataset
                 (id,match_id,feature_json,winner_label,is_trained,last_trained_at,
@@ -103,17 +105,17 @@ def test_merge_contract_tracks_the_application_schema():
 def test_older_schema_inputs_are_refused_with_migration_guidance(tmp_path, stale):
     paths = {name: database(tmp_path / f"{name}.db", 12 if name == stale else MERGE_SCHEMA_VERSION)
              for name in ("source", "target")}
-    with pytest.raises(ValueError, match="only schema version 15 is supported.*migrate a copy"):
+    with pytest.raises(ValueError, match="only schema version 16 is supported.*migrate a copy"):
         run(tmp_path, paths["source"], paths["target"])
     assert not (tmp_path / "merged.db").exists()
 
 
-def test_report_declares_v15_and_counts_spatial_embeddings(tmp_path):
+def test_report_declares_v16_and_counts_spatial_embeddings(tmp_path):
     source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
     add_match(target)
     embed(target, "EUW1_1", "real-puuid-0")
     report = run(tmp_path, source, target)
-    assert report["schema_version"] == 15
+    assert report["schema_version"] == 16
     assert report["before"]["target"]["player_spatial_embeddings"] == 1
     assert report["after"]["player_spatial_embeddings"] == 1
     assert "player_spatial_embeddings" in report["inputs"]["target"]["tables"]
@@ -554,3 +556,45 @@ def test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic(tmp_
         assert tuple(players[puuid][key] for key in ("total_matches", "avg_kda", "avg_gold")) == expected
     assert report["target_preservation"]["ok"]
     assert observed_plan == ["SCAN match_participants", "USE TEMP B-TREE FOR GROUP BY"]
+
+
+def test_imported_matches_keep_a_coherent_source_availability_record(tmp_path):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(source, "EUW1_1", ingested_at=5000, fetched_by_puuid="real-puuid-3")
+    add_match(source, "EUW1_2")  # ingested before v16: availability unknown
+    report = run(tmp_path, source, target)
+    merged = {r["match_id"]: r for r in rows(tmp_path / "merged.db", "matches")}
+    assert (merged["EUW1_1"]["ingested_at"], merged["EUW1_1"]["fetched_by_puuid"]) == (5000, "real-puuid-3")
+    assert (merged["EUW1_2"]["ingested_at"], merged["EUW1_2"]["fetched_by_puuid"]) == (None, None)
+    assert not any(e.get("table") == "matches" for e in archived(report))
+
+
+@pytest.mark.parametrize("ingested_at, fetched_by_puuid, cleared", [
+    (999, "real-puuid-3", "ingested_at"),       # before the match was created
+    ("2026-10-25", "real-puuid-3", "ingested_at"),
+    (True, "real-puuid-3", "ingested_at"),
+    (5000, "stranger", "fetched_by_puuid"),     # did not play the match it fetched
+])
+def test_incoherent_source_availability_is_cleared_and_archived(tmp_path, ingested_at, fetched_by_puuid, cleared):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(source, "EUW1_1", ingested_at=ingested_at, fetched_by_puuid=fetched_by_puuid)
+    report = run(tmp_path, source, target)
+    merged = rows(tmp_path / "merged.db", "matches")[0]
+    original = {"ingested_at": ingested_at, "fetched_by_puuid": fetched_by_puuid}
+    assert merged[cleared] is None
+    kept = ({"ingested_at", "fetched_by_puuid"} - {cleared}).pop()
+    assert merged[kept] == original[kept]
+    entries = [e for e in archived(report) if e.get("table") == "matches"]
+    assert [(e["reason"], e["row"][cleared]) for e in entries] == [("normalized_metadata", original[cleared])]
+
+
+def test_target_availability_wins_and_the_source_record_is_archived(tmp_path):
+    # A later ingestion time can only remove history rows, never leak one.
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(target, "EUW1_1", ingested_at=9000, fetched_by_puuid="real-puuid-1")
+    add_match(source, "EUW1_1", ingested_at=2000, fetched_by_puuid="real-puuid-2")
+    report = run(tmp_path, source, target)
+    assert rows(tmp_path / "merged.db", "matches") == rows(target, "matches")
+    assert report["target_preservation"]["ok"] is True
+    entries = [e for e in archived(report) if e.get("table") == "matches"]
+    assert [(e["reason"], e["row"]["ingested_at"]) for e in entries] == [("canonical_precedence", 2000)]
