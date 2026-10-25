@@ -13,7 +13,7 @@ def api():
     return importlib.import_module("scripts.merge_databases")
 
 
-MERGE_SCHEMA_VERSION = 16
+MERGE_SCHEMA_VERSION = 17
 
 
 def database(path, schema_version=MERGE_SCHEMA_VERSION):
@@ -61,16 +61,19 @@ def raw(match_id="EUW1_1", date=1000):
 
 
 def add_match(path, match_id="EUW1_1", payload=None, compressed=False, training_id=None,
-              ingested_at=None, fetched_by_puuid=None, facts=None):
-    """Store a match; with availability (or *facts*), also its match_facts row as the writers would."""
+              ingested_at=None, fetched_by_puuid=None, facts=None, v16_availability=(None, None)):
+    """Store a match; with availability (or *facts*), also its match_facts row as the writers would.
+
+    *v16_availability* fills the deprecated (ingested_at, fetched_by_puuid) columns of matches.
+    """
     from core.database import _facts_row
     payload = raw(match_id) if payload is None else payload
     encoded = json.dumps(payload) if not isinstance(payload, str) else payload
     if compressed:
         encoded = base64.b64encode(gzip.compress(encoded.encode())).decode()
     with sqlite3.connect(path) as conn:
-        conn.execute("INSERT INTO matches VALUES (?,?,?,?,?,?)",
-                     (match_id, encoded, "CLASSIC", 1000, 1500, 16))
+        conn.execute("INSERT INTO matches VALUES (?,?,?,?,?,?,?,?)",
+                     (match_id, encoded, "CLASSIC", 1000, 1500, 16, *v16_availability))
         if facts is None and (ingested_at is not None or fetched_by_puuid is not None):
             facts = list(_facts_row(match_id, payload["info"], ingested_at, None))
             facts[7] = fetched_by_puuid  # as stored, coherent or not
@@ -110,17 +113,17 @@ def test_merge_contract_tracks_the_application_schema():
 def test_older_schema_inputs_are_refused_with_migration_guidance(tmp_path, stale):
     paths = {name: database(tmp_path / f"{name}.db", 12 if name == stale else MERGE_SCHEMA_VERSION)
              for name in ("source", "target")}
-    with pytest.raises(ValueError, match="only schema version 16 is supported.*migrate a copy"):
+    with pytest.raises(ValueError, match="only schema version 17 is supported.*migrate a copy"):
         run(tmp_path, paths["source"], paths["target"])
     assert not (tmp_path / "merged.db").exists()
 
 
-def test_report_declares_v16_and_counts_spatial_embeddings(tmp_path):
+def test_report_declares_v17_and_counts_spatial_embeddings(tmp_path):
     source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
     add_match(target)
     embed(target, "EUW1_1", "real-puuid-0")
     report = run(tmp_path, source, target)
-    assert report["schema_version"] == 16
+    assert report["schema_version"] == 17
     assert report["before"]["target"]["player_spatial_embeddings"] == 1
     assert report["after"]["player_spatial_embeddings"] == 1
     assert "player_spatial_embeddings" in report["inputs"]["target"]["tables"]
@@ -612,3 +615,19 @@ def test_match_sightings_are_unioned_including_matches_never_stored(tmp_path):
     assert merged == [shared, ("EUW1_SEED", "real-puuid-1", 2000, "discovery_only")]
     assert sorted(e["row"]["match_id"] for e in archived(report) if e.get("table") == "match_sightings") == [
         "EUW1_2", "EUW1_3"]
+
+
+@pytest.mark.parametrize("v16_availability, expected", [
+    ((5000, "real-puuid-3"), (5000, "real-puuid-3")),
+    ((999, "real-puuid-3"), (None, "real-puuid-3")),   # before creation: impossible
+    ((5000, "stranger"), (5000, None)),                # did not play the match
+])
+def test_v16_availability_of_a_source_without_facts_is_carried(tmp_path, v16_availability, expected):
+    source, target = database(tmp_path / "source.db"), database(tmp_path / "target.db")
+    add_match(source, "EUW1_1", v16_availability=v16_availability)
+    run(tmp_path, source, target)
+    facts = rows(tmp_path / "merged.db", "match_facts")[0]
+    assert (facts["ingested_at"], facts["fetched_by_puuid"]) == expected
+    # The deprecated columns themselves are copied verbatim.
+    merged = rows(tmp_path / "merged.db", "matches")[0]
+    assert (merged["ingested_at"], merged["fetched_by_puuid"]) == v16_availability

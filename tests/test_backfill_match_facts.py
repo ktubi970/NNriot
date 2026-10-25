@@ -1,4 +1,4 @@
-"""Backfill of match_facts and participant teams for matches stored before schema v16."""
+"""Backfill of match_facts and participant teams for matches stored before schema v17."""
 import base64
 import gzip
 import json
@@ -68,3 +68,27 @@ def test_backfill_is_resumable_and_bounded(tmp_path):
     assert backfill(path, batch_size=1, max_batches=2)["facts_inserted"] == 2
     assert backfill(path, batch_size=10) == {"facts_inserted": 1, "participants_updated": 0, "batches": 1}
     assert backfill(path) == {"facts_inserted": 0, "participants_updated": 0, "batches": 0}
+
+
+def test_availability_recorded_by_schema_v16_is_carried_into_facts(tmp_path):
+    path = str(tmp_path / "v16.db")
+    with sqlite3.connect(path) as conn:
+        for from_version, statements in database._MIGRATIONS:
+            if from_version >= 16:
+                break
+            for sql in statements:
+                conn.execute(sql)
+        conn.executemany(
+            "INSERT INTO matches (match_id, raw_json, game_mode, ingested_at, fetched_by_puuid) "
+            "VALUES (?, ?, 'CLASSIC', ?, ?)",
+            [("KR_1", json.dumps(_payload("KR_1")), 5000, "KR_1-p3"),
+             ("KR_2", json.dumps(_payload("KR_2")), 999, "KR_2-p0"),      # before creation: impossible
+             ("KR_3", json.dumps(_payload("KR_3")), 5000, "stranger")])   # did not play the match
+    database.migrate_db(path)
+
+    backfill(path)
+
+    facts = _facts(path)
+    assert (facts["KR_1"]["ingested_at"], facts["KR_1"]["fetched_by_puuid"]) == (5000, "KR_1-p3")
+    assert (facts["KR_2"]["ingested_at"], facts["KR_2"]["fetched_by_puuid"]) == (None, "KR_2-p0")
+    assert (facts["KR_3"]["ingested_at"], facts["KR_3"]["fetched_by_puuid"]) == (5000, None)

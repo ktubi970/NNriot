@@ -1,10 +1,11 @@
-"""Backfill match_facts and match_participants.team_id for matches stored before schema v16.
+"""Backfill match_facts and match_participants.team_id for matches stored before schema v17.
 
 Every legacy match's raw_json is read once: on a large database that is the
 whole matches table, so run it with collectors stopped. Each batch commits on
 its own and the scan resumes where it stopped, since matches that already have
 facts are skipped. Availability is never invented: ``ingested_at`` and
-``fetched_by_puuid`` stay NULL for these rows.
+``fetched_by_puuid`` come from the deprecated schema-v16 columns of matches when
+they are coherent with the match, and stay NULL otherwise.
 
     python -m scripts.backfill_match_facts --db path/to/training_data.db
 """
@@ -28,7 +29,8 @@ def backfill(db_path: str, *, batch_size: int = 500, max_batches: Optional[int] 
         with database.get_connection(db_path) as conn:
             rows = conn.execute(
                 """
-                SELECT m.rowid AS rowid, m.match_id, m.raw_json FROM matches m
+                SELECT m.rowid AS rowid, m.match_id, m.raw_json, m.ingested_at, m.fetched_by_puuid
+                FROM matches m
                 WHERE m.rowid > ?
                   AND NOT EXISTS (SELECT 1 FROM match_facts f WHERE f.match_id = m.match_id)
                 ORDER BY m.rowid LIMIT ?
@@ -43,7 +45,10 @@ def backfill(db_path: str, *, batch_size: int = 500, max_batches: Optional[int] 
                 info = data.get("info") if isinstance(data, dict) else None
                 if not isinstance(info, dict):
                     info = {}  # Still recorded, so an unreadable payload is not scanned again.
-                facts.append(database._facts_row(row["match_id"], info, None, None))
+                facts.append(database._facts_row(
+                    row["match_id"], info,
+                    database._coherent_ingested_at(row["ingested_at"], info), row["fetched_by_puuid"],
+                ))
                 participants = info.get("participants")
                 for p in participants if isinstance(participants, list) else []:
                     if isinstance(p, dict) and p.get("puuid") and type(p.get("teamId")) is int:

@@ -1,4 +1,4 @@
-"""The v15 -> v16 migration: provenance tables, match facts and integer-millisecond times."""
+"""The v16 -> v17 migration: provenance tables, match facts and integer-millisecond times."""
 
 import json
 import sqlite3
@@ -22,10 +22,10 @@ def _payload(match_id="EUW1_1", creation=1_700_000_000_000):
         "gameVersion": "16.18.1", "participants": participants}}
 
 
-def _v15_database(path):
+def _v16_database(path):
     with sqlite3.connect(path) as conn:
         for from_version, statements in database._MIGRATIONS:
-            if from_version >= 15:
+            if from_version >= 16:
                 break
             for sql in statements:
                 conn.execute(sql)
@@ -35,8 +35,9 @@ def _v15_database(path):
 def _legacy_rows(db):
     # A plain connection does not enforce foreign keys, like the scripts that wrote legacy rows.
     with sqlite3.connect(db) as conn:
-        conn.executemany("INSERT INTO matches (match_id, game_mode) VALUES (?, 'CLASSIC')",
-                         [("EUW1_1",), ("EUW1_2",), ("EUW1_3",)])
+        conn.executemany("INSERT INTO matches (match_id, game_mode, ingested_at, fetched_by_puuid) "
+                         "VALUES (?, 'CLASSIC', ?, ?)",
+                         [("EUW1_1", 1234, "puuid_1"), ("EUW1_2", None, None), ("EUW1_3", None, None)])
         conn.executemany(
             "INSERT INTO crawl_queue (puuid, region, priority, is_processed, created_at, processed_at) "
             "VALUES (?, ?, ?, ?, ?, ?)",
@@ -70,13 +71,13 @@ def _rows(conn, sql):
 
 
 def test_migration_reshapes_tables_and_converts_legacy_times(tmp_path):
-    db = _v15_database(tmp_path / "legacy.db")
+    db = _v16_database(tmp_path / "legacy.db")
     _legacy_rows(db)
 
     database.migrate_db(db)
 
     with sqlite3.connect(db) as conn:
-        assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 16 == database.SCHEMA_VERSION
+        assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 17 == database.SCHEMA_VERSION
         assert _columns(conn, "players") == ["puuid", "game_name", "tag_line", "updated_at"]
         assert _columns(conn, "training_dataset") == [
             "id", "match_id", "feature_json", "winner_label", "labels_json", "feature_extractor"]
@@ -84,7 +85,11 @@ def test_migration_reshapes_tables_and_converts_legacy_times(tmp_path):
             "id", "puuid", "region", "game_name", "tag_line", "priority", "is_processed", "created_at", "processed_at"]
         assert _columns(conn, "match_participants")[-1] == "team_id"
         assert _columns(conn, "matches") == [
-            "match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id"]
+            "match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id",
+            "ingested_at", "fetched_by_puuid"]
+        # The deprecated v16 availability is kept as is; the backfill carries it into match_facts.
+        assert conn.execute("SELECT ingested_at, fetched_by_puuid FROM matches WHERE match_id = 'EUW1_1'"
+                            ).fetchone() == (1234, "puuid_1")
         queue = {r["puuid"]: r for r in _rows(conn, "SELECT * FROM crawl_queue")}
         players = {r["puuid"]: r for r in _rows(conn, "SELECT * FROM players")}
         training = {r["id"]: r for r in _rows(conn, "SELECT * FROM training_dataset")}
@@ -113,7 +118,7 @@ def test_migration_reshapes_tables_and_converts_legacy_times(tmp_path):
 
 
 def test_rebuilt_tables_keep_their_autoincrement_sequence(tmp_path):
-    db = _v15_database(tmp_path / "legacy.db")
+    db = _v16_database(tmp_path / "legacy.db")
     _legacy_rows(db)
     database.migrate_db(db)
 
@@ -130,23 +135,23 @@ def test_rebuilt_tables_keep_their_autoincrement_sequence(tmp_path):
 
 
 def test_a_failing_step_leaves_the_database_at_its_previous_version(tmp_path, monkeypatch):
-    db = _v15_database(tmp_path / "legacy.db")
+    db = _v16_database(tmp_path / "legacy.db")
     _legacy_rows(db)
-    steps = [(v, s + ["SELECT * FROM no_such_table"] if v == 15 else s) for v, s in database._MIGRATIONS]
+    steps = [(v, s + ["SELECT * FROM no_such_table"] if v == 16 else s) for v, s in database._MIGRATIONS]
     monkeypatch.setattr(database, "_MIGRATIONS", steps)
 
     with pytest.raises(sqlite3.OperationalError, match="no_such_table"):
         database.migrate_db(db)
 
     with sqlite3.connect(db) as conn:
-        assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 15
+        assert conn.execute("SELECT MAX(version) FROM schema_version").fetchone()[0] == 16
         assert "avg_kda" in _columns(conn, "players")
         assert conn.execute("SELECT name FROM sqlite_master WHERE name = 'match_facts'").fetchone() is None
         assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 0  # plain connection default
 
 
 def test_fresh_and_migrated_databases_have_the_same_schema(tmp_path):
-    fresh, legacy = str(tmp_path / "fresh.db"), _v15_database(tmp_path / "legacy.db")
+    fresh, legacy = str(tmp_path / "fresh.db"), _v16_database(tmp_path / "legacy.db")
     database.init_db(fresh)
     database.migrate_db(legacy)
 
@@ -166,7 +171,7 @@ def _facts(db, match_id):
 
 
 def test_writers_record_match_facts_with_availability(tmp_path):
-    db = str(tmp_path / "v16.db")
+    db = str(tmp_path / "v17.db")
     database.init_db(db)
     before = int(time.time() * 1000)
     database.save_matches_batch([("EUW1_1", _payload())], db_path=db, fetched_by_puuid="puuid_7")
@@ -184,7 +189,7 @@ def test_writers_record_match_facts_with_availability(tmp_path):
 
 
 def test_first_ingestion_wins_and_legacy_matches_get_no_invented_facts(tmp_path):
-    db = str(tmp_path / "v16.db")
+    db = str(tmp_path / "v17.db")
     database.init_db(db)
     with database.get_connection(db) as conn:
         conn.execute("INSERT INTO matches (match_id, game_mode) VALUES ('EUW1_LEGACY', 'CLASSIC')")
@@ -193,12 +198,12 @@ def test_first_ingestion_wins_and_legacy_matches_get_no_invented_facts(tmp_path)
                                 db_path=db, fetched_by_puuid="puuid_2", ingested_at=2000)
 
     assert (_facts(db, "EUW1_1")["ingested_at"], _facts(db, "EUW1_1")["fetched_by_puuid"]) == (1000, "puuid_1")
-    # Already stored before v16: its availability stays unknown rather than "now".
+    # Already stored before v17: the writer does not invent "now" for it.
     assert _facts(db, "EUW1_LEGACY") is None
 
 
 def test_participants_record_their_team(tmp_path):
-    db = str(tmp_path / "v16.db")
+    db = str(tmp_path / "v17.db")
     database.init_db(db)
     database.save_matches_batch([("EUW1_1", _payload())], db_path=db)
     database.save_match("EUW1_2", _payload("EUW1_2"), db_path=db)
@@ -209,7 +214,7 @@ def test_participants_record_their_team(tmp_path):
 
 
 def test_participant_write_errors_are_no_longer_swallowed(tmp_path):
-    db = str(tmp_path / "v16.db")
+    db = str(tmp_path / "v17.db")
     database.init_db(db)
     with sqlite3.connect(db) as conn:
         conn.execute("DROP TABLE match_participants")

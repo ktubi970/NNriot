@@ -113,11 +113,11 @@ def test_parse_sqlite_timestamp_is_utc_milliseconds():
     assert parse_sqlite_timestamp_ms(None) is None
 
 
-@pytest.fixture(params=["v16", "v15"])
+@pytest.fixture(params=["v17", "v15"])
 def crawl_db(tmp_path, request):
     # The diagnostic reads the operational database at either schema.
     db_file = str(tmp_path / "provenance.db")
-    if request.param == "v16":
+    if request.param == "v17":
         database.init_db(db_file)
         stamp, saved_column = parse_sqlite_timestamp_ms, "updated_at"
     else:

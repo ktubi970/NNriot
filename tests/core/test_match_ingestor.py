@@ -249,7 +249,7 @@ def test_ingest_match_ids_isolates_timeline_embedding_failure(ingestor):
 
 
 
-# --- v16 provenance, anchors and sightings ------------------------------------------------------
+# --- v17 provenance, anchors and sightings ------------------------------------------------------
 
 from core.collection.anchors import AnchorRepository
 

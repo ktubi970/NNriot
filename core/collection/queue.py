@@ -147,6 +147,17 @@ class CrawlQueueRepository:
                 (_now_ms(), queue_id),
             )
 
+    def unqueued(self, puuids: list[Optional[str]]) -> set[str]:
+        """The PUUIDs among *puuids* that have no crawl_queue entry yet."""
+        wanted = sorted({p for p in puuids if p})
+        known: set[str] = set()
+        with database.get_connection(self.db_path) as conn:
+            for start in range(0, len(wanted), 500):
+                chunk = wanted[start:start + 500]
+                known.update(r[0] for r in conn.execute(
+                    f"SELECT puuid FROM crawl_queue WHERE puuid IN ({','.join('?' for _ in chunk)})", chunk))
+        return set(wanted) - known
+
     def get_stats(self) -> dict[str, int]:
         """Return queue metrics: total, processed, pending."""
         with database.get_connection(self.db_path) as conn:

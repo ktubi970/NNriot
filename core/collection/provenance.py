@@ -26,7 +26,7 @@ LADDER_SEED_MIN_PRIORITY = 5
 
 
 def parse_sqlite_timestamp_ms(value: Optional[str | int]) -> Optional[int]:
-    """UTC epoch milliseconds from a schema-v16 integer or a legacy CURRENT_TIMESTAMP string."""
+    """UTC epoch milliseconds from a schema-v17 integer or a legacy CURRENT_TIMESTAMP string."""
     if type(value) is int:
         return value
     if not value:
@@ -148,7 +148,7 @@ def match_provenance(
 def load_crawl_registry(db_path: str) -> CrawlRegistry:
     """Read crawl_queue and players through a read-only connection.
 
-    Works on schema v16 (integer UTC ms, ``players.updated_at``) and on older
+    Works on schema v17 (integer UTC ms, ``players.updated_at``) and on older
     databases (CURRENT_TIMESTAMP text, ``players.last_updated``).
     """
     uri = Path(db_path).resolve().as_uri() + "?mode=ro"

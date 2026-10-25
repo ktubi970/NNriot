@@ -77,7 +77,7 @@ def test_migration_14_schema_and_data_preservation(tmp_path):
         assert faker["is_processed"] == 0
         assert faker["region"] == "EUW"
 
-        # Verify an index covers puuid (the UNIQUE constraint's own index since v16)
+        # Verify an index covers puuid (the UNIQUE constraint's own index since v17)
         indices = [row["name"] for row in conn.execute("PRAGMA index_list(crawl_queue)").fetchall()]
         indexed = {r["name"] for idx in indices for r in conn.execute(f"PRAGMA index_info({idx})")}
         assert "puuid" in indexed
@@ -203,3 +203,11 @@ def test_queue_times_are_utc_milliseconds(test_db):
     for created, processed in rows:
         assert type(created) is int and type(processed) is int
         assert before - 1000 <= created <= processed
+
+
+def test_unqueued_returns_puuids_absent_from_the_queue(test_db):
+    repo = CrawlQueueRepository(test_db)
+    repo.enqueue_puuids(["queued", "done"], region="EUW")
+    repo.mark_processed("done")
+    assert repo.unqueued(["queued", "done", "new", "", None, "new"]) == {"new"}
+    assert repo.unqueued([f"p{i}" for i in range(2500)]) == {f"p{i}" for i in range(2500)}

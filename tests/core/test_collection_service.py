@@ -213,7 +213,7 @@ def test_run_crawler_respects_stop_event(service):
     assert service.tracker.to_dict()["status"] == "completed"
 
 
-# --- Anchors chosen on rank only discover the frontier (v16) -----------------------------------
+# --- Anchors chosen on rank only discover the frontier (v17) -----------------------------------
 
 DAY_MS = 86_400_000
 
@@ -297,14 +297,15 @@ def test_run_crawler_keeps_seed_pre_entry_matches_out_of_targets_and_history(ser
     assert set(snowball) <= queued
 
 
-def test_a_ladder_player_already_crawled_is_still_protected(service):
-    # Selection is recorded even when crawl_queue already holds the player.
+def test_a_ladder_player_already_crawled_is_not_selected_again(service):
+    # The crawler does not fetch its list again, so this ladder read cannot bias which of
+    # its matches enter the database: no selection is recorded for it.
     service.queue_repo.enqueue_puuids(["seed"], region="EUW", priority=0)
     service.queue_repo.mark_processed("seed")
     now = int(time.time() * 1000)
     others = [f"p{i}" for i in range(1, 10)]
-    details = {"EUW1_PRE": _match("EUW1_PRE", now - DAY_MS, ["seed", *others])}
-    api = _riot({"p1": ["EUW1_PRE"]}, details, top_players=["seed"])
+    details = {"EUW1_OLD": _match("EUW1_OLD", now - DAY_MS, ["seed", *others])}
+    api = _riot({"p1": ["EUW1_OLD"]}, details, top_players=["seed", "fresh"])
     stop = threading.Event()
     ladder = api.get_top_players.return_value
     api.get_top_players.side_effect = lambda **_: (stop.set(), ladder)[1]  # stop once the ladder is read
@@ -313,9 +314,11 @@ def test_a_ladder_player_already_crawled_is_still_protected(service):
     service.run_crawler(target_matches=1, regions=["EUW"], batch_size=5, stop_event=stop)
     later = service.collect_player_matches("p1", region="EUW", count=5)
 
-    assert (later.matches_saved, later.discovery_only) == (0, 1)
-    assert _table(service.db_path, "SELECT priority, is_processed FROM crawl_queue WHERE puuid = 'seed'") == [
-        {"priority": 0, "is_processed": 1}]
+    assert (later.matches_saved, later.discovery_only) == (1, 0)
+    assert [(r["puuid"], r["source"]) for r in _table(service.db_path, "SELECT * FROM anchor_selections")] == [
+        ("fresh", "ladder_seed")]
+    queue = {r["puuid"]: (r["priority"], r["is_processed"]) for r in _table(service.db_path, "SELECT * FROM crawl_queue")}
+    assert (queue["seed"], queue["fresh"]) == ((0, 1), (10, 0))
 
 
 def test_collect_top_leagues_only_discovers_the_frontier(service):

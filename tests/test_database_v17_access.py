@@ -1,4 +1,4 @@
-"""Schema v16 access: derived player statistics, trainer state, sightings and times."""
+"""Schema v17 access: derived player statistics, trainer state, sightings and times."""
 
 import sqlite3
 import time
@@ -10,7 +10,7 @@ from core import database
 
 @pytest.fixture
 def db(tmp_path):
-    path = str(tmp_path / "v16.db")
+    path = str(tmp_path / "v17.db")
     database.init_db(path)
     return path
 
@@ -68,7 +68,7 @@ def test_trainer_state_lives_outside_training_rows(db):
     assert [r["match_id"] for r in database.get_untrained_records(10, db_path=db)] == ["M2"]
     assert sorted(r["match_id"] for r in database.get_random_trained_records(10, db_path=db)) == ["M1", "M3"]
     stats = database.get_db_stats(db_path=db)
-    assert (stats["trained_records"], stats["untrained_records"], stats["schema_version"]) == (2, 1, 16)
+    assert (stats["trained_records"], stats["untrained_records"], stats["schema_version"]) == (2, 1, 17)
     with sqlite3.connect(db) as conn:
         trained = dict(conn.execute("SELECT training_id, trained_at FROM trained_records"))
         extractors = {r[0] for r in conn.execute("SELECT feature_extractor FROM training_dataset")}

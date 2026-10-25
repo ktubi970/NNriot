@@ -1,4 +1,4 @@
-"""Offline schema-v16 merge. Inputs are read-only; outputs are never overwritten.
+"""Offline schema-v17 merge. Inputs are read-only; outputs are never overwritten.
 
 The gzip JSONL archive is also the classification manifest. ``kind=source_row``
 preserves exact SQLite values discarded by canonical precedence or regeneration;
@@ -14,7 +14,9 @@ match_facts are derived from the raw match. Their availability (``ingested_at``,
 ``fetched_by_puuid``) follows the match: the target's record wins, and an imported
 match keeps the source's record when it is coherent (ingested at or after
 creation, fetched by a participant); otherwise it becomes NULL (unknown) and the
-original row is archived. Collection provenance (anchor_selections,
+original row is archived. A source match without facts contributes the
+deprecated schema-v16 availability columns of its matches row, which are copied
+verbatim. Collection provenance (anchor_selections,
 match_sightings) is append-only and unioned. Trainer state (trained_records) is
 never imported, and imported training rows use the ingestor's pre-match features.
 """
@@ -34,7 +36,7 @@ import sqlite3
 from core.collection.anchors import SOURCES as ANCHOR_SOURCES
 from core.collection.ingestor import PRE_MATCH_FEATURE_EXTRACTOR
 from core.collection.regions import TAG_TO_REGION
-from core.database import SIGHTING_DISPOSITIONS, _facts_row
+from core.database import SIGHTING_DISPOSITIONS, _coherent_ingested_at, _facts_row
 from core.feature_labels import extract_labels, extract_timeline_labels
 from core.json_utils import extract_pre_match_features
 from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _valid_timestamp
@@ -43,7 +45,7 @@ from core.pre_match_dataset import _decode, _valid_features, _valid_labels, _val
 logger = logging.getLogger(__name__)
 
 
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 TABLES = ("schema_version", "matches", "match_facts", "training_dataset", "trained_records",
           "match_participants", "match_timelines", "match_sightings", "players", "player_aliases",
           "anchor_selections", "champions", "crawl_queue", "player_spatial_embeddings")
@@ -58,7 +60,8 @@ FACT_COLUMNS = ("match_id", "queue_id", "game_start_at", "game_end_at", "game_ve
                 "ingested_at", "fetched_by_puuid")
 REQUIRED = {
     "schema_version": {"version"},
-    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id"},
+    "matches": {"match_id", "raw_json", "game_mode", "game_creation_time", "game_duration", "season_id",
+        "ingested_at", "fetched_by_puuid"},
     "match_facts": set(FACT_COLUMNS),
     "training_dataset": {"id", "match_id", "feature_json", "winner_label", "labels_json", "feature_extractor"},
     "trained_records": {"training_id", "trained_at"},
@@ -216,9 +219,7 @@ def _facts(match_id, info, source_facts):
 
     Coherent: ingested at or after creation, fetched by one of its participants.
     """
-    ingested = source_facts["ingested_at"] if source_facts else None
-    if not _valid_timestamp(ingested) or ingested < info["gameCreation"]:
-        ingested = None
+    ingested = _coherent_ingested_at(source_facts["ingested_at"], info) if source_facts else None
     fetched = source_facts["fetched_by_puuid"] if source_facts else None
     return dict(zip(FACT_COLUMNS, _facts_row(match_id, info, ingested, fetched)))
 
@@ -314,7 +315,8 @@ def _merge_matches(source, target, out, archive):
                 if normalized != row:
                     archive.row("matches", row, "normalized_metadata")
                 _insert(out, "matches", normalized)
-                _insert(out, "match_facts", _facts(row["match_id"], info, _lookup(source, "match_facts", row)))
+                # Without facts, the deprecated v16 columns of the source row hold its availability.
+                _insert(out, "match_facts", _facts(row["match_id"], info, _lookup(source, "match_facts", row) or row))
                 for participant in _participants(row, data):
                     _insert(out, "match_participants", participant)
                 training = {"match_id": row["match_id"], "feature_json": _json(features),

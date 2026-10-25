@@ -201,12 +201,25 @@ class CollectionService:
 
     def _select_ladder(self, entries: list[dict], *, region: str, source: str) -> list[str]:
         """Record ladder entries as selected on rank now, with their ladder snapshot."""
-        puuids = [e["puuid"] for e in entries if isinstance(e, dict) and e.get("puuid")]
+        entries = [e for e in entries if isinstance(e, dict) and e.get("puuid")]
+        puuids = [e["puuid"] for e in entries]
         self.anchor_repo.record(
             puuids, source=source, region=region,
-            ranks={e["puuid"]: rank_snapshot(e) for e in entries if isinstance(e, dict) and e.get("puuid")},
+            ranks={e["puuid"]: rank_snapshot(e) for e in entries},
         )
         return puuids
+
+    def _seed_from_ladder(self, entries: list[dict], *, region: str, priority: int) -> None:
+        """Queue ladder players the crawler has never queued, recording them as selected.
+
+        A player already in crawl_queue is not fetched again, so this ladder read cannot
+        bias which of its matches enter the database: it is not recorded as selected.
+        """
+        entries = [e for e in entries if isinstance(e, dict) and e.get("puuid")]
+        fresh = self.queue_repo.unqueued([e["puuid"] for e in entries])
+        puuids = self._select_ladder([e for e in entries if e["puuid"] in fresh],
+                                     region=region, source="ladder_seed")
+        self.queue_repo.enqueue_puuids(puuids, region=region, priority=priority)
 
     def _enqueue_discovered(self, discovered_puuids: list[tuple[str, str]]) -> None:
         """Snowballing: enqueue newly discovered participants."""
@@ -355,8 +368,7 @@ class CollectionService:
                     api = self.api_factory(canon)
                     try:
                         entries = api.get_top_players(total_count=ladder_depth)
-                        puuids = self._select_ladder(entries, region=canon, source="ladder_seed")
-                        self.queue_repo.enqueue_puuids(puuids, region=canon, priority=10)
+                        self._seed_from_ladder(entries, region=canon, priority=10)
                     except Exception as e:
                         logger.warning("Failed seeding top players for %s: %s", canon, e)
 
@@ -378,8 +390,7 @@ class CollectionService:
                         api = self.api_factory(canon)
                         try:
                             entries = api.get_top_players(total_count=ladder_depth)
-                            puuids = self._select_ladder(entries, region=canon, source="ladder_seed")
-                            self.queue_repo.enqueue_puuids(puuids, region=canon, priority=5)
+                            self._seed_from_ladder(entries, region=canon, priority=5)
                         except Exception:
                             pass
 

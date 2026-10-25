@@ -22,7 +22,7 @@ RANK_SELECTION_SOURCES = frozenset({
     "ladder_seed",          # run_crawler: top of the ladder, then deeper when the queue runs dry
     "top_leagues",          # collect_top_leagues: Challenger / Grandmaster / Master
     "pro_import",           # lolpros and Liquipedia accounts
-    "legacy_crawl_queue",   # crawl_queue priority >= 5 before schema v16
+    "legacy_crawl_queue",   # crawl_queue priority >= 5 before schema v17
 })
 OTHER_SOURCES = frozenset({
     "manual_seed",                # Riot IDs typed by a user or passed to the crawler
@@ -30,7 +30,7 @@ OTHER_SOURCES = frozenset({
     "puuid_accounts",             # known accounts without a stated reason
     "prediction_warmup",          # stale players of a custom prediction
     "spectator",                  # participants of a live game
-    "legacy_players_last_saved",  # players rows before v16, at their last save (not all anchors)
+    "legacy_players_last_saved",  # players rows before v17, at their last save (not all anchors)
 })
 SOURCES = RANK_SELECTION_SOURCES | OTHER_SOURCES
 

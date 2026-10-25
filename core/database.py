@@ -25,7 +25,7 @@ from core import config
 DB_PATH = config.DB_PATH
 
 # Current schema version – bump this whenever you add a migration below
-SCHEMA_VERSION = 16
+SCHEMA_VERSION = 17
 
 # ---------------------------------------------------------------------------
 # Logging
@@ -89,7 +89,7 @@ def _rebuild(table: str, create_sql: str, columns: str, select_sql: str) -> list
     Rows are copied verbatim (``select_sql`` may convert values). Run with foreign
     keys off when another table references *table* (see _FOREIGN_KEYS_OFF_STEPS).
     """
-    new = f"{table}_v16"
+    new = f"{table}_v17"
     return [
         create_sql.format(name=new),
         f"INSERT INTO {new} ({columns}) {select_sql}",
@@ -341,17 +341,28 @@ _MIGRATIONS = [
             "UPDATE schema_version SET version = 15",
         ],
     ),
-    # v15 -> v16 : collection provenance and schema clean-up.
-    # - match_facts: narrow 1:1 facts read without touching raw_json pages (columns added to
-    #   matches would sit after raw_json), including availability: ingested_at (UTC ms of the
-    #   first insert) and fetched_by_puuid. Matches stored before v16 have no row until
-    #   scripts/backfill_match_facts.py derives one, with ingested_at left unknown.
+    # v15 -> v16 : record when each match became available (UTC epoch ms) and
+    # whose match list returned it (NULL = ingested before v16, unknown)
+    (
+        15,
+        [
+            "ALTER TABLE matches ADD COLUMN ingested_at INTEGER",
+            "ALTER TABLE matches ADD COLUMN fetched_by_puuid TEXT",
+            "UPDATE schema_version SET version = 16",
+        ],
+    ),
+    # v16 -> v17 : collection provenance and schema clean-up.
+    # - match_facts: narrow 1:1 facts read without touching raw_json pages, including
+    #   availability: ingested_at (UTC ms of the first insert) and fetched_by_puuid. The v16
+    #   columns on matches sit after raw_json, so reading them walks its overflow pages; they
+    #   are deprecated, NULL for rows written since v17. Matches stored before v17 have no
+    #   facts row until scripts/backfill_match_facts.py derives one, carrying the v16 values.
     # - match_sightings: every time a match list returned a match, and what was done with it.
     # - anchor_selections: who was picked as a collection anchor, why and when (append-only).
     # - trained_records: trainer bookkeeping, moved out of training_dataset.
     # - Times become INTEGER UTC ms; derived player statistics and unused llm_* columns go.
     (
-        15,
+        16,
         [
             """
             CREATE TABLE IF NOT EXISTS match_facts (
@@ -476,14 +487,14 @@ _MIGRATIONS = [
             "ALTER TABLE match_participants ADD COLUMN team_id INTEGER",
             # Duplicates the index SQLite already builds for the PRIMARY KEY.
             "DROP INDEX IF EXISTS idx_timelines_match",
-            "UPDATE schema_version SET version = 16",
+            "UPDATE schema_version SET version = 17",
         ],
     ),
 ]
 
 # Steps that rebuild a table other tables reference (players, training_dataset) run with
 # foreign keys off, as SQLite's rebuild procedure requires; rows are copied verbatim.
-_FOREIGN_KEYS_OFF_STEPS = frozenset({15})
+_FOREIGN_KEYS_OFF_STEPS = frozenset({16})
 
 
 def _get_schema_version(conn) -> int:
@@ -588,6 +599,14 @@ def _fetching_participant(info: dict, fetched_by_puuid: str | None) -> str | Non
 
 def _int_or_none(value):
     return value if type(value) is int else None
+
+
+def _coherent_ingested_at(value, info: dict) -> int | None:
+    """A recorded ingestion time, kept only if it is not earlier than the match's creation."""
+    creation = info.get("gameCreation")
+    if type(value) is int and type(creation) is int and 0 < creation <= value:
+        return value
+    return None
 
 
 def _facts_row(match_id: str, info: dict, ingested_at: int, fetched_by_puuid: str | None) -> tuple:
