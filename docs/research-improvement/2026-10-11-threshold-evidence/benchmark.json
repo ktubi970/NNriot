@@ -1,0 +1,74 @@
+{
+  "python": "3.12.10",
+  "numpy": "2.5.2",
+  "seed": 20261011,
+  "n": 45000,
+  "parameters": {
+    "target_accuracy": 1.0,
+    "min_count": 1000
+  },
+  "input_sha256": "f2093300d1be95f42a551f08a99b32445072366e74c1710a58bf301ec6a7dac0",
+  "baseline_source_sha256": "7c3a99c3f2d1012093ebe99090248cff3aea644d2de3c7739b1c08e4b1d0b5e1",
+  "after_source_sha256": "8291091a2f3cc0cfb1938d35b70e2b2eb80a7d29aeedbbb75143723b29712240",
+  "seconds": {
+    "before": [
+      11.385952099983115,
+      9.085839200008195,
+      8.935360999952536
+    ],
+    "after": [
+      0.15107770002214238,
+      0.16373129998100922,
+      0.08623950002947822
+    ]
+  },
+  "median_seconds": {
+    "before": 9.085839200008195,
+    "after": 0.15107770002214238
+  },
+  "results": {
+    "before": {
+      "threshold": 0.4556821246860616,
+      "coverage": 0.07011111111111111,
+      "accuracy": 0.5061806656101426,
+      "count": 3155,
+      "wilson_lower": 0.4887381860061736,
+      "wilson_upper": 0.5236081126316062,
+      "target_met": false,
+      "target_accuracy": 1.0
+    },
+    "after": {
+      "threshold": 0.454485,
+      "coverage": 0.07268888888888889,
+      "accuracy": 0.508407214918985,
+      "count": 3271,
+      "wilson_lower": 0.4912750718522755,
+      "wilson_upper": 0.5255196343011656,
+      "target_met": false,
+      "target_accuracy": 1.0
+    }
+  },
+  "counterexample": {
+    "before": {
+      "threshold": 0.10001098999999997,
+      "coverage": 0.99,
+      "accuracy": 0.9,
+      "count": 990,
+      "wilson_lower": 0.8797385499492674,
+      "wilson_upper": 0.9171692394880921,
+      "target_met": false,
+      "target_accuracy": 0.9007
+    },
+    "after": {
+      "threshold": 0.100003,
+      "coverage": 0.998,
+      "accuracy": 0.9008016032064128,
+      "count": 998,
+      "wilson_lower": 0.88069069507611,
+      "wilson_upper": 0.917838845657521,
+      "target_met": true,
+      "target_accuracy": 0.9007
+    }
+  },
+  "interpretation": "Synthetic empirical search cost and correctness only; no model accuracy or prospective risk guarantee."
+}

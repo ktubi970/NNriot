@@ -1,0 +1,4015 @@
+{
+  "schema_version": 1,
+  "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+  "dataset_sha256": "c04ccf4546007aa4ab4fd445f32c27baf57908e664d958fea57ef030a7092859",
+  "selection": "newest eligible candidates by match timestamp; chronological 70/15/15",
+  "feature_policy": "draft_context_only_v1; no post-match or undated career statistics",
+  "splits": {
+    "train": [
+      {
+        "match_id": "NA1_5647329580",
+        "game_creation_time": 1790134916023
+      },
+      {
+        "match_id": "NA1_5647338943",
+        "game_creation_time": 1790134947195
+      },
+      {
+        "match_id": "NA1_5647337032",
+        "game_creation_time": 1790134992314
+      },
+      {
+        "match_id": "NA1_5647341832",
+        "game_creation_time": 1790135052219
+      },
+      {
+        "match_id": "NA1_5647333543",
+        "game_creation_time": 1790135082514
+      },
+      {
+        "match_id": "NA1_5647331636",
+        "game_creation_time": 1790135111488
+      },
+      {
+        "match_id": "NA1_5647342859",
+        "game_creation_time": 1790135117017
+      },
+      {
+        "match_id": "NA1_5647341915",
+        "game_creation_time": 1790135144166
+      },
+      {
+        "match_id": "NA1_5647338081",
+        "game_creation_time": 1790135148135
+      },
+      {
+        "match_id": "NA1_5647336353",
+        "game_creation_time": 1790135158269
+      },
+      {
+        "match_id": "NA1_5647342894",
+        "game_creation_time": 1790135174248
+      },
+      {
+        "match_id": "NA1_5647332708",
+        "game_creation_time": 1790135203581
+      },
+      {
+        "match_id": "NA1_5647334661",
+        "game_creation_time": 1790135237352
+      },
+      {
+        "match_id": "NA1_5647344811",
+        "game_creation_time": 1790135240515
+      },
+      {
+        "match_id": "NA1_5647342055",
+        "game_creation_time": 1790135261490
+      },
+      {
+        "match_id": "NA1_5647340113",
+        "game_creation_time": 1790135273001
+      },
+      {
+        "match_id": "NA1_5647336454",
+        "game_creation_time": 1790135280319
+      },
+      {
+        "match_id": "NA1_5647341090",
+        "game_creation_time": 1790135280671
+      },
+      {
+        "match_id": "NA1_5647341055",
+        "game_creation_time": 1790135286412
+      },
+      {
+        "match_id": "NA1_5647343879",
+        "game_creation_time": 1790135297895
+      },
+      {
+        "match_id": "NA1_5647339248",
+        "game_creation_time": 1790135322530
+      },
+      {
+        "match_id": "NA1_5647340173",
+        "game_creation_time": 1790135324497
+      },
+      {
+        "match_id": "NA1_5647336492",
+        "game_creation_time": 1790135335043
+      },
+      {
+        "match_id": "NA1_5647340156",
+        "game_creation_time": 1790135358212
+      },
+      {
+        "match_id": "NA1_5647341140",
+        "game_creation_time": 1790135364779
+      },
+      {
+        "match_id": "NA1_5647345859",
+        "game_creation_time": 1790135366065
+      },
+      {
+        "match_id": "NA1_5647345882",
+        "game_creation_time": 1790135368120
+      },
+      {
+        "match_id": "NA1_5647341177",
+        "game_creation_time": 1790135398360
+      },
+      {
+        "match_id": "NA1_5647343127",
+        "game_creation_time": 1790135406747
+      },
+      {
+        "match_id": "NA1_5647346889",
+        "game_creation_time": 1790135441794
+      },
+      {
+        "match_id": "NA1_5647342209",
+        "game_creation_time": 1790135448090
+      },
+      {
+        "match_id": "NA1_5647349858",
+        "game_creation_time": 1790135468288
+      },
+      {
+        "match_id": "NA1_5647343188",
+        "game_creation_time": 1790135493594
+      },
+      {
+        "match_id": "NA1_5647338360",
+        "game_creation_time": 1790135501111
+      },
+      {
+        "match_id": "NA1_5647349909",
+        "game_creation_time": 1790135512260
+      },
+      {
+        "match_id": "NA1_5647345057",
+        "game_creation_time": 1790135524359
+      },
+      {
+        "match_id": "NA1_5647341327",
+        "game_creation_time": 1790135561986
+      },
+      {
+        "match_id": "NA1_5647345079",
+        "game_creation_time": 1790135569968
+      },
+      {
+        "match_id": "NA1_5647337506",
+        "game_creation_time": 1790135570466
+      },
+      {
+        "match_id": "NA1_5647347033",
+        "game_creation_time": 1790135581768
+      },
+      {
+        "match_id": "NA1_5647341348",
+        "game_creation_time": 1790135597572
+      },
+      {
+        "match_id": "NA1_5647340422",
+        "game_creation_time": 1790135599972
+      },
+      {
+        "match_id": "NA1_5647339524",
+        "game_creation_time": 1790135613800
+      },
+      {
+        "match_id": "NA1_5647340408",
+        "game_creation_time": 1790135623597
+      },
+      {
+        "match_id": "NA1_5647344222",
+        "game_creation_time": 1790135656700
+      },
+      {
+        "match_id": "NA1_5647345191",
+        "game_creation_time": 1790135682459
+      },
+      {
+        "match_id": "NA1_5647342447",
+        "game_creation_time": 1790135703132
+      },
+      {
+        "match_id": "NA1_5647347173",
+        "game_creation_time": 1790135725618
+      },
+      {
+        "match_id": "NA1_5647347153",
+        "game_creation_time": 1790135738975
+      },
+      {
+        "match_id": "NA1_5647340505",
+        "game_creation_time": 1790135740406
+      },
+      {
+        "match_id": "NA1_5647345273",
+        "game_creation_time": 1790135811964
+      },
+      {
+        "match_id": "NA1_5647339670",
+        "game_creation_time": 1790135817330
+      },
+      {
+        "match_id": "NA1_5647345262",
+        "game_creation_time": 1790135823682
+      },
+      {
+        "match_id": "NA1_5647351764",
+        "game_creation_time": 1790135853202
+      },
+      {
+        "match_id": "NA1_5647351779",
+        "game_creation_time": 1790135864006
+      },
+      {
+        "match_id": "NA1_5647340654",
+        "game_creation_time": 1790135868420
+      },
+      {
+        "match_id": "NA1_5647344394",
+        "game_creation_time": 1790135879500
+      },
+      {
+        "match_id": "NA1_5647343478",
+        "game_creation_time": 1790135879986
+      },
+      {
+        "match_id": "NA1_5647350984",
+        "game_creation_time": 1790135901483
+      },
+      {
+        "match_id": "NA1_5647340665",
+        "game_creation_time": 1790135923334
+      },
+      {
+        "match_id": "NA1_5647348285",
+        "game_creation_time": 1790135931346
+      },
+      {
+        "match_id": "NA1_5647352778",
+        "game_creation_time": 1790135932354
+      },
+      {
+        "match_id": "NA1_5647346349",
+        "game_creation_time": 1790135933693
+      },
+      {
+        "match_id": "NA1_5647342600",
+        "game_creation_time": 1790135943956
+      },
+      {
+        "match_id": "NA1_5647348290",
+        "game_creation_time": 1790135952525
+      },
+      {
+        "match_id": "NA1_5647352792",
+        "game_creation_time": 1790135969988
+      },
+      {
+        "match_id": "NA1_5647350312",
+        "game_creation_time": 1790135981016
+      },
+      {
+        "match_id": "NA1_5647351064",
+        "game_creation_time": 1790135996813
+      },
+      {
+        "match_id": "NA1_5647347384",
+        "game_creation_time": 1790136036967
+      },
+      {
+        "match_id": "NA1_5647345476",
+        "game_creation_time": 1790136047236
+      },
+      {
+        "match_id": "NA1_5647353840",
+        "game_creation_time": 1790136058096
+      },
+      {
+        "match_id": "NA1_5647348400",
+        "game_creation_time": 1790136068162
+      },
+      {
+        "match_id": "NA1_5647353847",
+        "game_creation_time": 1790136076569
+      },
+      {
+        "match_id": "NA1_5647348424",
+        "game_creation_time": 1790136084355
+      },
+      {
+        "match_id": "NA1_5647352931",
+        "game_creation_time": 1790136105584
+      },
+      {
+        "match_id": "NA1_5647346468",
+        "game_creation_time": 1790136116504
+      },
+      {
+        "match_id": "NA1_5647346491",
+        "game_creation_time": 1790136134028
+      },
+      {
+        "match_id": "NA1_5647347512",
+        "game_creation_time": 1790136174218
+      },
+      {
+        "match_id": "NA1_5647357783",
+        "game_creation_time": 1790136198399
+      },
+      {
+        "match_id": "NA1_5647354917",
+        "game_creation_time": 1790136209494
+      },
+      {
+        "match_id": "NA1_5647348493",
+        "game_creation_time": 1790136229315
+      },
+      {
+        "match_id": "NA1_5647345639",
+        "game_creation_time": 1790136248563
+      },
+      {
+        "match_id": "NA1_5647352106",
+        "game_creation_time": 1790136278242
+      },
+      {
+        "match_id": "NA1_5647349595",
+        "game_creation_time": 1790136291657
+      },
+      {
+        "match_id": "NA1_5647350563",
+        "game_creation_time": 1790136299523
+      },
+      {
+        "match_id": "NA1_5647345677",
+        "game_creation_time": 1790136311304
+      },
+      {
+        "match_id": "NA1_5647348583",
+        "game_creation_time": 1790136313483
+      },
+      {
+        "match_id": "NA1_5647345667",
+        "game_creation_time": 1790136318300
+      },
+      {
+        "match_id": "NA1_5647353103",
+        "game_creation_time": 1790136343047
+      },
+      {
+        "match_id": "NA1_5647349618",
+        "game_creation_time": 1790136344288
+      },
+      {
+        "match_id": "NA1_5647348628",
+        "game_creation_time": 1790136348775
+      },
+      {
+        "match_id": "NA1_5647345720",
+        "game_creation_time": 1790136372035
+      },
+      {
+        "match_id": "NA1_5647347703",
+        "game_creation_time": 1790136385062
+      },
+      {
+        "match_id": "NA1_5647358789",
+        "game_creation_time": 1790136410910
+      },
+      {
+        "match_id": "NA1_5647350661",
+        "game_creation_time": 1790136414599
+      },
+      {
+        "match_id": "NA1_5647346715",
+        "game_creation_time": 1790136425352
+      },
+      {
+        "match_id": "NA1_5647349691",
+        "game_creation_time": 1790136443621
+      },
+      {
+        "match_id": "NA1_5647361766",
+        "game_creation_time": 1790136448657
+      },
+      {
+        "match_id": "NA1_5647352288",
+        "game_creation_time": 1790136474690
+      },
+      {
+        "match_id": "NA1_5647361765",
+        "game_creation_time": 1790136484702
+      },
+      {
+        "match_id": "NA1_5647356077",
+        "game_creation_time": 1790136494945
+      },
+      {
+        "match_id": "NA1_5647356106",
+        "game_creation_time": 1790136498066
+      },
+      {
+        "match_id": "NA1_5647352303",
+        "game_creation_time": 1790136512384
+      },
+      {
+        "match_id": "NA1_5647353241",
+        "game_creation_time": 1790136518994
+      },
+      {
+        "match_id": "NA1_5647357088",
+        "game_creation_time": 1790136547748
+      },
+      {
+        "match_id": "NA1_5647363772",
+        "game_creation_time": 1790136566166
+      },
+      {
+        "match_id": "NA1_5647351538",
+        "game_creation_time": 1790136570098
+      },
+      {
+        "match_id": "NA1_5647359910",
+        "game_creation_time": 1790136571436
+      },
+      {
+        "match_id": "NA1_5647353329",
+        "game_creation_time": 1790136580821
+      },
+      {
+        "match_id": "NA1_5647364816",
+        "game_creation_time": 1790136584284
+      },
+      {
+        "match_id": "NA1_5647352378",
+        "game_creation_time": 1790136609334
+      },
+      {
+        "match_id": "NA1_5647359942",
+        "game_creation_time": 1790136654442
+      },
+      {
+        "match_id": "NA1_5647354347",
+        "game_creation_time": 1790136674779
+      },
+      {
+        "match_id": "NA1_5647352457",
+        "game_creation_time": 1790136677202
+      },
+      {
+        "match_id": "NA1_5647364893",
+        "game_creation_time": 1790136693197
+      },
+      {
+        "match_id": "NA1_5647361937",
+        "game_creation_time": 1790136693742
+      },
+      {
+        "match_id": "NA1_5647352468",
+        "game_creation_time": 1790136720141
+      },
+      {
+        "match_id": "NA1_5647359078",
+        "game_creation_time": 1790136728222
+      },
+      {
+        "match_id": "NA1_5647352483",
+        "game_creation_time": 1790136740440
+      },
+      {
+        "match_id": "NA1_5647352534",
+        "game_creation_time": 1790136741366
+      },
+      {
+        "match_id": "NA1_5647359058",
+        "game_creation_time": 1790136742333
+      },
+      {
+        "match_id": "NA1_5647360993",
+        "game_creation_time": 1790136750569
+      },
+      {
+        "match_id": "NA1_5647352537",
+        "game_creation_time": 1790136776916
+      },
+      {
+        "match_id": "NA1_5647362005",
+        "game_creation_time": 1790136796245
+      },
+      {
+        "match_id": "NA1_5647354429",
+        "game_creation_time": 1790136813116
+      },
+      {
+        "match_id": "NA1_5647357377",
+        "game_creation_time": 1790136858535
+      },
+      {
+        "match_id": "NA1_5647356365",
+        "game_creation_time": 1790136863848
+      },
+      {
+        "match_id": "NA1_5647355436",
+        "game_creation_time": 1790136872737
+      },
+      {
+        "match_id": "NA1_5647356380",
+        "game_creation_time": 1790136873797
+      },
+      {
+        "match_id": "NA1_5647352641",
+        "game_creation_time": 1790136879231
+      },
+      {
+        "match_id": "NA1_5647362086",
+        "game_creation_time": 1790136882567
+      },
+      {
+        "match_id": "NA1_5647357427",
+        "game_creation_time": 1790136920307
+      },
+      {
+        "match_id": "NA1_5647365855",
+        "game_creation_time": 1790136929927
+      },
+      {
+        "match_id": "NA1_5647356416",
+        "game_creation_time": 1790136934351
+      },
+      {
+        "match_id": "NA1_5647362082",
+        "game_creation_time": 1790136938665
+      },
+      {
+        "match_id": "NA1_5647352678",
+        "game_creation_time": 1790136951753
+      },
+      {
+        "match_id": "NA1_5647355541",
+        "game_creation_time": 1790136968993
+      },
+      {
+        "match_id": "NA1_5647353600",
+        "game_creation_time": 1790136987268
+      },
+      {
+        "match_id": "NA1_5647364162",
+        "game_creation_time": 1790136987633
+      },
+      {
+        "match_id": "NA1_5647355536",
+        "game_creation_time": 1790136997994
+      },
+      {
+        "match_id": "NA1_5647355574",
+        "game_creation_time": 1790137037193
+      },
+      {
+        "match_id": "NA1_5647362242",
+        "game_creation_time": 1790137042301
+      },
+      {
+        "match_id": "NA1_5647365917",
+        "game_creation_time": 1790137043904
+      },
+      {
+        "match_id": "NA1_5647365138",
+        "game_creation_time": 1790137046285
+      },
+      {
+        "match_id": "NA1_5647354604",
+        "game_creation_time": 1790137047998
+      },
+      {
+        "match_id": "NA1_5647356553",
+        "game_creation_time": 1790137072955
+      },
+      {
+        "match_id": "NA1_5647357558",
+        "game_creation_time": 1790137094468
+      },
+      {
+        "match_id": "NA1_5647362250",
+        "game_creation_time": 1790137099729
+      },
+      {
+        "match_id": "NA1_5647357571",
+        "game_creation_time": 1790137103292
+      },
+      {
+        "match_id": "NA1_5647358507",
+        "game_creation_time": 1790137115260
+      },
+      {
+        "match_id": "NA1_5647363248",
+        "game_creation_time": 1790137150978
+      },
+      {
+        "match_id": "NA1_5647359395",
+        "game_creation_time": 1790137154050
+      },
+      {
+        "match_id": "NA1_5647366034",
+        "game_creation_time": 1790137175996
+      },
+      {
+        "match_id": "NA1_5647364333",
+        "game_creation_time": 1790137197948
+      },
+      {
+        "match_id": "NA1_5647367793",
+        "game_creation_time": 1790137206911
+      },
+      {
+        "match_id": "NA1_5647356629",
+        "game_creation_time": 1790137221888
+      },
+      {
+        "match_id": "NA1_5647360392",
+        "game_creation_time": 1790137224922
+      },
+      {
+        "match_id": "NA1_5647364343",
+        "game_creation_time": 1790137228425
+      },
+      {
+        "match_id": "NA1_5647358601",
+        "game_creation_time": 1790137229071
+      },
+      {
+        "match_id": "NA1_5647358624",
+        "game_creation_time": 1790137249408
+      },
+      {
+        "match_id": "NA1_5647366146",
+        "game_creation_time": 1790137311357
+      },
+      {
+        "match_id": "NA1_5647359543",
+        "game_creation_time": 1790137323213
+      },
+      {
+        "match_id": "NA1_5647366982",
+        "game_creation_time": 1790137325116
+      },
+      {
+        "match_id": "NA1_5647367916",
+        "game_creation_time": 1790137340956
+      },
+      {
+        "match_id": "NA1_5647369844",
+        "game_creation_time": 1790137357010
+      },
+      {
+        "match_id": "NA1_5647367037",
+        "game_creation_time": 1790137375539
+      },
+      {
+        "match_id": "NA1_5647365491",
+        "game_creation_time": 1790137380158
+      },
+      {
+        "match_id": "NA1_5647361506",
+        "game_creation_time": 1790137386552
+      },
+      {
+        "match_id": "NA1_5647362465",
+        "game_creation_time": 1790137386953
+      },
+      {
+        "match_id": "NA1_5647366223",
+        "game_creation_time": 1790137411025
+      },
+      {
+        "match_id": "NA1_5647362529",
+        "game_creation_time": 1790137441847
+      },
+      {
+        "match_id": "NA1_5647372790",
+        "game_creation_time": 1790137457752
+      },
+      {
+        "match_id": "NA1_5647363528",
+        "game_creation_time": 1790137463571
+      },
+      {
+        "match_id": "NA1_5647368982",
+        "game_creation_time": 1790137516318
+      },
+      {
+        "match_id": "NA1_5647367129",
+        "game_creation_time": 1790137516522
+      },
+      {
+        "match_id": "NA1_5647365551",
+        "game_creation_time": 1790137519413
+      },
+      {
+        "match_id": "NA1_5647369036",
+        "game_creation_time": 1790137542923
+      },
+      {
+        "match_id": "NA1_5647365591",
+        "game_creation_time": 1790137555897
+      },
+      {
+        "match_id": "NA1_5647369977",
+        "game_creation_time": 1790137556029
+      },
+      {
+        "match_id": "NA1_5647366394",
+        "game_creation_time": 1790137584774
+      },
+      {
+        "match_id": "NA1_5647373768",
+        "game_creation_time": 1790137585686
+      },
+      {
+        "match_id": "NA1_5647371926",
+        "game_creation_time": 1790137593395
+      },
+      {
+        "match_id": "NA1_5647362652",
+        "game_creation_time": 1790137595120
+      },
+      {
+        "match_id": "NA1_5647367215",
+        "game_creation_time": 1790137600369
+      },
+      {
+        "match_id": "NA1_5647370962",
+        "game_creation_time": 1790137614674
+      },
+      {
+        "match_id": "NA1_5647370045",
+        "game_creation_time": 1790137633465
+      },
+      {
+        "match_id": "NA1_5647361724",
+        "game_creation_time": 1790137652672
+      },
+      {
+        "match_id": "NA1_5647373841",
+        "game_creation_time": 1790137658625
+      },
+      {
+        "match_id": "NA1_5647361706",
+        "game_creation_time": 1790137672131
+      },
+      {
+        "match_id": "NA1_5647368180",
+        "game_creation_time": 1790137676631
+      },
+      {
+        "match_id": "NA1_5647372041",
+        "game_creation_time": 1790137701813
+      },
+      {
+        "match_id": "NA1_5647369163",
+        "game_creation_time": 1790137709988
+      },
+      {
+        "match_id": "NA1_5647375759",
+        "game_creation_time": 1790137720227
+      },
+      {
+        "match_id": "NA1_5647373894",
+        "game_creation_time": 1790137725885
+      },
+      {
+        "match_id": "NA1_5647372056",
+        "game_creation_time": 1790137744835
+      },
+      {
+        "match_id": "NA1_5647368257",
+        "game_creation_time": 1790137756334
+      },
+      {
+        "match_id": "NA1_5647366483",
+        "game_creation_time": 1790137759645
+      },
+      {
+        "match_id": "NA1_5647374787",
+        "game_creation_time": 1790137771420
+      },
+      {
+        "match_id": "NA1_5647373035",
+        "game_creation_time": 1790137784034
+      },
+      {
+        "match_id": "NA1_5647378780",
+        "game_creation_time": 1790137810355
+      },
+      {
+        "match_id": "NA1_5647379774",
+        "game_creation_time": 1790137825179
+      },
+      {
+        "match_id": "NA1_5647372148",
+        "game_creation_time": 1790137849126
+      },
+      {
+        "match_id": "NA1_5647376881",
+        "game_creation_time": 1790137897760
+      },
+      {
+        "match_id": "NA1_5647379863",
+        "game_creation_time": 1790137907760
+      },
+      {
+        "match_id": "NA1_5647370219",
+        "game_creation_time": 1790137915014
+      },
+      {
+        "match_id": "NA1_5647367466",
+        "game_creation_time": 1790137930561
+      },
+      {
+        "match_id": "NA1_5647366603",
+        "game_creation_time": 1790137936837
+      },
+      {
+        "match_id": "NA1_5647369327",
+        "game_creation_time": 1790137948143
+      },
+      {
+        "match_id": "NA1_5647376932",
+        "game_creation_time": 1790138005863
+      },
+      {
+        "match_id": "NA1_5647368462",
+        "game_creation_time": 1790138019742
+      },
+      {
+        "match_id": "NA1_5647378938",
+        "game_creation_time": 1790138025708
+      },
+      {
+        "match_id": "NA1_5647373207",
+        "game_creation_time": 1790138035200
+      },
+      {
+        "match_id": "NA1_5647371319",
+        "game_creation_time": 1790138046611
+      },
+      {
+        "match_id": "NA1_5647379945",
+        "game_creation_time": 1790138082456
+      },
+      {
+        "match_id": "NA1_5647377015",
+        "game_creation_time": 1790138083550
+      },
+      {
+        "match_id": "NA1_5647368496",
+        "game_creation_time": 1790138098394
+      },
+      {
+        "match_id": "NA1_5647378038",
+        "game_creation_time": 1790138134772
+      },
+      {
+        "match_id": "NA1_5647370414",
+        "game_creation_time": 1790138140299
+      },
+      {
+        "match_id": "NA1_5647378096",
+        "game_creation_time": 1790138178150
+      },
+      {
+        "match_id": "NA1_5647375122",
+        "game_creation_time": 1790138186744
+      },
+      {
+        "match_id": "NA1_5647369544",
+        "game_creation_time": 1790138213074
+      },
+      {
+        "match_id": "NA1_5647367685",
+        "game_creation_time": 1790138236002
+      },
+      {
+        "match_id": "NA1_5647375154",
+        "game_creation_time": 1790138239761
+      },
+      {
+        "match_id": "NA1_5647376125",
+        "game_creation_time": 1790138244796
+      },
+      {
+        "match_id": "NA1_5647379100",
+        "game_creation_time": 1790138254036
+      },
+      {
+        "match_id": "NA1_5647371440",
+        "game_creation_time": 1790138257481
+      },
+      {
+        "match_id": "NA1_5647368599",
+        "game_creation_time": 1790138257562
+      },
+      {
+        "match_id": "NA1_5647380918",
+        "game_creation_time": 1790138285213
+      },
+      {
+        "match_id": "NA1_5647379120",
+        "game_creation_time": 1790138287093
+      },
+      {
+        "match_id": "NA1_5647378160",
+        "game_creation_time": 1790138325256
+      },
+      {
+        "match_id": "NA1_5647378197",
+        "game_creation_time": 1790138357919
+      },
+      {
+        "match_id": "NA1_5647377233",
+        "game_creation_time": 1790138368906
+      },
+      {
+        "match_id": "NA1_5647371553",
+        "game_creation_time": 1790138397731
+      },
+      {
+        "match_id": "NA1_5647369680",
+        "game_creation_time": 1790138408115
+      },
+      {
+        "match_id": "NA1_5647370619",
+        "game_creation_time": 1790138411085
+      },
+      {
+        "match_id": "NA1_5647371578",
+        "game_creation_time": 1790138414844
+      },
+      {
+        "match_id": "NA1_5647381888",
+        "game_creation_time": 1790138460473
+      },
+      {
+        "match_id": "NA1_5647369724",
+        "game_creation_time": 1790138469326
+      },
+      {
+        "match_id": "NA1_5647373592",
+        "game_creation_time": 1790138517291
+      },
+      {
+        "match_id": "NA1_5647380280",
+        "game_creation_time": 1790138518807
+      },
+      {
+        "match_id": "NA1_5647375349",
+        "game_creation_time": 1790138527023
+      },
+      {
+        "match_id": "NA1_5647380292",
+        "game_creation_time": 1790138530251
+      },
+      {
+        "match_id": "NA1_5647378320",
+        "game_creation_time": 1790138547098
+      },
+      {
+        "match_id": "NA1_5647381915",
+        "game_creation_time": 1790138547668
+      },
+      {
+        "match_id": "NA1_5647380307",
+        "game_creation_time": 1790138550517
+      },
+      {
+        "match_id": "NA1_5647377345",
+        "game_creation_time": 1790138552369
+      },
+      {
+        "match_id": "NA1_5647378335",
+        "game_creation_time": 1790138571026
+      },
+      {
+        "match_id": "NA1_5647379375",
+        "game_creation_time": 1790138591021
+      },
+      {
+        "match_id": "NA1_5647382876",
+        "game_creation_time": 1790138623496
+      },
+      {
+        "match_id": "NA1_5647378400",
+        "game_creation_time": 1790138635233
+      },
+      {
+        "match_id": "NA1_5647373665",
+        "game_creation_time": 1790138649547
+      },
+      {
+        "match_id": "NA1_5647379417",
+        "game_creation_time": 1790138672028
+      },
+      {
+        "match_id": "NA1_5647386769",
+        "game_creation_time": 1790138680169
+      },
+      {
+        "match_id": "NA1_5647380370",
+        "game_creation_time": 1790138681264
+      },
+      {
+        "match_id": "NA1_5647386798",
+        "game_creation_time": 1790138683615
+      },
+      {
+        "match_id": "NA1_5647374658",
+        "game_creation_time": 1790138699143
+      },
+      {
+        "match_id": "NA1_5647382061",
+        "game_creation_time": 1790138714037
+      },
+      {
+        "match_id": "NA1_5647376539",
+        "game_creation_time": 1790138734915
+      },
+      {
+        "match_id": "NA1_5647381267",
+        "game_creation_time": 1790138743083
+      },
+      {
+        "match_id": "NA1_5647374680",
+        "game_creation_time": 1790138748751
+      },
+      {
+        "match_id": "NA1_5647377496",
+        "game_creation_time": 1790138750504
+      },
+      {
+        "match_id": "NA1_5647374732",
+        "game_creation_time": 1790138785863
+      },
+      {
+        "match_id": "NA1_5647383021",
+        "game_creation_time": 1790138802727
+      },
+      {
+        "match_id": "NA1_5647387780",
+        "game_creation_time": 1790138812625
+      },
+      {
+        "match_id": "NA1_5647383003",
+        "game_creation_time": 1790138813486
+      },
+      {
+        "match_id": "NA1_5647380490",
+        "game_creation_time": 1790138818835
+      },
+      {
+        "match_id": "NA1_5647387777",
+        "game_creation_time": 1790138821833
+      },
+      {
+        "match_id": "NA1_5647383053",
+        "game_creation_time": 1790138851904
+      },
+      {
+        "match_id": "NA1_5647375611",
+        "game_creation_time": 1790138865474
+      },
+      {
+        "match_id": "NA1_5647377588",
+        "game_creation_time": 1790138874521
+      },
+      {
+        "match_id": "NA1_5647377648",
+        "game_creation_time": 1790138932931
+      },
+      {
+        "match_id": "NA1_5647386940",
+        "game_creation_time": 1790138948816
+      },
+      {
+        "match_id": "NA1_5647389749",
+        "game_creation_time": 1790138995848
+      },
+      {
+        "match_id": "NA1_5647388841",
+        "game_creation_time": 1790138999928
+      },
+      {
+        "match_id": "NA1_5647379618",
+        "game_creation_time": 1790139010760
+      },
+      {
+        "match_id": "NA1_5647380645",
+        "game_creation_time": 1790139017715
+      },
+      {
+        "match_id": "NA1_5647385066",
+        "game_creation_time": 1790139021404
+      },
+      {
+        "match_id": "NA1_5647389754",
+        "game_creation_time": 1790139027287
+      },
+      {
+        "match_id": "NA1_5647386066",
+        "game_creation_time": 1790139040264
+      },
+      {
+        "match_id": "NA1_5647383221",
+        "game_creation_time": 1790139055661
+      },
+      {
+        "match_id": "NA1_5647387053",
+        "game_creation_time": 1790139078517
+      },
+      {
+        "match_id": "NA1_5647391743",
+        "game_creation_time": 1790139114539
+      },
+      {
+        "match_id": "NA1_5647380724",
+        "game_creation_time": 1790139138992
+      },
+      {
+        "match_id": "NA1_5647387114",
+        "game_creation_time": 1790139139965
+      },
+      {
+        "match_id": "NA1_5647393744",
+        "game_creation_time": 1790139144712
+      },
+      {
+        "match_id": "NA1_5647379716",
+        "game_creation_time": 1790139148526
+      },
+      {
+        "match_id": "NA1_5647388071",
+        "game_creation_time": 1790139205583
+      },
+      {
+        "match_id": "NA1_5647388066",
+        "game_creation_time": 1790139206529
+      },
+      {
+        "match_id": "NA1_5647393780",
+        "game_creation_time": 1790139245449
+      },
+      {
+        "match_id": "NA1_5647387180",
+        "game_creation_time": 1790139247318
+      },
+      {
+        "match_id": "NA1_5647382430",
+        "game_creation_time": 1790139254684
+      },
+      {
+        "match_id": "NA1_5647381631",
+        "game_creation_time": 1790139261892
+      },
+      {
+        "match_id": "NA1_5647382451",
+        "game_creation_time": 1790139263816
+      },
+      {
+        "match_id": "NA1_5647388111",
+        "game_creation_time": 1790139271417
+      },
+      {
+        "match_id": "NA1_5647389052",
+        "game_creation_time": 1790139284461
+      },
+      {
+        "match_id": "NA1_5647383353",
+        "game_creation_time": 1790139288758
+      },
+      {
+        "match_id": "NA1_5647386226",
+        "game_creation_time": 1790139294236
+      },
+      {
+        "match_id": "NA1_5647390889",
+        "game_creation_time": 1790139294794
+      },
+      {
+        "match_id": "NA1_5647386299",
+        "game_creation_time": 1790139311669
+      },
+      {
+        "match_id": "NA1_5647389971",
+        "game_creation_time": 1790139323884
+      },
+      {
+        "match_id": "NA1_5647386257",
+        "game_creation_time": 1790139327692
+      },
+      {
+        "match_id": "NA1_5647392910",
+        "game_creation_time": 1790139375483
+      },
+      {
+        "match_id": "NA1_5647384358",
+        "game_creation_time": 1790139381014
+      },
+      {
+        "match_id": "NA1_5647385319",
+        "game_creation_time": 1790139401480
+      },
+      {
+        "match_id": "NA1_5647390959",
+        "game_creation_time": 1790139406419
+      },
+      {
+        "match_id": "NA1_5647383479",
+        "game_creation_time": 1790139435756
+      },
+      {
+        "match_id": "NA1_5647385362",
+        "game_creation_time": 1790139445305
+      },
+      {
+        "match_id": "NA1_5647382555",
+        "game_creation_time": 1790139458358
+      },
+      {
+        "match_id": "NA1_5647387352",
+        "game_creation_time": 1790139478529
+      },
+      {
+        "match_id": "NA1_5647388327",
+        "game_creation_time": 1790139531712
+      },
+      {
+        "match_id": "NA1_5647390106",
+        "game_creation_time": 1790139545825
+      },
+      {
+        "match_id": "NA1_5647392059",
+        "game_creation_time": 1790139555256
+      },
+      {
+        "match_id": "NA1_5647383597",
+        "game_creation_time": 1790139610247
+      },
+      {
+        "match_id": "NA1_5647394058",
+        "game_creation_time": 1790139612250
+      },
+      {
+        "match_id": "NA1_5647382700",
+        "game_creation_time": 1790139616382
+      },
+      {
+        "match_id": "NA1_5647395925",
+        "game_creation_time": 1790139633976
+      },
+      {
+        "match_id": "NA1_5647389333",
+        "game_creation_time": 1790139657249
+      },
+      {
+        "match_id": "NA1_5647383636",
+        "game_creation_time": 1790139662635
+      },
+      {
+        "match_id": "NA1_5647385499",
+        "game_creation_time": 1790139664234
+      },
+      {
+        "match_id": "NA1_5647394077",
+        "game_creation_time": 1790139666214
+      },
+      {
+        "match_id": "NA1_5647391178",
+        "game_creation_time": 1790139723096
+      },
+      {
+        "match_id": "NA1_5647385551",
+        "game_creation_time": 1790139767590
+      },
+      {
+        "match_id": "NA1_5647396006",
+        "game_creation_time": 1790139771890
+      },
+      {
+        "match_id": "NA1_5647383726",
+        "game_creation_time": 1790139774926
+      },
+      {
+        "match_id": "NA1_5647386572",
+        "game_creation_time": 1790139780933
+      },
+      {
+        "match_id": "NA1_5647390277",
+        "game_creation_time": 1790139785512
+      },
+      {
+        "match_id": "NA1_5647394192",
+        "game_creation_time": 1790139789976
+      },
+      {
+        "match_id": "NA1_5647386625",
+        "game_creation_time": 1790139813279
+      },
+      {
+        "match_id": "NA1_5647395213",
+        "game_creation_time": 1790139836765
+      },
+      {
+        "match_id": "NA1_5647396833",
+        "game_creation_time": 1790139848937
+      },
+      {
+        "match_id": "NA1_5647396847",
+        "game_creation_time": 1790139888034
+      },
+      {
+        "match_id": "NA1_5647393304",
+        "game_creation_time": 1790139893881
+      },
+      {
+        "match_id": "NA1_5647392353",
+        "game_creation_time": 1790139909111
+      },
+      {
+        "match_id": "NA1_5647390379",
+        "game_creation_time": 1790139916116
+      },
+      {
+        "match_id": "NA1_5647392341",
+        "game_creation_time": 1790139928377
+      },
+      {
+        "match_id": "NA1_5647393307",
+        "game_creation_time": 1790139931427
+      },
+      {
+        "match_id": "NA1_5647396122",
+        "game_creation_time": 1790139952110
+      },
+      {
+        "match_id": "NA1_5647392389",
+        "game_creation_time": 1790139987076
+      },
+      {
+        "match_id": "NA1_5647396151",
+        "game_creation_time": 1790139992313
+      },
+      {
+        "match_id": "NA1_5647394311",
+        "game_creation_time": 1790140000066
+      },
+      {
+        "match_id": "NA1_5647394344",
+        "game_creation_time": 1790140053857
+      },
+      {
+        "match_id": "NA1_5647391424",
+        "game_creation_time": 1790140092187
+      },
+      {
+        "match_id": "NA1_5647396225",
+        "game_creation_time": 1790140109358
+      },
+      {
+        "match_id": "NA1_5647399823",
+        "game_creation_time": 1790140130859
+      },
+      {
+        "match_id": "NA1_5647397982",
+        "game_creation_time": 1790140141763
+      },
+      {
+        "match_id": "NA1_5647395429",
+        "game_creation_time": 1790140148032
+      },
+      {
+        "match_id": "NA1_5647401828",
+        "game_creation_time": 1790140202381
+      },
+      {
+        "match_id": "NA1_5647392587",
+        "game_creation_time": 1790140248331
+      },
+      {
+        "match_id": "NA1_5647396339",
+        "game_creation_time": 1790140259985
+      },
+      {
+        "match_id": "NA1_5647402837",
+        "game_creation_time": 1790140262087
+      },
+      {
+        "match_id": "NA1_5647397141",
+        "game_creation_time": 1790140278666
+      },
+      {
+        "match_id": "NA1_5647399022",
+        "game_creation_time": 1790140279595
+      },
+      {
+        "match_id": "NA1_5647391546",
+        "game_creation_time": 1790140283466
+      },
+      {
+        "match_id": "NA1_5647402831",
+        "game_creation_time": 1790140299167
+      },
+      {
+        "match_id": "NA1_5647399039",
+        "game_creation_time": 1790140346890
+      },
+      {
+        "match_id": "NA1_5647396418",
+        "game_creation_time": 1790140353750
+      },
+      {
+        "match_id": "NA1_5647400011",
+        "game_creation_time": 1790140363121
+      },
+      {
+        "match_id": "NA1_5647397212",
+        "game_creation_time": 1790140380870
+      },
+      {
+        "match_id": "NA1_5647396443",
+        "game_creation_time": 1790140390214
+      },
+      {
+        "match_id": "NA1_5647404739",
+        "game_creation_time": 1790140434243
+      },
+      {
+        "match_id": "NA1_5647391662",
+        "game_creation_time": 1790140452783
+      },
+      {
+        "match_id": "NA1_5647401029",
+        "game_creation_time": 1790140476689
+      },
+      {
+        "match_id": "NA1_5647397281",
+        "game_creation_time": 1790140478849
+      },
+      {
+        "match_id": "NA1_5647397293",
+        "game_creation_time": 1790140502747
+      },
+      {
+        "match_id": "NA1_5647397297",
+        "game_creation_time": 1790140513243
+      },
+      {
+        "match_id": "NA1_5647405764",
+        "game_creation_time": 1790140531010
+      },
+      {
+        "match_id": "NA1_5647391715",
+        "game_creation_time": 1790140559901
+      },
+      {
+        "match_id": "NA1_5647404803",
+        "game_creation_time": 1790140570347
+      },
+      {
+        "match_id": "NA1_5647401075",
+        "game_creation_time": 1790140591042
+      },
+      {
+        "match_id": "NA1_5647402077",
+        "game_creation_time": 1790140594078
+      },
+      {
+        "match_id": "NA1_5647398283",
+        "game_creation_time": 1790140607142
+      },
+      {
+        "match_id": "NA1_5647405811",
+        "game_creation_time": 1790140618140
+      },
+      {
+        "match_id": "NA1_5647402138",
+        "game_creation_time": 1790140660403
+      },
+      {
+        "match_id": "NA1_5647408774",
+        "game_creation_time": 1790140668069
+      },
+      {
+        "match_id": "NA1_5647403994",
+        "game_creation_time": 1790140671583
+      },
+      {
+        "match_id": "NA1_5647405860",
+        "game_creation_time": 1790140702719
+      },
+      {
+        "match_id": "NA1_5647400206",
+        "game_creation_time": 1790140718685
+      },
+      {
+        "match_id": "NA1_5647402164",
+        "game_creation_time": 1790140743326
+      },
+      {
+        "match_id": "NA1_5647403153",
+        "game_creation_time": 1790140746832
+      },
+      {
+        "match_id": "NA1_5647408860",
+        "game_creation_time": 1790140780550
+      },
+      {
+        "match_id": "NA1_5647404980",
+        "game_creation_time": 1790140783289
+      },
+      {
+        "match_id": "NA1_5647406889",
+        "game_creation_time": 1790140809598
+      },
+      {
+        "match_id": "NA1_5647399349",
+        "game_creation_time": 1790140845589
+      },
+      {
+        "match_id": "NA1_5647399364",
+        "game_creation_time": 1790140867201
+      },
+      {
+        "match_id": "NA1_5647406959",
+        "game_creation_time": 1790140903700
+      },
+      {
+        "match_id": "NA1_5647399415",
+        "game_creation_time": 1790140933120
+      },
+      {
+        "match_id": "NA1_5647403291",
+        "game_creation_time": 1790140946286
+      },
+      {
+        "match_id": "NA1_5647407971",
+        "game_creation_time": 1790140946414
+      },
+      {
+        "match_id": "NA1_5647402322",
+        "game_creation_time": 1790140951224
+      },
+      {
+        "match_id": "NA1_5647400330",
+        "game_creation_time": 1790140951496
+      },
+      {
+        "match_id": "NA1_5647397592",
+        "game_creation_time": 1790140960447
+      },
+      {
+        "match_id": "NA1_5647403304",
+        "game_creation_time": 1790140984432
+      },
+      {
+        "match_id": "NA1_5647410792",
+        "game_creation_time": 1790140995903
+      },
+      {
+        "match_id": "NA1_5647397633",
+        "game_creation_time": 1790141013167
+      },
+      {
+        "match_id": "NA1_5647408022",
+        "game_creation_time": 1790141052004
+      },
+      {
+        "match_id": "NA1_5647410033",
+        "game_creation_time": 1790141070345
+      },
+      {
+        "match_id": "NA1_5647401391",
+        "game_creation_time": 1790141074140
+      },
+      {
+        "match_id": "NA1_5647401427",
+        "game_creation_time": 1790141119257
+      },
+      {
+        "match_id": "NA1_5647398612",
+        "game_creation_time": 1790141131022
+      },
+      {
+        "match_id": "NA1_5647403406",
+        "game_creation_time": 1790141135522
+      },
+      {
+        "match_id": "NA1_5647405182",
+        "game_creation_time": 1790141141971
+      },
+      {
+        "match_id": "NA1_5647399548",
+        "game_creation_time": 1790141151983
+      },
+      {
+        "match_id": "NA1_5647403429",
+        "game_creation_time": 1790141162154
+      },
+      {
+        "match_id": "NA1_5647409130",
+        "game_creation_time": 1790141172863
+      },
+      {
+        "match_id": "NA1_5647398657",
+        "game_creation_time": 1790141201954
+      },
+      {
+        "match_id": "NA1_5647398684",
+        "game_creation_time": 1790141217504
+      },
+      {
+        "match_id": "NA1_5647410126",
+        "game_creation_time": 1790141232543
+      },
+      {
+        "match_id": "NA1_5647399578",
+        "game_creation_time": 1790141233804
+      },
+      {
+        "match_id": "NA1_5647401508",
+        "game_creation_time": 1790141269605
+      },
+      {
+        "match_id": "NA1_5647406214",
+        "game_creation_time": 1790141270311
+      },
+      {
+        "match_id": "NA1_5647412743",
+        "game_creation_time": 1790141278844
+      },
+      {
+        "match_id": "NA1_5647404366",
+        "game_creation_time": 1790141286555
+      },
+      {
+        "match_id": "NA1_5647410997",
+        "game_creation_time": 1790141329494
+      },
+      {
+        "match_id": "NA1_5647412774",
+        "game_creation_time": 1790141348631
+      },
+      {
+        "match_id": "NA1_5647401561",
+        "game_creation_time": 1790141354163
+      },
+      {
+        "match_id": "NA1_5647403537",
+        "game_creation_time": 1790141354883
+      },
+      {
+        "match_id": "NA1_5647405332",
+        "game_creation_time": 1790141391530
+      },
+      {
+        "match_id": "NA1_5647411857",
+        "game_creation_time": 1790141402533
+      },
+      {
+        "match_id": "NA1_5647403561",
+        "game_creation_time": 1790141417634
+      },
+      {
+        "match_id": "NA1_5647399712",
+        "game_creation_time": 1790141430776
+      },
+      {
+        "match_id": "NA1_5647407329",
+        "game_creation_time": 1790141441201
+      },
+      {
+        "match_id": "NA1_5647402624",
+        "game_creation_time": 1790141453763
+      },
+      {
+        "match_id": "NA1_5647404459",
+        "game_creation_time": 1790141463308
+      },
+      {
+        "match_id": "NA1_5647408298",
+        "game_creation_time": 1790141491185
+      },
+      {
+        "match_id": "NA1_5647412846",
+        "game_creation_time": 1790141494987
+      },
+      {
+        "match_id": "NA1_5647411914",
+        "game_creation_time": 1790141519588
+      },
+      {
+        "match_id": "NA1_5647406397",
+        "game_creation_time": 1790141545620
+      },
+      {
+        "match_id": "NA1_5647406416",
+        "game_creation_time": 1790141596642
+      },
+      {
+        "match_id": "NA1_5647415749",
+        "game_creation_time": 1790141608093
+      },
+      {
+        "match_id": "NA1_5647414771",
+        "game_creation_time": 1790141642341
+      },
+      {
+        "match_id": "NA1_5647404587",
+        "game_creation_time": 1790141679462
+      },
+      {
+        "match_id": "NA1_5647412990",
+        "game_creation_time": 1790141707837
+      },
+      {
+        "match_id": "NA1_5647406540",
+        "game_creation_time": 1790141767700
+      },
+      {
+        "match_id": "NA1_5647412064",
+        "game_creation_time": 1790141776567
+      },
+      {
+        "match_id": "NA1_5647414882",
+        "game_creation_time": 1790141798163
+      },
+      {
+        "match_id": "NA1_5647412137",
+        "game_creation_time": 1790141876020
+      },
+      {
+        "match_id": "NA1_5647416875",
+        "game_creation_time": 1790141876300
+      },
+      {
+        "match_id": "NA1_5647409584",
+        "game_creation_time": 1790141888200
+      },
+      {
+        "match_id": "NA1_5647411342",
+        "game_creation_time": 1790141897193
+      },
+      {
+        "match_id": "NA1_5647416901",
+        "game_creation_time": 1790141918747
+      },
+      {
+        "match_id": "NA1_5647409599",
+        "game_creation_time": 1790141940532
+      },
+      {
+        "match_id": "NA1_5647414962",
+        "game_creation_time": 1790141941843
+      },
+      {
+        "match_id": "NA1_5647417904",
+        "game_creation_time": 1790141951778
+      },
+      {
+        "match_id": "NA1_5647405701",
+        "game_creation_time": 1790141957934
+      },
+      {
+        "match_id": "NA1_5647406671",
+        "game_creation_time": 1790141984092
+      },
+      {
+        "match_id": "NA1_5647409632",
+        "game_creation_time": 1790142005931
+      },
+      {
+        "match_id": "NA1_5647419757",
+        "game_creation_time": 1790142049876
+      },
+      {
+        "match_id": "NA1_5647415037",
+        "game_creation_time": 1790142055093
+      },
+      {
+        "match_id": "NA1_5647412279",
+        "game_creation_time": 1790142110379
+      },
+      {
+        "match_id": "NA1_5647410627",
+        "game_creation_time": 1790142130303
+      },
+      {
+        "match_id": "NA1_5647412309",
+        "game_creation_time": 1790142145707
+      },
+      {
+        "match_id": "NA1_5647419823",
+        "game_creation_time": 1790142176923
+      },
+      {
+        "match_id": "NA1_5647418045",
+        "game_creation_time": 1790142189641
+      },
+      {
+        "match_id": "NA1_5647421816",
+        "game_creation_time": 1790142200649
+      },
+      {
+        "match_id": "NA1_5647413301",
+        "game_creation_time": 1790142217890
+      },
+      {
+        "match_id": "NA1_5647416100",
+        "game_creation_time": 1790142220837
+      },
+      {
+        "match_id": "NA1_5647423752",
+        "game_creation_time": 1790142247156
+      },
+      {
+        "match_id": "NA1_5647411561",
+        "game_creation_time": 1790142248549
+      },
+      {
+        "match_id": "NA1_5647410721",
+        "game_creation_time": 1790142269845
+      },
+      {
+        "match_id": "NA1_5647418089",
+        "game_creation_time": 1790142275375
+      },
+      {
+        "match_id": "NA1_5647424736",
+        "game_creation_time": 1790142301262
+      },
+      {
+        "match_id": "NA1_5647415199",
+        "game_creation_time": 1790142312384
+      },
+      {
+        "match_id": "NA1_5647418165",
+        "game_creation_time": 1790142339722
+      },
+      {
+        "match_id": "NA1_5647420896",
+        "game_creation_time": 1790142351799
+      },
+      {
+        "match_id": "NA1_5647423815",
+        "game_creation_time": 1790142366080
+      },
+      {
+        "match_id": "NA1_5647411623",
+        "game_creation_time": 1790142401751
+      },
+      {
+        "match_id": "NA1_5647418158",
+        "game_creation_time": 1790142411344
+      },
+      {
+        "match_id": "NA1_5647415241",
+        "game_creation_time": 1790142411895
+      },
+      {
+        "match_id": "NA1_5647414334",
+        "game_creation_time": 1790142415594
+      },
+      {
+        "match_id": "NA1_5647421901",
+        "game_creation_time": 1790142424924
+      },
+      {
+        "match_id": "NA1_5647412493",
+        "game_creation_time": 1790142459247
+      },
+      {
+        "match_id": "NA1_5647419014",
+        "game_creation_time": 1790142464848
+      },
+      {
+        "match_id": "NA1_5647420953",
+        "game_creation_time": 1790142469514
+      },
+      {
+        "match_id": "NA1_5647417296",
+        "game_creation_time": 1790142564144
+      },
+      {
+        "match_id": "NA1_5647416290",
+        "game_creation_time": 1790142574806
+      },
+      {
+        "match_id": "NA1_5647424883",
+        "game_creation_time": 1790142575378
+      },
+      {
+        "match_id": "NA1_5647416295",
+        "game_creation_time": 1790142605477
+      },
+      {
+        "match_id": "NA1_5647412581",
+        "game_creation_time": 1790142643119
+      },
+      {
+        "match_id": "NA1_5647421093",
+        "game_creation_time": 1790142679783
+      },
+      {
+        "match_id": "NA1_5647424953",
+        "game_creation_time": 1790142704634
+      },
+      {
+        "match_id": "NA1_5647414509",
+        "game_creation_time": 1790142714354
+      },
+      {
+        "match_id": "NA1_5647413601",
+        "game_creation_time": 1790142727328
+      },
+      {
+        "match_id": "NA1_5647412695",
+        "game_creation_time": 1790142777217
+      },
+      {
+        "match_id": "NA1_5647425031",
+        "game_creation_time": 1790142827907
+      },
+      {
+        "match_id": "NA1_5647420197",
+        "game_creation_time": 1790142833635
+      },
+      {
+        "match_id": "NA1_5647424109",
+        "game_creation_time": 1790142850064
+      },
+      {
+        "match_id": "NA1_5647414599",
+        "game_creation_time": 1790142881375
+      },
+      {
+        "match_id": "NA1_5647421209",
+        "game_creation_time": 1790142892882
+      },
+      {
+        "match_id": "NA1_5647422208",
+        "game_creation_time": 1790142893392
+      },
+      {
+        "match_id": "NA1_5647417473",
+        "game_creation_time": 1790142897985
+      },
+      {
+        "match_id": "NA1_5647415533",
+        "game_creation_time": 1790142904164
+      },
+      {
+        "match_id": "NA1_5647413713",
+        "game_creation_time": 1790142924996
+      },
+      {
+        "match_id": "NA1_5647414625",
+        "game_creation_time": 1790142936309
+      },
+      {
+        "match_id": "NA1_5647423170",
+        "game_creation_time": 1790142960981
+      },
+      {
+        "match_id": "NA1_5647421254",
+        "game_creation_time": 1790143001650
+      },
+      {
+        "match_id": "NA1_5647425145",
+        "game_creation_time": 1790143024298
+      },
+      {
+        "match_id": "NA1_5647418517",
+        "game_creation_time": 1790143033787
+      },
+      {
+        "match_id": "NA1_5647425130",
+        "game_creation_time": 1790143035341
+      },
+      {
+        "match_id": "NA1_5647425161",
+        "game_creation_time": 1790143045391
+      },
+      {
+        "match_id": "NA1_5647425999",
+        "game_creation_time": 1790143045595
+      },
+      {
+        "match_id": "NA1_5647419378",
+        "game_creation_time": 1790143083263
+      },
+      {
+        "match_id": "NA1_5647422319",
+        "game_creation_time": 1790143098155
+      },
+      {
+        "match_id": "NA1_5647425211",
+        "game_creation_time": 1790143149554
+      },
+      {
+        "match_id": "NA1_5647417606",
+        "game_creation_time": 1790143171054
+      },
+      {
+        "match_id": "NA1_5647425226",
+        "game_creation_time": 1790143179324
+      },
+      {
+        "match_id": "NA1_5647426901",
+        "game_creation_time": 1790143191209
+      },
+      {
+        "match_id": "NA1_5647416641",
+        "game_creation_time": 1790143199727
+      },
+      {
+        "match_id": "NA1_5647424324",
+        "game_creation_time": 1790143240390
+      },
+      {
+        "match_id": "NA1_5647418658",
+        "game_creation_time": 1790143270093
+      },
+      {
+        "match_id": "NA1_5647421392",
+        "game_creation_time": 1790143271821
+      },
+      {
+        "match_id": "NA1_5647424370",
+        "game_creation_time": 1790143316855
+      },
+      {
+        "match_id": "NA1_5647427933",
+        "game_creation_time": 1790143330847
+      },
+      {
+        "match_id": "NA1_5647427927",
+        "game_creation_time": 1790143333159
+      },
+      {
+        "match_id": "NA1_5647423411",
+        "game_creation_time": 1790143392863
+      },
+      {
+        "match_id": "NA1_5647423420",
+        "game_creation_time": 1790143412354
+      },
+      {
+        "match_id": "NA1_5647420503",
+        "game_creation_time": 1790143418163
+      },
+      {
+        "match_id": "NA1_5647428871",
+        "game_creation_time": 1790143424755
+      },
+      {
+        "match_id": "NA1_5647421491",
+        "game_creation_time": 1790143450483
+      },
+      {
+        "match_id": "NA1_5647430797",
+        "game_creation_time": 1790143458117
+      },
+      {
+        "match_id": "NA1_5647423457",
+        "game_creation_time": 1790143493664
+      },
+      {
+        "match_id": "NA1_5647420552",
+        "game_creation_time": 1790143498659
+      },
+      {
+        "match_id": "NA1_5647429880",
+        "game_creation_time": 1790143517320
+      },
+      {
+        "match_id": "NA1_5647430823",
+        "game_creation_time": 1790143524837
+      },
+      {
+        "match_id": "NA1_5647428035",
+        "game_creation_time": 1790143541119
+      },
+      {
+        "match_id": "NA1_5647426244",
+        "game_creation_time": 1790143568115
+      },
+      {
+        "match_id": "NA1_5647422561",
+        "game_creation_time": 1790143576644
+      },
+      {
+        "match_id": "NA1_5647427113",
+        "game_creation_time": 1790143589524
+      },
+      {
+        "match_id": "NA1_5647428948",
+        "game_creation_time": 1790143621720
+      },
+      {
+        "match_id": "NA1_5647427151",
+        "game_creation_time": 1790143642458
+      },
+      {
+        "match_id": "NA1_5647425488",
+        "game_creation_time": 1790143654459
+      },
+      {
+        "match_id": "NA1_5647431871",
+        "game_creation_time": 1790143667131
+      },
+      {
+        "match_id": "NA1_5647420634",
+        "game_creation_time": 1790143674312
+      },
+      {
+        "match_id": "NA1_5647423547",
+        "game_creation_time": 1790143682635
+      },
+      {
+        "match_id": "NA1_5647425501",
+        "game_creation_time": 1790143694760
+      },
+      {
+        "match_id": "NA1_5647419696",
+        "game_creation_time": 1790143717337
+      },
+      {
+        "match_id": "NA1_5647429992",
+        "game_creation_time": 1790143732852
+      },
+      {
+        "match_id": "NA1_5647430003",
+        "game_creation_time": 1790143733680
+      },
+      {
+        "match_id": "NA1_5647431939",
+        "game_creation_time": 1790143755591
+      },
+      {
+        "match_id": "NA1_5647419727",
+        "game_creation_time": 1790143763903
+      },
+      {
+        "match_id": "NA1_5647426364",
+        "game_creation_time": 1790143791938
+      },
+      {
+        "match_id": "NA1_5647420717",
+        "game_creation_time": 1790143817282
+      },
+      {
+        "match_id": "NA1_5647429089",
+        "game_creation_time": 1790143912094
+      },
+      {
+        "match_id": "NA1_5647426426",
+        "game_creation_time": 1790143914595
+      },
+      {
+        "match_id": "NA1_5647423673",
+        "game_creation_time": 1790143926601
+      },
+      {
+        "match_id": "NA1_5647429143",
+        "game_creation_time": 1790143954795
+      },
+      {
+        "match_id": "NA1_5647431068",
+        "game_creation_time": 1790143979560
+      },
+      {
+        "match_id": "NA1_5647435755",
+        "game_creation_time": 1790143982492
+      },
+      {
+        "match_id": "NA1_5647428272",
+        "game_creation_time": 1790144020562
+      },
+      {
+        "match_id": "NA1_5647427349",
+        "game_creation_time": 1790144044138
+      },
+      {
+        "match_id": "NA1_5647426492",
+        "game_creation_time": 1790144065363
+      },
+      {
+        "match_id": "NA1_5647437770",
+        "game_creation_time": 1790144089590
+      },
+      {
+        "match_id": "NA1_5647426507",
+        "game_creation_time": 1790144111664
+      },
+      {
+        "match_id": "NA1_5647425725",
+        "game_creation_time": 1790144174709
+      },
+      {
+        "match_id": "NA1_5647432125",
+        "game_creation_time": 1790144180184
+      },
+      {
+        "match_id": "NA1_5647438810",
+        "game_creation_time": 1790144187780
+      },
+      {
+        "match_id": "NA1_5647428382",
+        "game_creation_time": 1790144199179
+      },
+      {
+        "match_id": "NA1_5647430238",
+        "game_creation_time": 1790144257383
+      },
+      {
+        "match_id": "NA1_5647438860",
+        "game_creation_time": 1790144276630
+      },
+      {
+        "match_id": "NA1_5647437863",
+        "game_creation_time": 1790144290172
+      },
+      {
+        "match_id": "NA1_5647430258",
+        "game_creation_time": 1790144307429
+      },
+      {
+        "match_id": "NA1_5647439834",
+        "game_creation_time": 1790144331853
+      },
+      {
+        "match_id": "NA1_5647429325",
+        "game_creation_time": 1790144337015
+      },
+      {
+        "match_id": "NA1_5647435981",
+        "game_creation_time": 1790144404652
+      },
+      {
+        "match_id": "NA1_5647437949",
+        "game_creation_time": 1790144408598
+      },
+      {
+        "match_id": "NA1_5647434969",
+        "game_creation_time": 1790144415328
+      },
+      {
+        "match_id": "NA1_5647436002",
+        "game_creation_time": 1790144421292
+      },
+      {
+        "match_id": "NA1_5647428494",
+        "game_creation_time": 1790144483062
+      },
+      {
+        "match_id": "NA1_5647426714",
+        "game_creation_time": 1790144535664
+      },
+      {
+        "match_id": "NA1_5647430365",
+        "game_creation_time": 1790144555541
+      },
+      {
+        "match_id": "NA1_5647439934",
+        "game_creation_time": 1790144558834
+      },
+      {
+        "match_id": "NA1_5647438979",
+        "game_creation_time": 1790144567333
+      },
+      {
+        "match_id": "NA1_5647427628",
+        "game_creation_time": 1790144582516
+      },
+      {
+        "match_id": "NA1_5647439979",
+        "game_creation_time": 1790144655681
+      },
+      {
+        "match_id": "NA1_5647433370",
+        "game_creation_time": 1790144662487
+      },
+      {
+        "match_id": "NA1_5647439067",
+        "game_creation_time": 1790144700942
+      },
+      {
+        "match_id": "NA1_5647440804",
+        "game_creation_time": 1790144714666
+      },
+      {
+        "match_id": "NA1_5647440005",
+        "game_creation_time": 1790144723874
+      },
+      {
+        "match_id": "NA1_5647433430",
+        "game_creation_time": 1790144751533
+      },
+      {
+        "match_id": "NA1_5647440040",
+        "game_creation_time": 1790144766843
+      },
+      {
+        "match_id": "NA1_5647438098",
+        "game_creation_time": 1790144768118
+      },
+      {
+        "match_id": "NA1_5647433451",
+        "game_creation_time": 1790144825761
+      },
+      {
+        "match_id": "NA1_5647432434",
+        "game_creation_time": 1790144843892
+      },
+      {
+        "match_id": "NA1_5647437179",
+        "game_creation_time": 1790144848407
+      },
+      {
+        "match_id": "NA1_5647428707",
+        "game_creation_time": 1790144896080
+      },
+      {
+        "match_id": "NA1_5647429589",
+        "game_creation_time": 1790144932319
+      },
+      {
+        "match_id": "NA1_5647436221",
+        "game_creation_time": 1790144939656
+      },
+      {
+        "match_id": "NA1_5647430554",
+        "game_creation_time": 1790144941296
+      },
+      {
+        "match_id": "NA1_5647434316",
+        "game_creation_time": 1790144945819
+      },
+      {
+        "match_id": "NA1_5647437222",
+        "game_creation_time": 1790144956186
+      },
+      {
+        "match_id": "NA1_5647435244",
+        "game_creation_time": 1790144986337
+      },
+      {
+        "match_id": "NA1_5647435294",
+        "game_creation_time": 1790145033992
+      },
+      {
+        "match_id": "NA1_5647435313",
+        "game_creation_time": 1790145085304
+      },
+      {
+        "match_id": "NA1_5647442807",
+        "game_creation_time": 1790145091426
+      },
+      {
+        "match_id": "NA1_5647438245",
+        "game_creation_time": 1790145115222
+      },
+      {
+        "match_id": "NA1_5647441883",
+        "game_creation_time": 1790145122050
+      },
+      {
+        "match_id": "NA1_5647440207",
+        "game_creation_time": 1790145136100
+      },
+      {
+        "match_id": "NA1_5647442828",
+        "game_creation_time": 1790145168587
+      },
+      {
+        "match_id": "NA1_5647437319",
+        "game_creation_time": 1790145170609
+      },
+      {
+        "match_id": "NA1_5647435368",
+        "game_creation_time": 1790145233997
+      },
+      {
+        "match_id": "NA1_5647429710",
+        "game_creation_time": 1790145256220
+      },
+      {
+        "match_id": "NA1_5647443744",
+        "game_creation_time": 1790145270993
+      },
+      {
+        "match_id": "NA1_5647440264",
+        "game_creation_time": 1790145292929
+      },
+      {
+        "match_id": "NA1_5647440270",
+        "game_creation_time": 1790145297549
+      },
+      {
+        "match_id": "NA1_5647435416",
+        "game_creation_time": 1790145358357
+      },
+      {
+        "match_id": "NA1_5647442915",
+        "game_creation_time": 1790145359551
+      },
+      {
+        "match_id": "NA1_5647432671",
+        "game_creation_time": 1790145372957
+      },
+      {
+        "match_id": "NA1_5647438378",
+        "game_creation_time": 1790145390940
+      },
+      {
+        "match_id": "NA1_5647436457",
+        "game_creation_time": 1790145447889
+      },
+      {
+        "match_id": "NA1_5647436470",
+        "game_creation_time": 1790145454393
+      },
+      {
+        "match_id": "NA1_5647435464",
+        "game_creation_time": 1790145467045
+      },
+      {
+        "match_id": "NA1_5647438438",
+        "game_creation_time": 1790145517182
+      },
+      {
+        "match_id": "NA1_5647444833",
+        "game_creation_time": 1790145528416
+      },
+      {
+        "match_id": "NA1_5647441179",
+        "game_creation_time": 1790145540689
+      },
+      {
+        "match_id": "NA1_5647438454",
+        "game_creation_time": 1790145559787
+      },
+      {
+        "match_id": "NA1_5647438460",
+        "game_creation_time": 1790145578997
+      },
+      {
+        "match_id": "NA1_5647435528",
+        "game_creation_time": 1790145580053
+      },
+      {
+        "match_id": "NA1_5647444855",
+        "game_creation_time": 1790145582316
+      },
+      {
+        "match_id": "NA1_5647440398",
+        "game_creation_time": 1790145601130
+      },
+      {
+        "match_id": "NA1_5647436544",
+        "game_creation_time": 1790145647348
+      },
+      {
+        "match_id": "NA1_5647435552",
+        "game_creation_time": 1790145654306
+      },
+      {
+        "match_id": "NA1_5647445844",
+        "game_creation_time": 1790145674874
+      },
+      {
+        "match_id": "NA1_5647435591",
+        "game_creation_time": 1790145732575
+      },
+      {
+        "match_id": "NA1_5647445863",
+        "game_creation_time": 1790145738994
+      },
+      {
+        "match_id": "NA1_5647440458",
+        "game_creation_time": 1790145755109
+      },
+      {
+        "match_id": "NA1_5647436600",
+        "game_creation_time": 1790145786573
+      },
+      {
+        "match_id": "NA1_5647446882",
+        "game_creation_time": 1790145800053
+      },
+      {
+        "match_id": "NA1_5647440492",
+        "game_creation_time": 1790145834298
+      },
+      {
+        "match_id": "NA1_5647436627",
+        "game_creation_time": 1790145857027
+      },
+      {
+        "match_id": "NA1_5647445927",
+        "game_creation_time": 1790145888833
+      },
+      {
+        "match_id": "NA1_5647445003",
+        "game_creation_time": 1790145921111
+      },
+      {
+        "match_id": "NA1_5647443198",
+        "game_creation_time": 1790145967622
+      },
+      {
+        "match_id": "NA1_5647441375",
+        "game_creation_time": 1790145970628
+      },
+      {
+        "match_id": "NA1_5647445970",
+        "game_creation_time": 1790146033468
+      },
+      {
+        "match_id": "NA1_5647441406",
+        "game_creation_time": 1790146044948
+      },
+      {
+        "match_id": "NA1_5647444072",
+        "game_creation_time": 1790146058365
+      },
+      {
+        "match_id": "NA1_5647444097",
+        "game_creation_time": 1790146097442
+      },
+      {
+        "match_id": "NA1_5647445059",
+        "game_creation_time": 1790146106177
+      },
+      {
+        "match_id": "NA1_5647437712",
+        "game_creation_time": 1790146121669
+      },
+      {
+        "match_id": "NA1_5647439668",
+        "game_creation_time": 1790146124886
+      },
+      {
+        "match_id": "NA1_5647448022",
+        "game_creation_time": 1790146139891
+      },
+      {
+        "match_id": "NA1_5647443255",
+        "game_creation_time": 1790146140036
+      },
+      {
+        "match_id": "NA1_5647437714",
+        "game_creation_time": 1790146145911
+      },
+      {
+        "match_id": "NA1_5647441479",
+        "game_creation_time": 1790146216887
+      },
+      {
+        "match_id": "NA1_5647441512",
+        "game_creation_time": 1790146277105
+      },
+      {
+        "match_id": "NA1_5647453759",
+        "game_creation_time": 1790146311307
+      },
+      {
+        "match_id": "NA1_5647448941",
+        "game_creation_time": 1790146329202
+      },
+      {
+        "match_id": "NA1_5647450817",
+        "game_creation_time": 1790146330417
+      },
+      {
+        "match_id": "NA1_5647453755",
+        "game_creation_time": 1790146340467
+      },
+      {
+        "match_id": "NA1_5647446122",
+        "game_creation_time": 1790146369628
+      },
+      {
+        "match_id": "NA1_5647446123",
+        "game_creation_time": 1790146372447
+      },
+      {
+        "match_id": "NA1_5647446145",
+        "game_creation_time": 1790146417722
+      },
+      {
+        "match_id": "NA1_5647453805",
+        "game_creation_time": 1790146452969
+      },
+      {
+        "match_id": "NA1_5647454776",
+        "game_creation_time": 1790146516202
+      },
+      {
+        "match_id": "NA1_5647447218",
+        "game_creation_time": 1790146538315
+      },
+      {
+        "match_id": "NA1_5647445240",
+        "game_creation_time": 1790146594744
+      },
+      {
+        "match_id": "NA1_5647446217",
+        "game_creation_time": 1790146602633
+      },
+      {
+        "match_id": "NA1_5647450966",
+        "game_creation_time": 1790146668996
+      },
+      {
+        "match_id": "NA1_5647453890",
+        "game_creation_time": 1790146673452
+      },
+      {
+        "match_id": "NA1_5647443460",
+        "game_creation_time": 1790146681857
+      },
+      {
+        "match_id": "NA1_5647449978",
+        "game_creation_time": 1790146683537
+      },
+      {
+        "match_id": "NA1_5647442562",
+        "game_creation_time": 1790146700879
+      },
+      {
+        "match_id": "NA1_5647447271",
+        "game_creation_time": 1790146721522
+      },
+      {
+        "match_id": "NA1_5647448263",
+        "game_creation_time": 1790146749890
+      },
+      {
+        "match_id": "NA1_5647442598",
+        "game_creation_time": 1790146781417
+      },
+      {
+        "match_id": "NA1_5647444376",
+        "game_creation_time": 1790146801442
+      },
+      {
+        "match_id": "NA1_5647441717",
+        "game_creation_time": 1790146827462
+      },
+      {
+        "match_id": "NA1_5647442617",
+        "game_creation_time": 1790146875484
+      },
+      {
+        "match_id": "NA1_5647448333",
+        "game_creation_time": 1790146922777
+      },
+      {
+        "match_id": "NA1_5647453988",
+        "game_creation_time": 1790146952848
+      },
+      {
+        "match_id": "NA1_5647449184",
+        "game_creation_time": 1790146962927
+      },
+      {
+        "match_id": "NA1_5647455786",
+        "game_creation_time": 1790146981631
+      },
+      {
+        "match_id": "NA1_5647447378",
+        "game_creation_time": 1790146983177
+      },
+      {
+        "match_id": "NA1_5647454979",
+        "game_creation_time": 1790146984517
+      },
+      {
+        "match_id": "NA1_5647442709",
+        "game_creation_time": 1790147067060
+      },
+      {
+        "match_id": "NA1_5647444475",
+        "game_creation_time": 1790147092638
+      },
+      {
+        "match_id": "NA1_5647455819",
+        "game_creation_time": 1790147104041
+      },
+      {
+        "match_id": "NA1_5647445465",
+        "game_creation_time": 1790147126473
+      },
+      {
+        "match_id": "NA1_5647444504",
+        "game_creation_time": 1790147131580
+      },
+      {
+        "match_id": "NA1_5647455045",
+        "game_creation_time": 1790147170140
+      },
+      {
+        "match_id": "NA1_5647451186",
+        "game_creation_time": 1790147251583
+      },
+      {
+        "match_id": "NA1_5647453172",
+        "game_creation_time": 1790147285279
+      },
+      {
+        "match_id": "NA1_5647453194",
+        "game_creation_time": 1790147348143
+      },
+      {
+        "match_id": "NA1_5647453198",
+        "game_creation_time": 1790147348511
+      },
+      {
+        "match_id": "NA1_5647443707",
+        "game_creation_time": 1790147355520
+      },
+      {
+        "match_id": "NA1_5647446503",
+        "game_creation_time": 1790147371468
+      },
+      {
+        "match_id": "NA1_5647455926",
+        "game_creation_time": 1790147380739
+      },
+      {
+        "match_id": "NA1_5647451273",
+        "game_creation_time": 1790147464200
+      },
+      {
+        "match_id": "NA1_5647448538",
+        "game_creation_time": 1790147473403
+      },
+      {
+        "match_id": "NA1_5647457767",
+        "game_creation_time": 1790147496292
+      },
+      {
+        "match_id": "NA1_5647453240",
+        "game_creation_time": 1790147513213
+      },
+      {
+        "match_id": "NA1_5647448578",
+        "game_creation_time": 1790147556201
+      },
+      {
+        "match_id": "NA1_5647452287",
+        "game_creation_time": 1790147585293
+      },
+      {
+        "match_id": "NA1_5647445644",
+        "game_creation_time": 1790147640816
+      },
+      {
+        "match_id": "NA1_5647451337",
+        "game_creation_time": 1790147668189
+      },
+      {
+        "match_id": "NA1_5647456064",
+        "game_creation_time": 1790147732653
+      },
+      {
+        "match_id": "NA1_5647449468",
+        "game_creation_time": 1790147737314
+      },
+      {
+        "match_id": "NA1_5647457879",
+        "game_creation_time": 1790147780355
+      },
+      {
+        "match_id": "NA1_5647452371",
+        "game_creation_time": 1790147786557
+      },
+      {
+        "match_id": "NA1_5647458744",
+        "game_creation_time": 1790147803078
+      },
+      {
+        "match_id": "NA1_5647449489",
+        "game_creation_time": 1790147807640
+      }
+    ],
+    "validation": [
+      {
+        "match_id": "NA1_5647449506",
+        "game_creation_time": 1790147837653
+      },
+      {
+        "match_id": "NA1_5647450417",
+        "game_creation_time": 1790147850906
+      },
+      {
+        "match_id": "NA1_5647454322",
+        "game_creation_time": 1790147894811
+      },
+      {
+        "match_id": "NA1_5647456142",
+        "game_creation_time": 1790148022083
+      },
+      {
+        "match_id": "NA1_5647449587",
+        "game_creation_time": 1790148065601
+      },
+      {
+        "match_id": "NA1_5647455357",
+        "game_creation_time": 1790148070159
+      },
+      {
+        "match_id": "NA1_5647450516",
+        "game_creation_time": 1790148074222
+      },
+      {
+        "match_id": "NA1_5647449601",
+        "game_creation_time": 1790148098696
+      },
+      {
+        "match_id": "NA1_5647459849",
+        "game_creation_time": 1790148192685
+      },
+      {
+        "match_id": "NA1_5647454412",
+        "game_creation_time": 1790148204927
+      },
+      {
+        "match_id": "NA1_5647450551",
+        "game_creation_time": 1790148212568
+      },
+      {
+        "match_id": "NA1_5647461825",
+        "game_creation_time": 1790148249964
+      },
+      {
+        "match_id": "NA1_5647456206",
+        "game_creation_time": 1790148278185
+      },
+      {
+        "match_id": "NA1_5647462849",
+        "game_creation_time": 1790148328936
+      },
+      {
+        "match_id": "NA1_5647458941",
+        "game_creation_time": 1790148332069
+      },
+      {
+        "match_id": "NA1_5647456237",
+        "game_creation_time": 1790148359309
+      },
+      {
+        "match_id": "NA1_5647461880",
+        "game_creation_time": 1790148399912
+      },
+      {
+        "match_id": "NA1_5647451596",
+        "game_creation_time": 1790148430546
+      },
+      {
+        "match_id": "NA1_5647453534",
+        "game_creation_time": 1790148430620
+      },
+      {
+        "match_id": "NA1_5647456252",
+        "game_creation_time": 1790148436344
+      },
+      {
+        "match_id": "NA1_5647451580",
+        "game_creation_time": 1790148453540
+      },
+      {
+        "match_id": "NA1_5647452619",
+        "game_creation_time": 1790148500457
+      },
+      {
+        "match_id": "NA1_5647460920",
+        "game_creation_time": 1790148547930
+      },
+      {
+        "match_id": "NA1_5647459953",
+        "game_creation_time": 1790148548888
+      },
+      {
+        "match_id": "NA1_5647455520",
+        "game_creation_time": 1790148591688
+      },
+      {
+        "match_id": "NA1_5647457266",
+        "game_creation_time": 1790148595674
+      },
+      {
+        "match_id": "NA1_5647459964",
+        "game_creation_time": 1790148595798
+      },
+      {
+        "match_id": "NA1_5647453638",
+        "game_creation_time": 1790148721287
+      },
+      {
+        "match_id": "NA1_5647461990",
+        "game_creation_time": 1790148785843
+      },
+      {
+        "match_id": "NA1_5647461010",
+        "game_creation_time": 1790148828260
+      },
+      {
+        "match_id": "NA1_5647455609",
+        "game_creation_time": 1790148868734
+      },
+      {
+        "match_id": "NA1_5647459098",
+        "game_creation_time": 1790148873166
+      },
+      {
+        "match_id": "NA1_5647459121",
+        "game_creation_time": 1790148892368
+      },
+      {
+        "match_id": "NA1_5647461037",
+        "game_creation_time": 1790148901563
+      },
+      {
+        "match_id": "NA1_5647457356",
+        "game_creation_time": 1790148930461
+      },
+      {
+        "match_id": "NA1_5647463063",
+        "game_creation_time": 1790148935262
+      },
+      {
+        "match_id": "NA1_5647454667",
+        "game_creation_time": 1790149015827
+      },
+      {
+        "match_id": "NA1_5647460086",
+        "game_creation_time": 1790149032243
+      },
+      {
+        "match_id": "NA1_5647465791",
+        "game_creation_time": 1790149060611
+      },
+      {
+        "match_id": "NA1_5647455706",
+        "game_creation_time": 1790149104310
+      },
+      {
+        "match_id": "NA1_5647466813",
+        "game_creation_time": 1790149122313
+      },
+      {
+        "match_id": "NA1_5647456486",
+        "game_creation_time": 1790149194489
+      },
+      {
+        "match_id": "NA1_5647464866",
+        "game_creation_time": 1790149195908
+      },
+      {
+        "match_id": "NA1_5647456507",
+        "game_creation_time": 1790149230585
+      },
+      {
+        "match_id": "NA1_5647467845",
+        "game_creation_time": 1790149320311
+      },
+      {
+        "match_id": "NA1_5647462158",
+        "game_creation_time": 1790149329472
+      },
+      {
+        "match_id": "NA1_5647462165",
+        "game_creation_time": 1790149355590
+      },
+      {
+        "match_id": "NA1_5647462168",
+        "game_creation_time": 1790149382976
+      },
+      {
+        "match_id": "NA1_5647467861",
+        "game_creation_time": 1790149418930
+      },
+      {
+        "match_id": "NA1_5647457510",
+        "game_creation_time": 1790149419621
+      },
+      {
+        "match_id": "NA1_5647464044",
+        "game_creation_time": 1790149477513
+      },
+      {
+        "match_id": "NA1_5647459319",
+        "game_creation_time": 1790149548023
+      },
+      {
+        "match_id": "NA1_5647458455",
+        "game_creation_time": 1790149562935
+      },
+      {
+        "match_id": "NA1_5647466965",
+        "game_creation_time": 1790149646959
+      },
+      {
+        "match_id": "NA1_5647460302",
+        "game_creation_time": 1790149737152
+      },
+      {
+        "match_id": "NA1_5647456667",
+        "game_creation_time": 1790149785896
+      },
+      {
+        "match_id": "NA1_5647459386",
+        "game_creation_time": 1790149801796
+      },
+      {
+        "match_id": "NA1_5647461291",
+        "game_creation_time": 1790149814625
+      },
+      {
+        "match_id": "NA1_5647460361",
+        "game_creation_time": 1790149934913
+      },
+      {
+        "match_id": "NA1_5647468026",
+        "game_creation_time": 1790149941419
+      },
+      {
+        "match_id": "NA1_5647462343",
+        "game_creation_time": 1790149959263
+      },
+      {
+        "match_id": "NA1_5647470742",
+        "game_creation_time": 1790150018512
+      },
+      {
+        "match_id": "NA1_5647468974",
+        "game_creation_time": 1790150047761
+      },
+      {
+        "match_id": "NA1_5647464203",
+        "game_creation_time": 1790150050990
+      },
+      {
+        "match_id": "NA1_5647464227",
+        "game_creation_time": 1790150130169
+      },
+      {
+        "match_id": "NA1_5647468097",
+        "game_creation_time": 1790150209540
+      },
+      {
+        "match_id": "NA1_5647463457",
+        "game_creation_time": 1790150219919
+      },
+      {
+        "match_id": "NA1_5647464284",
+        "game_creation_time": 1790150307985
+      },
+      {
+        "match_id": "NA1_5647462458",
+        "game_creation_time": 1790150308515
+      },
+      {
+        "match_id": "NA1_5647470080",
+        "game_creation_time": 1790150354465
+      },
+      {
+        "match_id": "NA1_5647467171",
+        "game_creation_time": 1790150438843
+      },
+      {
+        "match_id": "NA1_5647466171",
+        "game_creation_time": 1790150452043
+      },
+      {
+        "match_id": "NA1_5647470846",
+        "game_creation_time": 1790150469478
+      },
+      {
+        "match_id": "NA1_5647465226",
+        "game_creation_time": 1790150516790
+      },
+      {
+        "match_id": "NA1_5647465234",
+        "game_creation_time": 1790150553747
+      },
+      {
+        "match_id": "NA1_5647466209",
+        "game_creation_time": 1790150592121
+      },
+      {
+        "match_id": "NA1_5647466212",
+        "game_creation_time": 1790150635912
+      },
+      {
+        "match_id": "NA1_5647468191",
+        "game_creation_time": 1790150642584
+      },
+      {
+        "match_id": "NA1_5647464392",
+        "game_creation_time": 1790150668315
+      },
+      {
+        "match_id": "NA1_5647469150",
+        "game_creation_time": 1790150675337
+      },
+      {
+        "match_id": "NA1_5647460588",
+        "game_creation_time": 1790150729006
+      },
+      {
+        "match_id": "NA1_5647461543",
+        "game_creation_time": 1790150814480
+      },
+      {
+        "match_id": "NA1_5647462593",
+        "game_creation_time": 1790150835668
+      },
+      {
+        "match_id": "NA1_5647470963",
+        "game_creation_time": 1790150859936
+      },
+      {
+        "match_id": "NA1_5647470214",
+        "game_creation_time": 1790150920958
+      },
+      {
+        "match_id": "NA1_5647468286",
+        "game_creation_time": 1790150989852
+      },
+      {
+        "match_id": "NA1_5647459709",
+        "game_creation_time": 1790151005503
+      },
+      {
+        "match_id": "NA1_5647459723",
+        "game_creation_time": 1790151008687
+      },
+      {
+        "match_id": "NA1_5647465401",
+        "game_creation_time": 1790151131734
+      },
+      {
+        "match_id": "NA1_5647466347",
+        "game_creation_time": 1790151171106
+      },
+      {
+        "match_id": "NA1_5647472014",
+        "game_creation_time": 1790151197716
+      },
+      {
+        "match_id": "NA1_5647463723",
+        "game_creation_time": 1790151255460
+      },
+      {
+        "match_id": "NA1_5647470301",
+        "game_creation_time": 1790151271400
+      },
+      {
+        "match_id": "NA1_5647460726",
+        "game_creation_time": 1790151278135
+      },
+      {
+        "match_id": "NA1_5647461674",
+        "game_creation_time": 1790151289341
+      },
+      {
+        "match_id": "NA1_5647466372",
+        "game_creation_time": 1790151319762
+      },
+      {
+        "match_id": "NA1_5647469315",
+        "game_creation_time": 1790151341911
+      },
+      {
+        "match_id": "NA1_5647475748",
+        "game_creation_time": 1790151358283
+      },
+      {
+        "match_id": "NA1_5647472930",
+        "game_creation_time": 1790151413698
+      },
+      {
+        "match_id": "NA1_5647470340",
+        "game_creation_time": 1790151448740
+      },
+      {
+        "match_id": "NA1_5647476753",
+        "game_creation_time": 1790151464116
+      },
+      {
+        "match_id": "NA1_5647473842",
+        "game_creation_time": 1790151468071
+      },
+      {
+        "match_id": "NA1_5647465481",
+        "game_creation_time": 1790151481718
+      },
+      {
+        "match_id": "NA1_5647475787",
+        "game_creation_time": 1790151515746
+      },
+      {
+        "match_id": "NA1_5647474810",
+        "game_creation_time": 1790151549024
+      },
+      {
+        "match_id": "NA1_5647477737",
+        "game_creation_time": 1790151624939
+      },
+      {
+        "match_id": "NA1_5647477756",
+        "game_creation_time": 1790151666111
+      },
+      {
+        "match_id": "NA1_5647473878",
+        "game_creation_time": 1790151671555
+      },
+      {
+        "match_id": "NA1_5647474853",
+        "game_creation_time": 1790151735907
+      },
+      {
+        "match_id": "NA1_5647470435",
+        "game_creation_time": 1790151878252
+      },
+      {
+        "match_id": "NA1_5647470456",
+        "game_creation_time": 1790152001894
+      },
+      {
+        "match_id": "NA1_5647470473",
+        "game_creation_time": 1790152054746
+      },
+      {
+        "match_id": "NA1_5647478738",
+        "game_creation_time": 1790152085283
+      },
+      {
+        "match_id": "NA1_5647478752",
+        "game_creation_time": 1790152112841
+      },
+      {
+        "match_id": "NA1_5647475967",
+        "game_creation_time": 1790152249319
+      },
+      {
+        "match_id": "NA1_5647476911",
+        "game_creation_time": 1790152275624
+      },
+      {
+        "match_id": "NA1_5647475999",
+        "game_creation_time": 1790152385967
+      },
+      {
+        "match_id": "NA1_5647467675",
+        "game_creation_time": 1790152420653
+      },
+      {
+        "match_id": "NA1_5647469569",
+        "game_creation_time": 1790152441534
+      },
+      {
+        "match_id": "NA1_5647476976",
+        "game_creation_time": 1790152531533
+      },
+      {
+        "match_id": "NA1_5647477970",
+        "game_creation_time": 1790152573262
+      },
+      {
+        "match_id": "NA1_5647477971",
+        "game_creation_time": 1790152589382
+      },
+      {
+        "match_id": "NA1_5647473193",
+        "game_creation_time": 1790152599899
+      },
+      {
+        "match_id": "NA1_5647505752",
+        "game_creation_time": 1790163912270
+      },
+      {
+        "match_id": "NA1_5647500766",
+        "game_creation_time": 1790163989840
+      },
+      {
+        "match_id": "NA1_5647495776",
+        "game_creation_time": 1790164227634
+      },
+      {
+        "match_id": "NA1_5647499776",
+        "game_creation_time": 1790164303607
+      },
+      {
+        "match_id": "NA1_5647508774",
+        "game_creation_time": 1790164324907
+      },
+      {
+        "match_id": "NA1_5647504796",
+        "game_creation_time": 1790164536762
+      },
+      {
+        "match_id": "NA1_5647499806",
+        "game_creation_time": 1790164686001
+      },
+      {
+        "match_id": "NA1_5647499820",
+        "game_creation_time": 1790164894523
+      },
+      {
+        "match_id": "NA1_5647505832",
+        "game_creation_time": 1790165016416
+      },
+      {
+        "match_id": "NA1_5647497841",
+        "game_creation_time": 1790165207484
+      },
+      {
+        "match_id": "NA1_5647504850",
+        "game_creation_time": 1790165278023
+      },
+      {
+        "match_id": "NA1_5647500868",
+        "game_creation_time": 1790165327475
+      },
+      {
+        "match_id": "NA1_5647497860",
+        "game_creation_time": 1790165408355
+      },
+      {
+        "match_id": "NA1_5647495887",
+        "game_creation_time": 1790165723348
+      },
+      {
+        "match_id": "NA1_5647506888",
+        "game_creation_time": 1790165782426
+      },
+      {
+        "match_id": "NA1_5647504907",
+        "game_creation_time": 1790165902612
+      },
+      {
+        "match_id": "NA1_5647504914",
+        "game_creation_time": 1790165996776
+      },
+      {
+        "match_id": "NA1_5647504920",
+        "game_creation_time": 1790166061714
+      },
+      {
+        "match_id": "NA1_5647498928",
+        "game_creation_time": 1790166099380
+      },
+      {
+        "match_id": "NA1_5647500956",
+        "game_creation_time": 1790166232703
+      },
+      {
+        "match_id": "NA1_5647505951",
+        "game_creation_time": 1790166316762
+      },
+      {
+        "match_id": "NA1_5647500971",
+        "game_creation_time": 1790166366700
+      },
+      {
+        "match_id": "NA1_5647503941",
+        "game_creation_time": 1790166446974
+      },
+      {
+        "match_id": "NA1_5647505977",
+        "game_creation_time": 1790166506476
+      },
+      {
+        "match_id": "NA1_5647501962",
+        "game_creation_time": 1790166525505
+      },
+      {
+        "match_id": "NA1_5647501963",
+        "game_creation_time": 1790166604960
+      },
+      {
+        "match_id": "NA1_5647499966",
+        "game_creation_time": 1790166669183
+      }
+    ],
+    "test": [
+      {
+        "match_id": "NA1_5647499008",
+        "game_creation_time": 1790166821193
+      },
+      {
+        "match_id": "NA1_5647506030",
+        "game_creation_time": 1790167156238
+      },
+      {
+        "match_id": "NA1_5647500028",
+        "game_creation_time": 1790167300535
+      },
+      {
+        "match_id": "NA1_5647509041",
+        "game_creation_time": 1790167335721
+      },
+      {
+        "match_id": "NA1_5647498051",
+        "game_creation_time": 1790167386553
+      },
+      {
+        "match_id": "NA1_5647501101",
+        "game_creation_time": 1790167492952
+      },
+      {
+        "match_id": "NA1_5647509070",
+        "game_creation_time": 1790167608069
+      },
+      {
+        "match_id": "NA1_5647499126",
+        "game_creation_time": 1790167760354
+      },
+      {
+        "match_id": "NA1_5647498097",
+        "game_creation_time": 1790167768944
+      },
+      {
+        "match_id": "NA1_5647500113",
+        "game_creation_time": 1790167957396
+      },
+      {
+        "match_id": "NA1_5647509133",
+        "game_creation_time": 1790168089300
+      },
+      {
+        "match_id": "NA1_5647507130",
+        "game_creation_time": 1790168097714
+      },
+      {
+        "match_id": "NA1_5647506156",
+        "game_creation_time": 1790168178453
+      },
+      {
+        "match_id": "NA1_5647501201",
+        "game_creation_time": 1790168244439
+      },
+      {
+        "match_id": "NA1_5647510154",
+        "game_creation_time": 1790168318054
+      },
+      {
+        "match_id": "NA1_5647502164",
+        "game_creation_time": 1790168396753
+      },
+      {
+        "match_id": "NA1_5647498171",
+        "game_creation_time": 1790168460838
+      },
+      {
+        "match_id": "NA1_5647500196",
+        "game_creation_time": 1790168563679
+      },
+      {
+        "match_id": "NA1_5647507192",
+        "game_creation_time": 1790168574354
+      },
+      {
+        "match_id": "NA1_5647505222",
+        "game_creation_time": 1790168676693
+      },
+      {
+        "match_id": "NA1_5647505223",
+        "game_creation_time": 1790168683178
+      },
+      {
+        "match_id": "NA1_5647507225",
+        "game_creation_time": 1790168814259
+      },
+      {
+        "match_id": "NA1_5647501291",
+        "game_creation_time": 1790168893292
+      },
+      {
+        "match_id": "NA1_5647497222",
+        "game_creation_time": 1790168903132
+      },
+      {
+        "match_id": "NA1_5647507254",
+        "game_creation_time": 1790168954499
+      },
+      {
+        "match_id": "NA1_5647508264",
+        "game_creation_time": 1790169075391
+      },
+      {
+        "match_id": "NA1_5647506275",
+        "game_creation_time": 1790169122622
+      },
+      {
+        "match_id": "NA1_5647497277",
+        "game_creation_time": 1790169339574
+      },
+      {
+        "match_id": "NA1_5647502310",
+        "game_creation_time": 1790169522777
+      },
+      {
+        "match_id": "NA1_5647508340",
+        "game_creation_time": 1790169710258
+      },
+      {
+        "match_id": "NA1_5647510350",
+        "game_creation_time": 1790169783200
+      },
+      {
+        "match_id": "NA1_5647502352",
+        "game_creation_time": 1790169846061
+      },
+      {
+        "match_id": "NA1_5647500391",
+        "game_creation_time": 1790169942941
+      },
+      {
+        "match_id": "NA1_5647502404",
+        "game_creation_time": 1790170196351
+      },
+      {
+        "match_id": "NA1_5647504420",
+        "game_creation_time": 1790170286348
+      },
+      {
+        "match_id": "NA1_5647500447",
+        "game_creation_time": 1790170307055
+      },
+      {
+        "match_id": "NA1_5647499447",
+        "game_creation_time": 1790170324067
+      },
+      {
+        "match_id": "NA1_5647501497",
+        "game_creation_time": 1790170372051
+      },
+      {
+        "match_id": "NA1_5647500466",
+        "game_creation_time": 1790170441190
+      },
+      {
+        "match_id": "NA1_5647504476",
+        "game_creation_time": 1790170608307
+      },
+      {
+        "match_id": "NA1_5647505493",
+        "game_creation_time": 1790170692973
+      },
+      {
+        "match_id": "NA1_5647502485",
+        "game_creation_time": 1790170743554
+      },
+      {
+        "match_id": "NA1_5647505505",
+        "game_creation_time": 1790170788496
+      },
+      {
+        "match_id": "NA1_5647501571",
+        "game_creation_time": 1790170862361
+      },
+      {
+        "match_id": "NA1_5647498495",
+        "game_creation_time": 1790170874308
+      },
+      {
+        "match_id": "NA1_5647507553",
+        "game_creation_time": 1790170981951
+      },
+      {
+        "match_id": "NA1_5647502532",
+        "game_creation_time": 1790171039225
+      },
+      {
+        "match_id": "NA1_5647507566",
+        "game_creation_time": 1790171123337
+      },
+      {
+        "match_id": "NA1_5647509578",
+        "game_creation_time": 1790171258377
+      },
+      {
+        "match_id": "NA1_5647504580",
+        "game_creation_time": 1790171267332
+      },
+      {
+        "match_id": "NA1_5647501649",
+        "game_creation_time": 1790171388888
+      },
+      {
+        "match_id": "NA1_5647498571",
+        "game_creation_time": 1790171400218
+      },
+      {
+        "match_id": "NA1_5647507648",
+        "game_creation_time": 1790171605573
+      },
+      {
+        "match_id": "NA1_5647496649",
+        "game_creation_time": 1790171702583
+      },
+      {
+        "match_id": "NA1_5647497668",
+        "game_creation_time": 1790171825363
+      },
+      {
+        "match_id": "NA1_5647510676",
+        "game_creation_time": 1790171932361
+      },
+      {
+        "match_id": "NA1_5647503701",
+        "game_creation_time": 1790171935530
+      },
+      {
+        "match_id": "NA1_5647507716",
+        "game_creation_time": 1790171994720
+      },
+      {
+        "match_id": "NA1_5647496720",
+        "game_creation_time": 1790172125431
+      },
+      {
+        "match_id": "NA1_5647497734",
+        "game_creation_time": 1790172239470
+      },
+      {
+        "match_id": "NA1_5647515756",
+        "game_creation_time": 1790172277359
+      },
+      {
+        "match_id": "NA1_5647515761",
+        "game_creation_time": 1790172304968
+      },
+      {
+        "match_id": "NA1_5647515772",
+        "game_creation_time": 1790172373418
+      },
+      {
+        "match_id": "NA1_5647510869",
+        "game_creation_time": 1790172761787
+      },
+      {
+        "match_id": "NA1_5647515851",
+        "game_creation_time": 1790172807068
+      },
+      {
+        "match_id": "NA1_5647515850",
+        "game_creation_time": 1790172842949
+      },
+      {
+        "match_id": "NA1_5647519863",
+        "game_creation_time": 1790172922846
+      },
+      {
+        "match_id": "NA1_5647512862",
+        "game_creation_time": 1790172928995
+      },
+      {
+        "match_id": "NA1_5647512868",
+        "game_creation_time": 1790172951947
+      },
+      {
+        "match_id": "NA1_5647524849",
+        "game_creation_time": 1790173021087
+      },
+      {
+        "match_id": "NA1_5647521893",
+        "game_creation_time": 1790173027688
+      },
+      {
+        "match_id": "NA1_5647522897",
+        "game_creation_time": 1790173143838
+      },
+      {
+        "match_id": "NA1_5647523891",
+        "game_creation_time": 1790173172949
+      },
+      {
+        "match_id": "NA1_5647520920",
+        "game_creation_time": 1790173279030
+      },
+      {
+        "match_id": "NA1_5647512923",
+        "game_creation_time": 1790173285910
+      },
+      {
+        "match_id": "NA1_5647524924",
+        "game_creation_time": 1790173407796
+      },
+      {
+        "match_id": "NA1_5647516987",
+        "game_creation_time": 1790173555512
+      },
+      {
+        "match_id": "NA1_5647519996",
+        "game_creation_time": 1790173587186
+      },
+      {
+        "match_id": "NA1_5647511052",
+        "game_creation_time": 1790173720570
+      },
+      {
+        "match_id": "NA1_5647516021",
+        "game_creation_time": 1790173748515
+      },
+      {
+        "match_id": "NA1_5647518027",
+        "game_creation_time": 1790173756401
+      },
+      {
+        "match_id": "NA1_5647518031",
+        "game_creation_time": 1790173792821
+      },
+      {
+        "match_id": "NA1_5647517055",
+        "game_creation_time": 1790173910016
+      },
+      {
+        "match_id": "NA1_5647514079",
+        "game_creation_time": 1790174002504
+      },
+      {
+        "match_id": "NA1_5647521082",
+        "game_creation_time": 1790174070967
+      },
+      {
+        "match_id": "NA1_5647511133",
+        "game_creation_time": 1790174118681
+      },
+      {
+        "match_id": "NA1_5647514130",
+        "game_creation_time": 1790174217228
+      },
+      {
+        "match_id": "NA1_5647516124",
+        "game_creation_time": 1790174330085
+      },
+      {
+        "match_id": "NA1_5647514155",
+        "game_creation_time": 1790174358318
+      },
+      {
+        "match_id": "NA1_5647520170",
+        "game_creation_time": 1790174428237
+      },
+      {
+        "match_id": "NA1_5647517164",
+        "game_creation_time": 1790174438032
+      },
+      {
+        "match_id": "NA1_5647513140",
+        "game_creation_time": 1790174513263
+      },
+      {
+        "match_id": "NA1_5647520186",
+        "game_creation_time": 1790174513414
+      },
+      {
+        "match_id": "NA1_5647519214",
+        "game_creation_time": 1790174685504
+      },
+      {
+        "match_id": "NA1_5647518212",
+        "game_creation_time": 1790174823104
+      },
+      {
+        "match_id": "NA1_5647512259",
+        "game_creation_time": 1790174942142
+      },
+      {
+        "match_id": "NA1_5647515286",
+        "game_creation_time": 1790174977270
+      },
+      {
+        "match_id": "NA1_5647511351",
+        "game_creation_time": 1790175202180
+      },
+      {
+        "match_id": "NA1_5647514336",
+        "game_creation_time": 1790175227870
+      },
+      {
+        "match_id": "NA1_5647522385",
+        "game_creation_time": 1790175478567
+      },
+      {
+        "match_id": "NA1_5647518352",
+        "game_creation_time": 1790175479210
+      },
+      {
+        "match_id": "NA1_5647511432",
+        "game_creation_time": 1790175550677
+      },
+      {
+        "match_id": "NA1_5647512418",
+        "game_creation_time": 1790175611148
+      },
+      {
+        "match_id": "NA1_5647522426",
+        "game_creation_time": 1790175690454
+      },
+      {
+        "match_id": "NA1_5647525392",
+        "game_creation_time": 1790175748308
+      },
+      {
+        "match_id": "NA1_5647525391",
+        "game_creation_time": 1790175787643
+      },
+      {
+        "match_id": "NA1_5647518424",
+        "game_creation_time": 1790175816014
+      },
+      {
+        "match_id": "NA1_5647513432",
+        "game_creation_time": 1790175905371
+      },
+      {
+        "match_id": "NA1_5647517493",
+        "game_creation_time": 1790176007853
+      },
+      {
+        "match_id": "NA1_5647512508",
+        "game_creation_time": 1790176012891
+      },
+      {
+        "match_id": "NA1_5647511538",
+        "game_creation_time": 1790176036081
+      },
+      {
+        "match_id": "NA1_5647518547",
+        "game_creation_time": 1790176356307
+      },
+      {
+        "match_id": "NA1_5647514606",
+        "game_creation_time": 1790176474698
+      },
+      {
+        "match_id": "NA1_5647520638",
+        "game_creation_time": 1790176655239
+      },
+      {
+        "match_id": "NA1_5647512683",
+        "game_creation_time": 1790176733406
+      },
+      {
+        "match_id": "NA1_5647512721",
+        "game_creation_time": 1790176872116
+      },
+      {
+        "match_id": "NA1_5647517688",
+        "game_creation_time": 1790176875243
+      },
+      {
+        "match_id": "NA1_5647511733",
+        "game_creation_time": 1790176882366
+      },
+      {
+        "match_id": "NA1_5647523707",
+        "game_creation_time": 1790176950615
+      },
+      {
+        "match_id": "NA1_5647532747",
+        "game_creation_time": 1790177195263
+      },
+      {
+        "match_id": "NA1_5647531763",
+        "game_creation_time": 1790177226786
+      },
+      {
+        "match_id": "NA1_5647525822",
+        "game_creation_time": 1790177295605
+      },
+      {
+        "match_id": "NA1_5647531822",
+        "game_creation_time": 1790177429331
+      },
+      {
+        "match_id": "NA1_5647525858",
+        "game_creation_time": 1790177429538
+      },
+      {
+        "match_id": "NA1_5647533817",
+        "game_creation_time": 1790177467847
+      },
+      {
+        "match_id": "NA1_5647529884",
+        "game_creation_time": 1790177683208
+      },
+      {
+        "match_id": "NA1_5647539817",
+        "game_creation_time": 1790177702553
+      },
+      {
+        "match_id": "NA1_5647530905",
+        "game_creation_time": 1790177802563
+      },
+      {
+        "match_id": "NA1_5647531967",
+        "game_creation_time": 1790178000140
+      },
+      {
+        "match_id": "NA1_5647526992",
+        "game_creation_time": 1790178011654
+      },
+      {
+        "match_id": "NA1_5647526042",
+        "game_creation_time": 1790178125951
+      },
+      {
+        "match_id": "NA1_5647530015",
+        "game_creation_time": 1790178204466
+      },
+      {
+        "match_id": "NA1_5647536016",
+        "game_creation_time": 1790178321001
+      },
+      {
+        "match_id": "NA1_5647533032",
+        "game_creation_time": 1790178364867
+      },
+      {
+        "match_id": "NA1_5647531056",
+        "game_creation_time": 1790178419001
+      },
+      {
+        "match_id": "NA1_5647536059",
+        "game_creation_time": 1790178468262
+      },
+      {
+        "match_id": "NA1_5647530089",
+        "game_creation_time": 1790178510446
+      },
+      {
+        "match_id": "NA1_5647539079",
+        "game_creation_time": 1790178606620
+      },
+      {
+        "match_id": "NA1_5647536171",
+        "game_creation_time": 1790178964137
+      },
+      {
+        "match_id": "NA1_5647529243",
+        "game_creation_time": 1790179075722
+      },
+      {
+        "match_id": "NA1_5647531225",
+        "game_creation_time": 1790179149885
+      },
+      {
+        "match_id": "NA1_5647534310",
+        "game_creation_time": 1790179532402
+      },
+      {
+        "match_id": "NA1_5647536342",
+        "game_creation_time": 1790179620852
+      },
+      {
+        "match_id": "NA1_5647538384",
+        "game_creation_time": 1790179775824
+      },
+      {
+        "match_id": "NA1_5647537382",
+        "game_creation_time": 1790179869247
+      },
+      {
+        "match_id": "NA1_5647536525",
+        "game_creation_time": 1790180269782
+      },
+      {
+        "match_id": "NA1_5647533534",
+        "game_creation_time": 1790180276991
+      },
+      {
+        "match_id": "NA1_5647533561",
+        "game_creation_time": 1790180378081
+      },
+      {
+        "match_id": "NA1_5647532583",
+        "game_creation_time": 1790180515414
+      },
+      {
+        "match_id": "NA1_5647534648",
+        "game_creation_time": 1790180743383
+      }
+    ]
+  }
+}

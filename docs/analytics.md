@@ -7,16 +7,17 @@ de données, à une cohorte et à une méthode statistique reproductible.
 
 ## Démarrage
 
-Les commandes suivantes utilisent `training_data.db` comme source opérationnelle
-et le mart séparé `analytics.db` :
+Les chemins de la source opérationnelle et du mart séparé proviennent de
+`NNRIOT_DB_PATH` et `NNRIOT_ANALYTICS_DB_PATH`. Pour un autre emplacement,
+utiliser `--source` et `--analytics` avec des chemins explicites :
 
 ```powershell
-python -m analytics --source training_data.db --analytics analytics.db build
-python -m analytics --source training_data.db --analytics analytics.db update
-python -m analytics --source training_data.db --analytics analytics.db health
-python -m analytics --analytics analytics.db train-model --artifacts analytics_artifacts
-python -m analytics --source training_data.db --analytics analytics.db benchmark --iterations 30
-python run.py
+python -m analytics build
+python -m analytics update
+python -m analytics health
+python -m analytics train-model --artifacts analytics_artifacts
+python -m analytics benchmark --iterations 30
+python cli.py web
 ```
 
 L’interface est alors disponible sur `http://127.0.0.1:5000/analytics`. Les

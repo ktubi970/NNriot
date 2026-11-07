@@ -1,0 +1,2 @@
+Notification: Please check the terms at https://info.arxiv.org/help/api/index.html and always check the license of the papers retrieved by the skill for any restrictions.
+Timestamp: 2026-09-27T10:17:40+02:00

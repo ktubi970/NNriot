@@ -1,0 +1,42 @@
+{
+  "artifacts_sha256": {
+    "availability.json": "c44db98cdd7fe66c3967a3bfa7941ed6fd76c277b8e7141e2b7e7454cfba704f",
+    "dataset.json": "4ada0db3c2d9fd39da0e35e6e4f03a60d5f0cfe3c49ea75d475f17fb143da650",
+    "exclusions.json": "d975f64e4c8e17ae2febb1d0b31495203d85c448d489972d304d608149d0d7ac",
+    "freeze_driver.py": "0aa72de25f219d61ed6f9a8fe0a5117bd24b04f2e5e33381ce744eae88d0d7dc",
+    "live_audit.py": "fbcc2663e3a2cc2008110b33f444ad4a3e2c478ec07221ae7ba1b5767f7fadc6",
+    "live_panel.json": "8af24261c6e02e0acad4ac6ee12d2c10a34beac8e65f39980dec209783b78a58",
+    "live_parity.json": "852b088885509236c3d2e242a8c163de5658638589544ffcce8585119f04bb9e",
+    "model.split.json": "691f25383adc73fbed6d9b9002b8a9c57373d415184073a919df2c4db6d8b733",
+    "refreeze_driver.py": "3a0a537c2e3bee628bbddbaefa400caf5460658e34695331c6be3f0a88f0ac2f",
+    "replay_verification.json": "bf1c570bab19b90f866cf4811581ddc57cc95e0521ddb14dcacdab862fe982f4",
+    "sealed_test.json": "5c556e0314362db1acfd0963d725d9ecdc8ea4c830758df0a8f6dd34cc20400e",
+    "sealed_test14.npz": "7f2a0de4dc0f471c2661c1cb37d3d352a58d1d6adcff75e2d1f4a9f0f06ce851",
+    "source_inventory.json": "955a8d798701fcb036589b8632070e51854e9eb35802841f6df2395569f120c3",
+    "source_rows.json.gz": "a3392790b27eba57fcb50f44d0e61d104cd16e64fab7453f07225b34fd9235bf",
+    "train.json": "ca8b3d1c9a03960e5c58913b57aef6241345fe5bc024f7ad3aa422592c92e5ab",
+    "train14.npz": "0cbf98c5a687d645fcf1be44054f0f85baf42e82dcc268a74e4d8fe91e709969",
+    "validation.json": "1484d853b4a4a9a94d9ea0a4d425d6bea3d9186725779bc7d88b7d25ee3fa54d",
+    "validation14.npz": "ecfd1390a4b07bed15e7333970fbf308dd6541f83930cc101ab8cded6b2e1aa4"
+  },
+  "exclusions_by_reason": {
+    "previous_test": 1198,
+    "result_not_available_at_partition_start": 310,
+    "team_a roles must contain each canonical role exactly once": 5,
+    "team_b roles must contain each canonical role exactly once": 1
+  },
+  "live_panel_count": 20,
+  "partitions": {
+    "test": 3000,
+    "train": 43486,
+    "validation": 3000
+  },
+  "reference_checkpoint_sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f",
+  "runtime_sources_verified": true,
+  "serving_validation_status": "unverified",
+  "source_count": 61000,
+  "status": "verified_features",
+  "tensor_comparisons": 148458,
+  "test_metrics_computed": false,
+  "timestamp_utc": "2026-10-09T18:13:52.929219+00:00"
+}

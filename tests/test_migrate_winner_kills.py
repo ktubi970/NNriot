@@ -6,8 +6,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import json
 import gzip
 import base64
-import database
-import migrate_winner_kills as m
+from core import database
+from scripts import migrate_winner_kills as m
 
 
 def _make_match(match_id):

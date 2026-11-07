@@ -1,0 +1,22 @@
+{
+  "database": "D:\\projet\\NNriot\\training_data.db",
+  "schema_version": 14,
+  "counts": {
+    "matches": 142455,
+    "training_dataset": 134192,
+    "match_participants": 1475734,
+    "match_timelines": 142455
+  },
+  "first_rowid": 142456,
+  "pid": 22732,
+  "target_new_matches": null,
+  "deadline_at": "2026-10-18T14:10:16.559960+00:00",
+  "max_hours": 20,
+  "regions": [
+    "EUW",
+    "KR",
+    "NA"
+  ],
+  "days_back": 14,
+  "started_at": "2026-10-17T18:10:16.559960+00:00"
+}

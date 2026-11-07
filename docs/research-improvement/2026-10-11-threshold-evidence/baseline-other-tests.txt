@@ -1,0 +1,84 @@
+Using original selective_classification snapshot; workspace files unchanged.
+FFFF                                                                     [100%]
+================================== FAILURES ===================================
+________________ test_endpoint_feature_parity_and_calibration _________________
+tests\test_calibrated_serving.py:337: in test_endpoint_feature_parity_and_calibration
+    assert resp1.status_code == 200
+E   assert 503 == 200
+E    +  where 503 = <WrapperTestResponse streamed [503 SERVICE UNAVAILABLE]>.status_code
+_____________________ test_schema_version_is_at_least_12 ______________________
+tests\test_database_v11_migration.py:61: in test_schema_version_is_at_least_12
+    assert database.SCHEMA_VERSION == 12
+E   assert 14 == 12
+E    +  where 14 = database.SCHEMA_VERSION
+________________ test_final_predict_rejects_uncalibrated_model ________________
+tests\test_model_calibration_guard.py:126: in test_final_predict_rejects_uncalibrated_model
+    assert "calibrated" in res["error"].lower()
+E   AssertionError: assert 'calibrated' in 'checkpoint file does not exist: d:\\projet\\nnriot\\scratch\\research-threshold-temp\\nnriot-pytest-7ik6vl07\\model.keras'
+E    +  where 'checkpoint file does not exist: d:\\projet\\nnriot\\scratch\\research-threshold-temp\\nnriot-pytest-7ik6vl07\\model.keras' = <built-in method lower of str object at 0x0000021BD0C240D0>()
+E    +    where <built-in method lower of str object at 0x0000021BD0C240D0> = 'Checkpoint file does not exist: D:\\projet\\NNriot\\scratch\\research-threshold-temp\\nnriot-pytest-7ik6vl07\\model.keras'.lower
+___________________ test_equivariant_deepsets_training_run ____________________
+tests\test_pre_match_training.py:82: in test_equivariant_deepsets_training_run
+    assert report["symmetry_diagnostics"]["anti_symmetry_guarantee"] is True
+E   assert False is True
+---------------------------- Captured stderr call -----------------------------
+INFO:train_pre_match_model:Dataset splits: {'train': 17, 'validation': 4, 'test': 4}
+WARNING: All log messages before absl::InitializeLog() is called are written to STDERR
+I0000 00:00:1791711890.435779   33784 cpu_feature_guard.cc:227] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: SSE3 SSE4.1 SSE4.2 AVX AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+INFO:train_pre_match_model:Epoch 1/1: train_loss=31.9685 validation winner log_loss=0.7243 accuracy=0.500
+INFO:train_pre_match_model:Equivariant anti-symmetry check: max_violation=4.549214e-02 guaranteed=False
+INFO:train_pre_match_model:Candidate checkpoint: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-4\test_equivariant_deepsets_trai0\model.keras
+INFO:train_pre_match_model:Held-out test: {"model": {"accuracy": 0.5, "log_loss": 0.7242954772329546, "brier": 0.26509895872090805, "roc_auc": 0.75, "calibration_error": 0.12287788093090057, "diagnostics": {"quantile_ece": 0.3114389181137085, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 2}, "brier_decomposition": {"reliability": 0.09843229205424137, "resolution": 0.08333333333333333, "uncertainty": 0.25, "binned_brier": 0.26509895872090805, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "estimated", "slope": 0.0, "intercept": 0.0, "reason": null}, "selective_metrics": {"conviction_ge_0pct": {"threshold": 0.0, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_2pct": {"threshold": 0.02, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_4pct": {"threshold": 0.04, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_6pct": {"threshold": 0.06, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_8pct": {"threshold": 0.08, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_10pct": {"threshold": 0.1, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_12pct": {"threshold": 0.12, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_15pct": {"threshold": 0.15, "coverage": 0.0, "accuracy": 0.0, "count": 0, "wilson_lower": 0.0, "wilson_upper": 0.0}}}}, "baseline": {"accuracy": 0.5, "log_loss": 0.6948802845481884, "brier": 0.2508650519031142, "roc_auc": 0.5, "calibration_error": 0.02941176470588236, "diagnostics": {"quantile_ece": 0.02941176470588236, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 1}, "brier_decomposition": {"reliability": 0.0008650519031141872, "resolution": 0.0, "uncertainty": 0.25, "binned_brier": 0.2508650519031142, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "unavailable", "slope": null, "intercept": null, "reason": "constant_predictions"}}}, "accuracy_lift": 0.0, "log_loss_improvement": -0.029415192684766223}
+INFO:train_pre_match_model:Evaluation report: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-4\test_equivariant_deepsets_trai0\model.metrics.json
+INFO:train_pre_match_model:Selective Evaluation [VALIDATION] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO:train_pre_match_model:  * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+INFO:train_pre_match_model:Selective Evaluation [TEST] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO:train_pre_match_model:  * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO:train_pre_match_model:    conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+------------------------------ Captured log call ------------------------------
+INFO     train_pre_match_model:train_pre_match_model.py:273 Dataset splits: {'train': 17, 'validation': 4, 'test': 4}
+INFO     train_pre_match_model:train_pre_match_model.py:368 Epoch 1/1: train_loss=31.9685 validation winner log_loss=0.7243 accuracy=0.500
+INFO     train_pre_match_model:train_pre_match_model.py:445 Equivariant anti-symmetry check: max_violation=4.549214e-02 guaranteed=False
+INFO     train_pre_match_model:train_pre_match_model.py:485 Candidate checkpoint: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-4\test_equivariant_deepsets_trai0\model.keras
+INFO     train_pre_match_model:train_pre_match_model.py:486 Held-out test: {"model": {"accuracy": 0.5, "log_loss": 0.7242954772329546, "brier": 0.26509895872090805, "roc_auc": 0.75, "calibration_error": 0.12287788093090057, "diagnostics": {"quantile_ece": 0.3114389181137085, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 2}, "brier_decomposition": {"reliability": 0.09843229205424137, "resolution": 0.08333333333333333, "uncertainty": 0.25, "binned_brier": 0.26509895872090805, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "estimated", "slope": 0.0, "intercept": 0.0, "reason": null}, "selective_metrics": {"conviction_ge_0pct": {"threshold": 0.0, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_2pct": {"threshold": 0.02, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_4pct": {"threshold": 0.04, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_6pct": {"threshold": 0.06, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_8pct": {"threshold": 0.08, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_10pct": {"threshold": 0.1, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_12pct": {"threshold": 0.12, "coverage": 1.0, "accuracy": 0.5, "count": 4, "wilson_lower": 0.15003898915214947, "wilson_upper": 0.8499610108478506}, "conviction_ge_15pct": {"threshold": 0.15, "coverage": 0.0, "accuracy": 0.0, "count": 0, "wilson_lower": 0.0, "wilson_upper": 0.0}}}}, "baseline": {"accuracy": 0.5, "log_loss": 0.6948802845481884, "brier": 0.2508650519031142, "roc_auc": 0.5, "calibration_error": 0.02941176470588236, "diagnostics": {"quantile_ece": 0.02941176470588236, "binning": {"method": "quantile", "requested_bins": 10, "effective_bins": 1}, "brier_decomposition": {"reliability": 0.0008650519031141872, "resolution": 0.0, "uncertainty": 0.25, "binned_brier": 0.2508650519031142, "binning_residual": 0.0, "identity_target": "binned_probabilities"}, "calibration_slope": {"status": "unavailable", "slope": null, "intercept": null, "reason": "constant_predictions"}}}, "accuracy_lift": 0.0, "log_loss_improvement": -0.029415192684766223}
+INFO     train_pre_match_model:train_pre_match_model.py:487 Evaluation report: D:\projet\NNriot\scratch\research-threshold-temp\pytest-of-ktubi\pytest-4\test_equivariant_deepsets_trai0\model.metrics.json
+INFO     train_pre_match_model:train_pre_match_model.py:145 Selective Evaluation [VALIDATION] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO     train_pre_match_model:train_pre_match_model.py:151   * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+INFO     train_pre_match_model:train_pre_match_model.py:145 Selective Evaluation [TEST] - Unconditional Accuracy: 0.5000 (100.0% coverage)
+INFO     train_pre_match_model:train_pre_match_model.py:151   * Conviction >= 4% (Target Tier): accuracy=0.5000 (95% Wilson CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_2pct (tau=0.02): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_6pct (tau=0.06): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_8pct (tau=0.08): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_10pct (tau=0.10): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_12pct (tau=0.12): accuracy=0.5000 (CI: [0.1500, 0.8500]) | coverage=100.0% (n=4)
+INFO     train_pre_match_model:train_pre_match_model.py:158     conviction_ge_15pct (tau=0.15): accuracy=0.0000 (CI: [0.0000, 0.0000]) | coverage=0.0% (n=0)
+============================== warnings summary ===============================
+tests/test_pre_match_training.py: 65 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\backend\tensorflow\core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests/test_calibrated_serving.py::test_endpoint_feature_parity_and_calibration
+FAILED tests/test_database_v11_migration.py::test_schema_version_is_at_least_12
+FAILED tests/test_model_calibration_guard.py::test_final_predict_rejects_uncalibrated_model
+FAILED tests/test_pre_match_training.py::test_equivariant_deepsets_training_run
+4 failed, 65 warnings in 40.32s

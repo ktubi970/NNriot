@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "baseUrl": ".",
+    "paths": {
+      "@fixtures/*": ["e2e/fixtures/*"],
+      "@pages/*": ["e2e/pages/*"]
+    }
+  },
+  "include": ["e2e/**/*.ts", "playwright.config.ts", "playwright.cockpit.config.ts"]
+}

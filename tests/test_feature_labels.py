@@ -4,7 +4,7 @@ import sys
 # Ensure project root is on sys.path when running this file directly
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from feature_labels import LABEL_KEYS, extract_labels
+from core.feature_labels import LABEL_KEYS, extract_labels
 
 
 def _make_match(
@@ -309,7 +309,7 @@ def test_extract_labels_coerces_non_int_kills():
 
 def test_extract_timeline_labels_team_a_5_kills():
     """Team A reaches 5 kills first."""
-    from feature_labels import extract_timeline_labels
+    from core.feature_labels import extract_timeline_labels
     # Build a timeline where killer participants 1-5 each get one kill in sequence
     timeline = {
         "info": {
@@ -329,7 +329,7 @@ def test_extract_timeline_labels_team_a_5_kills():
 
 def test_extract_timeline_labels_team_b_10_kills():
     """Team B reaches 10 kills first."""
-    from feature_labels import extract_timeline_labels
+    from core.feature_labels import extract_timeline_labels
     # Team A: 9 kills. Team B: 10 kills. Team B should "win" first_to_10.
     events = []
     for i in range(1, 10):  # 9 team-A kills (killerId 1-9 cycling through 1-5)
@@ -348,7 +348,7 @@ def test_extract_timeline_labels_team_b_10_kills():
 
 def test_extract_timeline_labels_ignores_non_champion_kill():
     """Events other than CHAMPION_KILL are ignored."""
-    from feature_labels import extract_timeline_labels
+    from core.feature_labels import extract_timeline_labels
     timeline = {
         "info": {
             "frames": [{
@@ -373,7 +373,7 @@ def test_extract_timeline_labels_ignores_non_champion_kill():
 
 def test_extract_timeline_labels_returns_none_on_malformed():
     """Empty / non-dict / missing frames returns None."""
-    from feature_labels import extract_timeline_labels
+    from core.feature_labels import extract_timeline_labels
     assert extract_timeline_labels({}) is None
     assert extract_timeline_labels({"info": {}}) is None
     assert extract_timeline_labels({"info": {"frames": []}}) is None
@@ -381,5 +381,5 @@ def test_extract_timeline_labels_returns_none_on_malformed():
 
 def test_timeline_label_keys_constant():
     """TIMELINE_LABEL_KEYS contains exactly the 4 keys."""
-    from feature_labels import TIMELINE_LABEL_KEYS
+    from core.feature_labels import TIMELINE_LABEL_KEYS
     assert TIMELINE_LABEL_KEYS == ["first_to_5_kills", "first_to_10_kills", "first_to_15_kills", "first_to_20_kills"]

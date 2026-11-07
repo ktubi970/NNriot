@@ -1,0 +1,31 @@
+{
+  "schema_version": 1,
+  "method": "binary_temperature",
+  "head": "winner",
+  "class_order": [
+    "A",
+    "B"
+  ],
+  "positive_class": 1,
+  "feature_policy": "draft_context_only_v1; no post-match or undated career statistics",
+  "input_dim": 18,
+  "checkpoint_sha256": "c52b429be8e7cbf7ac15cca67ff3956093e4779ecb4b6bdf9ff5b68738ca97d8",
+  "split_manifest_sha256": "dc0385c2c54db034e0a30d9e029f0964882be7be29db468041eac1612db01981",
+  "dataset_sha256": "a9ee7493506488b24b6f4cac036d38863e5acd23aa77c2b2b13be375c7b03c65",
+  "split_sha256": "0c762167e86edb0478b121d316abf871bc36c6d19adbd20513afb3902e77539d",
+  "temperature": 1.239026013114855,
+  "fit": {
+    "status": "fitted",
+    "partition": "validation",
+    "count": 1800,
+    "class_counts": [
+      875,
+      925
+    ],
+    "temperature": 1.239026013114855,
+    "optimizer_success": true,
+    "boundary_hit": false,
+    "log_loss_before": 0.6885387908632251,
+    "log_loss_after": 0.6882651825845303
+  }
+}

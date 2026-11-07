@@ -1,0 +1,783 @@
+{
+  "status": "completed",
+  "database": "D:\\projet\\NNriot\\training_data.db",
+  "database_counts_at_snapshot": {
+    "matches": 118310,
+    "training_dataset": 110047,
+    "match_timelines": 118310
+  },
+  "snapshot_method": "Read-only source with persistent data_version guard, disjoint complete-creation chunks using production read_recent_rows; full header equality asserted",
+  "source_data_version_start": 2,
+  "source_data_version_end": 2,
+  "snapshot_read_started_utc": "2026-10-11T11:48:12.639465+00:00",
+  "snapshot_read_finished_utc": "2026-10-11T12:03:33.341709+00:00",
+  "source_snapshot_sha256": "a085edbb7c3d2d398790d5405278bd623bfae9d7e6e8bced35423325072766d7",
+  "source_rows": 110049,
+  "source_first_utc": "2024-06-17T13:24:46.858000+00:00",
+  "source_last_utc": "2026-10-11T10:22:30.047000+00:00",
+  "source_timeline_diagnostics": {
+    "fast_json_calls": 219940,
+    "json_parser_parity_checks": 2200,
+    "timeline_read_calls": 110049,
+    "timeline_parsed_nonempty": 109891,
+    "strict_timeline_accepted": 109891,
+    "timeline_absent_or_empty": 158
+  },
+  "source_metric_status": {
+    "missing_or_rejected": 158,
+    "valid": 109891
+  },
+  "invalid_source_facts": 0,
+  "warmup_rows": 10000,
+  "target_selection_rejections": {
+    "unsupported_queue": 2051,
+    "team_a roles must contain each canonical role exactly once": 39,
+    "team_b roles must contain each canonical role exactly once": 43
+  },
+  "target_count": 97916,
+  "eligible18": 97894,
+  "coverage18": 0.9997753176191838,
+  "contract_failures": {
+    "FeatureUnavailableError: 18D timeline history source unavailable; cannot replace missing source with cold defaults": 22
+  },
+  "history_unavailability_reasons": {
+    "no_prior_player_match_in_window": 22
+  },
+  "players_with_history_per_target": {
+    "0": 22,
+    "1": 637,
+    "2": 732,
+    "3": 974,
+    "4": 1468,
+    "5": 3069,
+    "6": 4202,
+    "7": 7096,
+    "8": 12512,
+    "9": 23197,
+    "10": 44007
+  },
+  "groups": {
+    "all": {
+      "targets": 97916,
+      "eligible": 97894,
+      "player_slots": 979160,
+      "players_with_timeline": 850063
+    },
+    "date:2026-04-12": {
+      "targets": 799,
+      "eligible": 799,
+      "player_slots": 7990,
+      "players_with_timeline": 7102
+    },
+    "date:2026-04-13": {
+      "targets": 1176,
+      "eligible": 1176,
+      "player_slots": 11760,
+      "players_with_timeline": 10446
+    },
+    "date:2026-04-14": {
+      "targets": 1248,
+      "eligible": 1247,
+      "player_slots": 12480,
+      "players_with_timeline": 11229
+    },
+    "date:2026-04-15": {
+      "targets": 1483,
+      "eligible": 1483,
+      "player_slots": 14830,
+      "players_with_timeline": 13374
+    },
+    "date:2026-04-16": {
+      "targets": 1691,
+      "eligible": 1691,
+      "player_slots": 16910,
+      "players_with_timeline": 15252
+    },
+    "date:2026-04-17": {
+      "targets": 1900,
+      "eligible": 1900,
+      "player_slots": 19000,
+      "players_with_timeline": 17037
+    },
+    "date:2026-04-18": {
+      "targets": 2044,
+      "eligible": 2044,
+      "player_slots": 20440,
+      "players_with_timeline": 17992
+    },
+    "date:2026-04-19": {
+      "targets": 1587,
+      "eligible": 1586,
+      "player_slots": 15870,
+      "players_with_timeline": 13993
+    },
+    "date:2026-04-20": {
+      "targets": 1210,
+      "eligible": 1210,
+      "player_slots": 12100,
+      "players_with_timeline": 10639
+    },
+    "date:2026-04-21": {
+      "targets": 1260,
+      "eligible": 1260,
+      "player_slots": 12600,
+      "players_with_timeline": 10971
+    },
+    "date:2026-04-22": {
+      "targets": 1180,
+      "eligible": 1179,
+      "player_slots": 11800,
+      "players_with_timeline": 10076
+    },
+    "date:2026-04-23": {
+      "targets": 1356,
+      "eligible": 1356,
+      "player_slots": 13560,
+      "players_with_timeline": 11640
+    },
+    "date:2026-04-24": {
+      "targets": 1393,
+      "eligible": 1392,
+      "player_slots": 13930,
+      "players_with_timeline": 11712
+    },
+    "date:2026-04-25": {
+      "targets": 558,
+      "eligible": 557,
+      "player_slots": 5580,
+      "players_with_timeline": 4752
+    },
+    "date:2026-04-26": {
+      "targets": 29,
+      "eligible": 29,
+      "player_slots": 290,
+      "players_with_timeline": 223
+    },
+    "date:2026-04-27": {
+      "targets": 45,
+      "eligible": 45,
+      "player_slots": 450,
+      "players_with_timeline": 339
+    },
+    "date:2026-04-28": {
+      "targets": 53,
+      "eligible": 53,
+      "player_slots": 530,
+      "players_with_timeline": 429
+    },
+    "date:2026-04-29": {
+      "targets": 47,
+      "eligible": 47,
+      "player_slots": 470,
+      "players_with_timeline": 358
+    },
+    "date:2026-04-30": {
+      "targets": 55,
+      "eligible": 55,
+      "player_slots": 550,
+      "players_with_timeline": 410
+    },
+    "date:2026-05-01": {
+      "targets": 81,
+      "eligible": 81,
+      "player_slots": 810,
+      "players_with_timeline": 589
+    },
+    "date:2026-05-02": {
+      "targets": 142,
+      "eligible": 142,
+      "player_slots": 1420,
+      "players_with_timeline": 1058
+    },
+    "date:2026-05-03": {
+      "targets": 250,
+      "eligible": 250,
+      "player_slots": 2500,
+      "players_with_timeline": 1700
+    },
+    "date:2026-05-04": {
+      "targets": 349,
+      "eligible": 349,
+      "player_slots": 3490,
+      "players_with_timeline": 2507
+    },
+    "date:2026-05-05": {
+      "targets": 557,
+      "eligible": 557,
+      "player_slots": 5570,
+      "players_with_timeline": 4079
+    },
+    "date:2026-05-06": {
+      "targets": 690,
+      "eligible": 690,
+      "player_slots": 6900,
+      "players_with_timeline": 5244
+    },
+    "date:2026-05-07": {
+      "targets": 1041,
+      "eligible": 1041,
+      "player_slots": 10410,
+      "players_with_timeline": 8043
+    },
+    "date:2026-05-08": {
+      "targets": 1607,
+      "eligible": 1607,
+      "player_slots": 16070,
+      "players_with_timeline": 12755
+    },
+    "date:2026-05-09": {
+      "targets": 2396,
+      "eligible": 2395,
+      "player_slots": 23960,
+      "players_with_timeline": 19582
+    },
+    "date:2026-05-10": {
+      "targets": 3129,
+      "eligible": 3129,
+      "player_slots": 31290,
+      "players_with_timeline": 26142
+    },
+    "date:2026-05-11": {
+      "targets": 4254,
+      "eligible": 4253,
+      "player_slots": 42540,
+      "players_with_timeline": 35744
+    },
+    "date:2026-05-12": {
+      "targets": 4151,
+      "eligible": 4151,
+      "player_slots": 41510,
+      "players_with_timeline": 35502
+    },
+    "date:2026-05-13": {
+      "targets": 3255,
+      "eligible": 3255,
+      "player_slots": 32550,
+      "players_with_timeline": 27961
+    },
+    "date:2026-05-14": {
+      "targets": 4330,
+      "eligible": 4330,
+      "player_slots": 43300,
+      "players_with_timeline": 36485
+    },
+    "date:2026-05-15": {
+      "targets": 4288,
+      "eligible": 4287,
+      "player_slots": 42880,
+      "players_with_timeline": 36358
+    },
+    "date:2026-05-16": {
+      "targets": 4038,
+      "eligible": 4036,
+      "player_slots": 40380,
+      "players_with_timeline": 34562
+    },
+    "date:2026-05-17": {
+      "targets": 3075,
+      "eligible": 3072,
+      "player_slots": 30750,
+      "players_with_timeline": 26121
+    },
+    "date:2026-09-02": {
+      "targets": 171,
+      "eligible": 169,
+      "player_slots": 1710,
+      "players_with_timeline": 1025
+    },
+    "date:2026-09-03": {
+      "targets": 1313,
+      "eligible": 1310,
+      "player_slots": 13130,
+      "players_with_timeline": 10159
+    },
+    "date:2026-09-04": {
+      "targets": 1477,
+      "eligible": 1476,
+      "player_slots": 14770,
+      "players_with_timeline": 12704
+    },
+    "date:2026-09-05": {
+      "targets": 1582,
+      "eligible": 1581,
+      "player_slots": 15820,
+      "players_with_timeline": 14152
+    },
+    "date:2026-09-06": {
+      "targets": 1717,
+      "eligible": 1716,
+      "player_slots": 17170,
+      "players_with_timeline": 15448
+    },
+    "date:2026-09-07": {
+      "targets": 1970,
+      "eligible": 1970,
+      "player_slots": 19700,
+      "players_with_timeline": 17956
+    },
+    "date:2026-09-08": {
+      "targets": 2203,
+      "eligible": 2203,
+      "player_slots": 22030,
+      "players_with_timeline": 20298
+    },
+    "date:2026-09-09": {
+      "targets": 2331,
+      "eligible": 2331,
+      "player_slots": 23310,
+      "players_with_timeline": 21358
+    },
+    "date:2026-09-10": {
+      "targets": 2505,
+      "eligible": 2505,
+      "player_slots": 25050,
+      "players_with_timeline": 22823
+    },
+    "date:2026-09-11": {
+      "targets": 2779,
+      "eligible": 2779,
+      "player_slots": 27790,
+      "players_with_timeline": 25178
+    },
+    "date:2026-09-12": {
+      "targets": 3083,
+      "eligible": 3083,
+      "player_slots": 30830,
+      "players_with_timeline": 27739
+    },
+    "date:2026-09-13": {
+      "targets": 3560,
+      "eligible": 3560,
+      "player_slots": 35600,
+      "players_with_timeline": 32238
+    },
+    "date:2026-09-14": {
+      "targets": 4061,
+      "eligible": 4060,
+      "player_slots": 40610,
+      "players_with_timeline": 36413
+    },
+    "date:2026-09-15": {
+      "targets": 4657,
+      "eligible": 4657,
+      "player_slots": 46570,
+      "players_with_timeline": 41057
+    },
+    "date:2026-09-16": {
+      "targets": 5063,
+      "eligible": 5063,
+      "player_slots": 50630,
+      "players_with_timeline": 44773
+    },
+    "date:2026-09-17": {
+      "targets": 1353,
+      "eligible": 1353,
+      "player_slots": 13530,
+      "players_with_timeline": 11856
+    },
+    "date:2026-09-27": {
+      "targets": 22,
+      "eligible": 22,
+      "player_slots": 220,
+      "players_with_timeline": 176
+    },
+    "date:2026-09-28": {
+      "targets": 16,
+      "eligible": 16,
+      "player_slots": 160,
+      "players_with_timeline": 143
+    },
+    "date:2026-09-29": {
+      "targets": 26,
+      "eligible": 26,
+      "player_slots": 260,
+      "players_with_timeline": 231
+    },
+    "date:2026-09-30": {
+      "targets": 23,
+      "eligible": 23,
+      "player_slots": 230,
+      "players_with_timeline": 212
+    },
+    "date:2026-10-01": {
+      "targets": 30,
+      "eligible": 30,
+      "player_slots": 300,
+      "players_with_timeline": 259
+    },
+    "date:2026-10-02": {
+      "targets": 41,
+      "eligible": 41,
+      "player_slots": 410,
+      "players_with_timeline": 359
+    },
+    "date:2026-10-03": {
+      "targets": 32,
+      "eligible": 32,
+      "player_slots": 320,
+      "players_with_timeline": 281
+    },
+    "date:2026-10-04": {
+      "targets": 49,
+      "eligible": 49,
+      "player_slots": 490,
+      "players_with_timeline": 445
+    },
+    "date:2026-10-05": {
+      "targets": 64,
+      "eligible": 64,
+      "player_slots": 640,
+      "players_with_timeline": 600
+    },
+    "date:2026-10-06": {
+      "targets": 83,
+      "eligible": 83,
+      "player_slots": 830,
+      "players_with_timeline": 767
+    },
+    "date:2026-10-07": {
+      "targets": 143,
+      "eligible": 143,
+      "player_slots": 1430,
+      "players_with_timeline": 1344
+    },
+    "date:2026-10-08": {
+      "targets": 205,
+      "eligible": 205,
+      "player_slots": 2050,
+      "players_with_timeline": 1928
+    },
+    "date:2026-10-09": {
+      "targets": 203,
+      "eligible": 203,
+      "player_slots": 2030,
+      "players_with_timeline": 1911
+    },
+    "date:2026-10-10": {
+      "targets": 276,
+      "eligible": 276,
+      "player_slots": 2760,
+      "players_with_timeline": 2621
+    },
+    "date:2026-10-11": {
+      "targets": 131,
+      "eligible": 131,
+      "player_slots": 1310,
+      "players_with_timeline": 1203
+    },
+    "older_than_30d": {
+      "targets": 72951,
+      "eligible": 72930,
+      "player_slots": 729510,
+      "players_with_timeline": 626727
+    },
+    "patch:16.10.775.1511": {
+      "targets": 6484,
+      "eligible": 6484,
+      "player_slots": 64840,
+      "players_with_timeline": 55547
+    },
+    "patch:16.10.776.5552": {
+      "targets": 11961,
+      "eligible": 11955,
+      "player_slots": 119610,
+      "players_with_timeline": 101257
+    },
+    "patch:16.17.810.4348": {
+      "targets": 12951,
+      "eligible": 12943,
+      "player_slots": 129510,
+      "players_with_timeline": 114771
+    },
+    "patch:16.18.815.9717": {
+      "targets": 1937,
+      "eligible": 1937,
+      "player_slots": 19370,
+      "players_with_timeline": 17799
+    },
+    "patch:16.18.816.5012": {
+      "targets": 2942,
+      "eligible": 2942,
+      "player_slots": 29420,
+      "players_with_timeline": 26649
+    },
+    "patch:16.18.817.4437": {
+      "targets": 347,
+      "eligible": 347,
+      "player_slots": 3470,
+      "players_with_timeline": 2986
+    },
+    "patch:16.18.817.5716": {
+      "targets": 21648,
+      "eligible": 21647,
+      "player_slots": 216480,
+      "players_with_timeline": 192972
+    },
+    "patch:16.19.821.7343": {
+      "targets": 38,
+      "eligible": 38,
+      "player_slots": 380,
+      "players_with_timeline": 319
+    },
+    "patch:16.19.823.722": {
+      "targets": 355,
+      "eligible": 355,
+      "player_slots": 3550,
+      "players_with_timeline": 3221
+    },
+    "patch:16.20.824.8524": {
+      "targets": 951,
+      "eligible": 951,
+      "player_slots": 9510,
+      "players_with_timeline": 8940
+    },
+    "patch:16.7.760.9485": {
+      "targets": 3425,
+      "eligible": 3424,
+      "player_slots": 34250,
+      "players_with_timeline": 30615
+    },
+    "patch:16.8.764.3737": {
+      "targets": 9199,
+      "eligible": 9198,
+      "player_slots": 91990,
+      "players_with_timeline": 81987
+    },
+    "patch:16.8.766.8562": {
+      "targets": 6388,
+      "eligible": 6385,
+      "player_slots": 63880,
+      "players_with_timeline": 54604
+    },
+    "patch:16.9.769.5709": {
+      "targets": 43,
+      "eligible": 43,
+      "player_slots": 430,
+      "players_with_timeline": 343
+    },
+    "patch:16.9.771.8383": {
+      "targets": 59,
+      "eligible": 59,
+      "player_slots": 590,
+      "players_with_timeline": 425
+    },
+    "patch:16.9.772.1032": {
+      "targets": 829,
+      "eligible": 829,
+      "player_slots": 8290,
+      "players_with_timeline": 5902
+    },
+    "patch:16.9.772.8292": {
+      "targets": 18359,
+      "eligible": 18357,
+      "player_slots": 183590,
+      "players_with_timeline": 151726
+    },
+    "recent_30d": {
+      "targets": 24965,
+      "eligible": 24964,
+      "player_slots": 249650,
+      "players_with_timeline": 223336
+    },
+    "region:EUN": {
+      "targets": 15283,
+      "eligible": 15280,
+      "player_slots": 152830,
+      "players_with_timeline": 122597
+    },
+    "region:EUW": {
+      "targets": 37554,
+      "eligible": 37543,
+      "player_slots": 375540,
+      "players_with_timeline": 330819
+    },
+    "region:KR": {
+      "targets": 23049,
+      "eligible": 23042,
+      "player_slots": 230490,
+      "players_with_timeline": 207156
+    },
+    "region:NA": {
+      "targets": 22006,
+      "eligible": 22005,
+      "player_slots": 220060,
+      "players_with_timeline": 189425
+    },
+    "region:TR": {
+      "targets": 24,
+      "eligible": 24,
+      "player_slots": 240,
+      "players_with_timeline": 66
+    }
+  },
+  "prospective_partitioning": {
+    "all_admissible_unprotected": {
+      "status": "blocked",
+      "reason": "Insufficient new test targets"
+    },
+    "timeline_eligible_unprotected": {
+      "status": "blocked",
+      "reason": "Insufficient new test targets"
+    }
+  },
+  "protected_prior_test_ids": 5000,
+  "future_test_after_utc": "2026-09-24T14:06:27.690000+00:00",
+  "backfill_existing_history_candidates": 0,
+  "blocked_target_unique_players": 220,
+  "top_backfill_existing_history": [],
+  "examples": {
+    "eligible_players_10": {
+      "match_id": "KR_8170448233",
+      "game_creation_time": 1775972084162,
+      "status": "eligible",
+      "player_timeline_count": 10,
+      "minimum_player_history": 1,
+      "timeline_history_matches": 149,
+      "history_matches": 149,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_6": {
+      "match_id": "NA1_5538721891",
+      "game_creation_time": 1775972672040,
+      "status": "eligible",
+      "player_timeline_count": 6,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 198,
+      "history_matches": 198,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_7": {
+      "match_id": "KR_8170476196",
+      "game_creation_time": 1775973368165,
+      "status": "eligible",
+      "player_timeline_count": 7,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 109,
+      "history_matches": 109,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_9": {
+      "match_id": "KR_8170484344",
+      "game_creation_time": 1775973802813,
+      "status": "eligible",
+      "player_timeline_count": 9,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 156,
+      "history_matches": 156,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_8": {
+      "match_id": "EUW1_7817913207",
+      "game_creation_time": 1775974413650,
+      "status": "eligible",
+      "player_timeline_count": 8,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 64,
+      "history_matches": 64,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_2": {
+      "match_id": "NA1_5538754794",
+      "game_creation_time": 1775976094924,
+      "status": "eligible",
+      "player_timeline_count": 2,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 46,
+      "history_matches": 46,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_5": {
+      "match_id": "KR_8170583760",
+      "game_creation_time": 1775978356356,
+      "status": "eligible",
+      "player_timeline_count": 5,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 39,
+      "history_matches": 39,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_4": {
+      "match_id": "EUN1_3937206062",
+      "game_creation_time": 1775983847477,
+      "status": "eligible",
+      "player_timeline_count": 4,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 32,
+      "history_matches": 32,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_1": {
+      "match_id": "KR_8170841112",
+      "game_creation_time": 1775988444759,
+      "status": "eligible",
+      "player_timeline_count": 1,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 26,
+      "history_matches": 26,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "eligible_players_3": {
+      "match_id": "EUN1_3937246372",
+      "game_creation_time": 1775991119746,
+      "status": "eligible",
+      "player_timeline_count": 3,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 16,
+      "history_matches": 16,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    },
+    "FeatureUnavailableError: 18D timeline history source unavailable; cannot replace missing source with cold defaults": {
+      "match_id": "EUW1_7820624087",
+      "game_creation_time": 1776195849856,
+      "status": "FeatureUnavailableError: 18D timeline history source unavailable; cannot replace missing source with cold defaults",
+      "player_timeline_count": 0,
+      "minimum_player_history": 0,
+      "timeline_history_matches": 0,
+      "history_matches": 0,
+      "own_timeline_usable": true,
+      "protected_prior_test": false
+    }
+  },
+  "diagnostic_replay_panel_checks": 49,
+  "runtime_sources": {
+    "core/aligned_features.py": "875c3eb9950327529281c8e18946f1efacefdcaeaad01452e92228aa862979a2",
+    "core/features/pipeline.py": "a40732951bf01be398c90e7dbaf5c14813ae135255f30a4a839919939a33e1bb",
+    "core/player_priors.py": "70c69331fde832ac140a0db1f04a57bbccf1cb9d7b505404c44116a425e2f3b6",
+    "core/champion_registry.py": "19c43cb95ba831f660b4443c6e0046be0d7962468da58316d9f699f9e535c598",
+    "core/features/static_meta.py": "3433bd64cd2d15c96f3d96368d370c1c0219e68aa6e10ba7477b72c582bfa332",
+    "core/features/draft_composition.py": "1a926af7b1dc74b8524a94fcf7107ad45a99474113ed7f5f02298acd528a4848",
+    "core/pre_match_history.py": "44844034895466360707756d3af74fd4a232298686dc4a555b68cf66aed1d545",
+    "core/features/matchup_matrix.py": "7123897bca24f1cd8e8896e28945e79039342ba191ec30da890ab4b59447dc0b",
+    "core/pre_match_dataset.py": "d68bd5242a26aa3ba67994da62ee00e4f1ac462a40bf882255b27cfef664cae5",
+    "core/deepsets_layers.py": "90b7612c1d77406bb35776e43cf2c26b396ebce941ad59266faef842a5c1b1e5",
+    "core/equivariant_model.py": "d3e82ccb0d98dd91493529767ebd66ea1523911da111336d023475d79addd60d",
+    "core/draft_features.py": "ec86a9d571615bd6fb6d6911cd5d2703dc0ff74def72e5e310f871f96a54b784",
+    "core/features/timeline_metrics.py": "c1f7dfb7a73cb61e0cd9d2edb00058e803cfac5ab9f0d227bd6dc4fc0efcd29b",
+    "core/point_in_time_dataset.py": "5e18e30745ecd8b441500e4b9a97747619cec88cfbb72f7adc6c85ce2e110dbf",
+    "core/json_utils.py": "80e62fe9b6a22f8dc5af14cd39039c1cd2f9c85954123fc1d20da93d754136d6",
+    "core/collection/regions.py": "ceecc5bbff7925a172dff02d0df46a928f673799b578ce0aa76f4603120bd8d5",
+    "core/frozen_history.py": "35b1aa2b38596c1d83d632e1d4fd23537d463534c2b4e5eb8b9db8e22ce31be8",
+    "core/aligned_partitions.py": "25dfd004478f903c8c5a7ecaa2a36cb23894dd02a640b76b4374cc2583d4c87b"
+  },
+  "runtime_unchanged": true,
+  "python_version": "3.14.4 (tags/v3.14.4:23116f9, Apr  7 2026, 14:10:54) [MSC v.1944 64 bit (AMD64)]",
+  "capture_optimization": "Installed pydantic_core JSON parser, checked against stdlib every 100 parses; production extraction and history semantics unchanged; checkpointed chunks bound to source metadata and headers",
+  "elapsed_seconds": 1520.32,
+  "limitations": [
+    "recent_30d means 30 days ending at the newest source match creation, not the wall-clock audit date.",
+    "Coverage is data and feature availability, not predictive performance.",
+    "Any timeline-admissible subset is a changed population; exclusions must remain explicit.",
+    "No new dataset frozen, model trained, or reserved test predictive metric computed.",
+    "Historical results assumed observable at result end; ingestion timestamps unknown."
+  ]
+}

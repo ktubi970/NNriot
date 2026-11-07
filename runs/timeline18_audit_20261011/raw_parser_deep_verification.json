@@ -1,0 +1,13 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-10-11T11:38:34.667516+00:00",
+  "python": "3.12.10 (tags/v3.12.10:0cc8128, Apr  8 2025, 12:21:36) [MSC v.1943 64 bit (AMD64)]",
+  "source_read_only": true,
+  "before_data_version": 2,
+  "after_data_version": 2,
+  "chunk": "1774293301317-1500.json.gz",
+  "checked_rows": 1500,
+  "first_mismatch": null,
+  "elapsed_seconds": 19.14,
+  "prior_timeline_check": "2500 earliest timelines compared without mismatch before deliberate switch to raw diagnostic; first complete chunk 1342 accepted plus 158 absent"
+}

@@ -1,0 +1,82 @@
+{
+  "new_matches": 58,
+  "training_records": 58,
+  "participants": 580,
+  "timelines_nonnull": 48,
+  "spatial_rows": 480,
+  "complete_matches": 48,
+  "total_matches": 117024,
+  "verified_at": "2026-10-11T09:28:59.971568+00:00",
+  "incomplete": [
+    {
+      "match_id": "EUW1_8007389612",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8007339404",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8007293537",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8005719877",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8003841781",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8003783100",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8002578189",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_8002542384",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_7999435186",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    },
+    {
+      "match_id": "EUW1_7999420819",
+      "training_records": 1,
+      "participants": 10,
+      "timelines_nonnull": 0,
+      "spatial_rows": 0
+    }
+  ]
+}

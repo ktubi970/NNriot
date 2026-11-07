@@ -1,0 +1,65 @@
+............................FFFF.....F....FFF.                           [100%]
+================================== FAILURES ===================================
+________ test_exact_threshold_finds_narrow_nonmonotone_feasible_region ________
+tests\test_selective_classification.py:333: in test_exact_threshold_finds_narrow_nonmonotone_feasible_region
+    assert result["target_met"] is True
+E   assert False is True
+__________ test_exact_threshold_keeps_maximum_feasible_coverage[0.0] __________
+tests\test_selective_classification.py:348: in test_exact_threshold_keeps_maximum_feasible_coverage
+    assert result["count"] == 101
+E   assert 100 == 101
+__ test_exact_threshold_keeps_maximum_feasible_coverage[0.9901960784313726] ___
+tests\test_selective_classification.py:347: in test_exact_threshold_keeps_maximum_feasible_coverage
+    assert result["target_met"] is True
+E   assert False is True
+_____________ test_exact_threshold_uses_rounded_group_boundaries ______________
+tests\test_selective_classification.py:356: in test_exact_threshold_uses_rounded_group_boundaries
+    assert result["target_met"] is True
+E   assert False is True
+______ test_exact_threshold_fallback_prefers_coverage_when_accuracy_ties ______
+tests\test_selective_classification.py:392: in test_exact_threshold_fallback_prefers_coverage_when_accuracy_ties
+    assert result["threshold"] == .1
+E   assert 0.011999999999999997 == 0.1
+____________ test_exact_threshold_matches_exhaustive_serving_masks ____________
+tests\test_selective_classification.py:428: in test_exact_threshold_matches_exhaustive_serving_masks
+    assert {key: actual[key] for key in expected} == expected
+E   AssertionError: assert {'threshold':...unt': 22, ...} == {'threshold':...unt': 22, ...}
+E     
+E     Omitting 5 identical items, use -vv to show
+E     Differing items:
+E     {'threshold': 0.039999499999999966} != {'threshold': 0.04}
+E     Use -v to get more diff
+_ test_exact_threshold_rejects_misaligned_observations[labels0-probabilities0] _
+tests\test_selective_classification.py:437: in test_exact_threshold_rejects_misaligned_observations
+    with pytest.raises(ValueError, match="Length mismatch"):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   Failed: DID NOT RAISE ValueError
+_ test_exact_threshold_rejects_misaligned_observations[labels1-probabilities1] _
+tests\test_selective_classification.py:438: in test_exact_threshold_rejects_misaligned_observations
+    find_threshold_for_accuracy(labels, probabilities)
+core\selective_classification.py:253: in find_threshold_for_accuracy
+    quantiles = np.quantile(conviction, np.linspace(0.0, 0.99, 100))
+                ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.venv312\Lib\site-packages\numpy\lib\_function_base_impl.py:4508: in quantile
+    return _quantile_unchecked(
+.venv312\Lib\site-packages\numpy\lib\_function_base_impl.py:4522: in _quantile_unchecked
+    return _ureduce(a,
+.venv312\Lib\site-packages\numpy\lib\_function_base_impl.py:3892: in _ureduce
+    r = func(a, **kwargs)
+        ^^^^^^^^^^^^^^^^^
+.venv312\Lib\site-packages\numpy\lib\_function_base_impl.py:4681: in _quantile_ureduce_func
+    result = _quantile(arr,
+.venv312\Lib\site-packages\numpy\lib\_function_base_impl.py:4805: in _quantile
+    slices_having_nans = np.isnan(arr[-1, ...])
+                                  ^^^^^^^^^^^^
+E   IndexError: index -1 is out of bounds for axis 0 with size 0
+=========================== short test summary info ===========================
+FAILED tests/test_selective_classification.py::test_exact_threshold_finds_narrow_nonmonotone_feasible_region
+FAILED tests/test_selective_classification.py::test_exact_threshold_keeps_maximum_feasible_coverage[0.0]
+FAILED tests/test_selective_classification.py::test_exact_threshold_keeps_maximum_feasible_coverage[0.9901960784313726]
+FAILED tests/test_selective_classification.py::test_exact_threshold_uses_rounded_group_boundaries
+FAILED tests/test_selective_classification.py::test_exact_threshold_fallback_prefers_coverage_when_accuracy_ties
+FAILED tests/test_selective_classification.py::test_exact_threshold_matches_exhaustive_serving_masks
+FAILED tests/test_selective_classification.py::test_exact_threshold_rejects_misaligned_observations[labels0-probabilities0]
+FAILED tests/test_selective_classification.py::test_exact_threshold_rejects_misaligned_observations[labels1-probabilities1]
+8 failed, 38 passed in 18.91s

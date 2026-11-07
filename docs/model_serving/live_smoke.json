@@ -1,0 +1,37 @@
+{
+  "match_id": "NA1_5643326491",
+  "prediction_time_ms": 1789591971592,
+  "live_frozen_priors": {
+    "14": "exactly_equal",
+    "18": "exactly_equal"
+  },
+  "checkpoint": {
+    "id": "candidate_deepsets_v3",
+    "checkpoint_sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f",
+    "feature_contract": "nnriot.players14.v1",
+    "legacy_architecture": true,
+    "training_provenance_status": "unknown",
+    "serving_validation": {
+      "status": "unverified",
+      "independent_evaluation_report": null
+    }
+  },
+  "probabilities_raw": {
+    "team_a": 0.43925827741622925,
+    "team_b": 0.5607417225837708
+  },
+  "calibration": {
+    "status": "unavailable",
+    "temperature": null
+  },
+  "selective_decision": {
+    "conviction": 0.060742,
+    "tier": "UNCALIBRATED",
+    "is_actionable": false,
+    "threshold_applied": 0.04,
+    "high_threshold": 0.08,
+    "abstained": true,
+    "recommendation": "Abstain - winner calibration unavailable"
+  },
+  "batch_inference_abs_delta": 5.960464477539063e-08
+}

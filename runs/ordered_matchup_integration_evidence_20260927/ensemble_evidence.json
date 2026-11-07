@@ -1,0 +1,28 @@
+{
+  "evaluation_exit_code": 0,
+  "refused_rerun_exit_code": 1,
+  "report": "runs\\ordered_matchup_integration_evidence_20260927\\ensemble_v2_1500\\ensemble_comparison.json",
+  "pytest_log": "runs\\ordered_matchup_integration_evidence_20260927\\ensemble_contract_pytest.log",
+  "refused_rerun_log": "runs\\ordered_matchup_integration_evidence_20260927\\ensemble_v2_1500_rerun_refused.log",
+  "source_hashes_at_evaluation": {
+    "model_sha256": "431f949f526374bcd6905f7ce3bb1be6537983e9c815661cecef2a9cf0d9c4d7",
+    "manifest_sha256": "89e975a5df041ad0f94bb958cce23e2922704560b352180cf8abed09f1faeab1",
+    "calibration_sha256": "ddd5504dee04725273a3fd598de8e960c6abfa4d993b6233fd845ed298e3ca41",
+    "feature_contract_sha256": "b5d9296106e13d7d8dd1a17c950906be5b58a952c5a196299e0feb1ac5892af4",
+    "source_cache_sha256": "adef89abac699163b69848706ac9385d909533eae3c93c5dbbf5b366bddf82a2",
+    "result_end_times_sha256": "d4d5d9a49319615c05e0c799d0557c12a2565af8c92cfed69e58737aca2c8f52"
+  },
+  "source_hashes_after_refused_rerun": {
+    "model_sha256": "431f949f526374bcd6905f7ce3bb1be6537983e9c815661cecef2a9cf0d9c4d7",
+    "manifest_sha256": "89e975a5df041ad0f94bb958cce23e2922704560b352180cf8abed09f1faeab1",
+    "calibration_sha256": "ddd5504dee04725273a3fd598de8e960c6abfa4d993b6233fd845ed298e3ca41",
+    "feature_contract_sha256": "b5d9296106e13d7d8dd1a17c950906be5b58a952c5a196299e0feb1ac5892af4",
+    "source_cache_sha256": "adef89abac699163b69848706ac9385d909533eae3c93c5dbbf5b366bddf82a2",
+    "result_end_times_sha256": "d4d5d9a49319615c05e0c799d0557c12a2565af8c92cfed69e58737aca2c8f52"
+  },
+  "source_hashes_unchanged": true,
+  "report_sha256_after_refused_rerun": "63b5a98e5a3493994bfa475f907949b640fe7cb267ef640503872caa4e7994b0",
+  "neural_matchup_weight": 5.0,
+  "tree_matchup_weight": 15.0,
+  "calibration_applied": true
+}

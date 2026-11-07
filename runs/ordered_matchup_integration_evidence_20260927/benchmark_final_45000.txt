@@ -1,0 +1,11 @@
+Verified frozen splits: {'train': 31500, 'validation': 6750, 'test': 6750}
+Extracted greedy train (31500, 232)
+Extracted greedy validation (6750, 232)
+Extracted greedy test (6750, 232)
+Completed greedy {"train": {"count": 31500, "coverage": 1.0, "accuracy": 0.7752063492063492, "log_loss": 0.4721308288459583, "roc_auc": 0.8652104375484004, "brier": 0.15378942623746353}, "validation": {"count": 6750, "coverage": 1.0, "accuracy": 0.5331851851851852, "log_loss": 0.7907431980322923, "roc_auc": 0.5372521879579155, "brier": 0.2849613218938161}, "test": {"count": 6750, "coverage": 1.0, "accuracy": 0.5305185185185185, "log_loss": 0.7916316057169205, "roc_auc": 0.5354674638104726, "brier": 0.28544138776024464}}
+Completed ordered {"train": {"count": 31500, "coverage": 1.0, "accuracy": 0.7078730158730159, "log_loss": 0.6097864899403231, "roc_auc": 0.78344487893099, "brier": 0.2096556143560649}, "validation": {"count": 6750, "coverage": 1.0, "accuracy": 0.5728888888888889, "log_loss": 0.6742056995455684, "roc_auc": 0.5951162191341651, "brier": 0.24071417351954033}, "test": {"count": 6750, "coverage": 1.0, "accuracy": 0.5755555555555556, "log_loss": 0.6795818068597846, "roc_auc": 0.583120440635448, "brier": 0.24324058518979447}}
+Extracted neutral train (31500, 232)
+Extracted neutral validation (6750, 232)
+Extracted neutral test (6750, 232)
+Completed neutral {"train": {"count": 31500, "coverage": 1.0, "accuracy": 0.7086349206349206, "log_loss": 0.6097776210810142, "roc_auc": 0.7833656710971526, "brier": 0.20964904643362162}, "validation": {"count": 6750, "coverage": 1.0, "accuracy": 0.5746666666666667, "log_loss": 0.6744680075515515, "roc_auc": 0.5945156418917951, "brier": 0.24083946595692532}, "test": {"count": 6750, "coverage": 1.0, "accuracy": 0.5734814814814815, "log_loss": 0.6794976248053235, "roc_auc": 0.5831257066114149, "brier": 0.24320814828397092}}
+Saved D:\projet\NNriot\runs\ordered_matchup_integration_validation_final

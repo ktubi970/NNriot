@@ -4,8 +4,8 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import numpy as np
 import pytest
 
-from continuous_trainer import _build_targets, sparse_microbatch_generator, REGRESSION_STATS
-from feature_labels import LABEL_KEYS, ALL_LABEL_KEYS
+from core.training_utils import _build_targets, sparse_microbatch_generator, REGRESSION_STATS
+from core.feature_labels import LABEL_KEYS, ALL_LABEL_KEYS
 
 
 def _make_record(labels: dict) -> dict:
@@ -112,24 +112,29 @@ def test_sparse_microbatch_generator_with_dict_targets():
         assert y_batch["total_kills"].shape[0] == x_batch.shape[0]
 
 
-def test_validate_checkpoint_input_dim_mismatch():
-    """_validate_checkpoint rejects a model with wrong input dim."""
-    from continuous_trainer import ContinuousTrainer
-    from generate_graph import build_multi_output_model
+def test_validate_checkpoint_input_dim_mismatch(tmp_path):
+    """ModelFactory rebuilds fresh model if checkpoint has wrong input dim."""
+    from core.model_factory import ModelFactory
+    from core.generate_graph import build_multi_output_model
 
-    # Build a model with the WRONG dim (different from VECTOR_DIM)
+    # Save a model with the WRONG dim into tmp_path
     wrong = build_multi_output_model(input_dim=999)
-    trainer = ContinuousTrainer.__new__(ContinuousTrainer)  # bypass __init__
-    with pytest.raises(ValueError, match="input dim"):
-        trainer._validate_checkpoint(wrong)
+    save_path = str(tmp_path / "model_v2.keras")
+    wrong.save(save_path)
+
+    # Calling ModelFactory with expected dim=20000 should detect mismatch and rebuild fresh model
+    model, path = ModelFactory.get_model(version="v2", input_dim=20000, checkpoint_dir=str(tmp_path))
+    assert model.input_shape[-1] == 20000
 
 
-def test_validate_checkpoint_correct_arch_passes():
-    """_validate_checkpoint accepts a model with matching input dim and heads."""
-    import continuous_trainer
-    from generate_graph import build_multi_output_model
+def test_validate_checkpoint_correct_arch_passes(tmp_path):
+    """ModelFactory loads correctly when input dim and heads match."""
+    from core.model_factory import ModelFactory
+    from core.generate_graph import build_multi_output_model
 
-    correct = build_multi_output_model(input_dim=continuous_trainer.VECTOR_DIM)
-    trainer = continuous_trainer.ContinuousTrainer.__new__(continuous_trainer.ContinuousTrainer)
-    # Should not raise
-    trainer._validate_checkpoint(correct)
+    correct = build_multi_output_model(input_dim=1000)
+    save_path = str(tmp_path / "model_v2.keras")
+    correct.save(save_path)
+
+    model, path = ModelFactory.get_model(version="v2", input_dim=1000, checkpoint_dir=str(tmp_path))
+    assert model.input_shape[-1] == 1000

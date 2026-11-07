@@ -1,0 +1,91 @@
+{
+  "split_counts": {
+    "train": 31500,
+    "validation": 6750,
+    "test": 6750
+  },
+  "best_weights": {
+    "nn": 0.6000000000000001,
+    "lgb": 0.23999999999999996,
+    "gbdt": 0.15999999999999995
+  },
+  "deepsets_metrics": {
+    "accuracy": 0.584,
+    "accuracy_lift": 0.020000000000000018,
+    "roc_auc": 0.5923497775482169,
+    "log_loss": 0.6759358412105231,
+    "brier": 0.24141944599654644
+  },
+  "lightgbm_metrics": {
+    "accuracy": 0.5804444444444444,
+    "accuracy_lift": 0.016444444444444484,
+    "roc_auc": 0.5945242239803441,
+    "log_loss": 0.6749059114133045,
+    "brier": 0.24101537371267362
+  },
+  "gbdt_metrics": {
+    "accuracy": 0.5700740740740741,
+    "accuracy_lift": 0.006074074074074121,
+    "roc_auc": 0.5850765275726055,
+    "log_loss": 0.6782537664531452,
+    "brier": 0.24264089440155187
+  },
+  "deepsets_plus_lightgbm": {
+    "accuracy": 0.5885925925925926,
+    "accuracy_lift": 0.02459259259259261,
+    "roc_auc": 0.5995416280309149,
+    "log_loss": 0.6733561076501625,
+    "brier": 0.24021443937985149
+  },
+  "tri_blend_ensemble_metrics": {
+    "accuracy": 0.5875555555555556,
+    "accuracy_lift": 0.023555555555555663,
+    "roc_auc": 0.6001001784987344,
+    "log_loss": 0.6732881891932435,
+    "brier": 0.24018507911921141,
+    "calibration_error": 0.03967590081507627
+  },
+  "confidence_stratification": {
+    "conviction_ge_0pct": {
+      "coverage_pct": 100.0,
+      "count": 6750,
+      "accuracy": 0.5876
+    },
+    "conviction_ge_2pct": {
+      "coverage_pct": 82.4,
+      "count": 5564,
+      "accuracy": 0.6041
+    },
+    "conviction_ge_4pct": {
+      "coverage_pct": 65.8,
+      "count": 4441,
+      "accuracy": 0.6154
+    },
+    "conviction_ge_6pct": {
+      "coverage_pct": 50.4,
+      "count": 3399,
+      "accuracy": 0.6299
+    },
+    "conviction_ge_8pct": {
+      "coverage_pct": 36.1,
+      "count": 2440,
+      "accuracy": 0.6389
+    },
+    "conviction_ge_10pct": {
+      "coverage_pct": 25.1,
+      "count": 1696,
+      "accuracy": 0.6492
+    },
+    "conviction_ge_12pct": {
+      "coverage_pct": 16.5,
+      "count": 1115,
+      "accuracy": 0.6637
+    },
+    "conviction_ge_15pct": {
+      "coverage_pct": 8.7,
+      "count": 584,
+      "accuracy": 0.6935
+    }
+  },
+  "baseline_accuracy": 0.564
+}

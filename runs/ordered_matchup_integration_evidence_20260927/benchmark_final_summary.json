@@ -1,0 +1,108 @@
+{
+  "completed": true,
+  "run": "D:\\projet\\NNriot\\runs\\ordered_matchup_integration_validation_final",
+  "same_library_versions_as_A3": true,
+  "end_time_diagnostics": {
+    "excluded": 0,
+    "found": 31500,
+    "invalid": 0,
+    "missing": 0,
+    "requested": 31500,
+    "valid": 31500
+  },
+  "variants": {
+    "greedy": {
+      "matrix_hashes_match": true,
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "test": {
+        "count": 6750,
+        "coverage": 1.0,
+        "accuracy": 0.5305185185185185,
+        "log_loss": 0.7916316057169205,
+        "roc_auc": 0.5354674638104726,
+        "brier": 0.28544138776024464
+      }
+    },
+    "ordered": {
+      "matrix_hashes_match": true,
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "test": {
+        "count": 6750,
+        "coverage": 1.0,
+        "accuracy": 0.5755555555555556,
+        "log_loss": 0.6795818068597846,
+        "roc_auc": 0.583120440635448,
+        "brier": 0.24324058518979447
+      }
+    },
+    "neutral": {
+      "matrix_hashes_match": true,
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "test": {
+        "count": 6750,
+        "coverage": 1.0,
+        "accuracy": 0.5734814814814815,
+        "log_loss": 0.6794976248053235,
+        "roc_auc": 0.5831257066114149,
+        "brier": 0.24320814828397092
+      }
+    }
+  }
+}

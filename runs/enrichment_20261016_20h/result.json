@@ -1,0 +1,48 @@
+{
+  "outcome": "completed",
+  "error": null,
+  "auth_failed": false,
+  "stop_reason": [
+    "duration_limit"
+  ],
+  "elapsed_seconds": 72310.19,
+  "duration_hours": 20,
+  "started_at": "2026-10-16T17:17:34.314516+00:00",
+  "deadline_at": "2026-10-17T13:17:34.314516+00:00",
+  "before": {
+    "matches": 118310,
+    "training_dataset": 110047,
+    "match_participants": 1234284,
+    "match_timelines": 118310
+  },
+  "after": {
+    "matches": 142455,
+    "training_dataset": 134192,
+    "match_participants": 1475734,
+    "match_timelines": 142455
+  },
+  "delta": {
+    "matches": 24145,
+    "training_dataset": 24145,
+    "match_participants": 241450,
+    "match_timelines": 24145
+  },
+  "validation": {
+    "new_matches": 24145,
+    "training_records": 24145,
+    "participants": 241450,
+    "timelines_nonnull": 24145,
+    "spatial_rows": 241450,
+    "missing_training": [],
+    "missing_timelines": [],
+    "invalid_participant_count": []
+  },
+  "service_result": {
+    "matches_saved": 24145,
+    "records_saved": 24145,
+    "timelines_saved": 24145,
+    "embeddings_computed": 24145,
+    "skipped": 30997,
+    "errors": 0
+  }
+}

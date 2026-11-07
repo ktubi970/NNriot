@@ -1,5 +1,5 @@
 import pytest
-from import_liquipedia import resolve_pro_name
+from scripts.import_liquipedia import resolve_pro_name
 
 def test_resolve_pro_name_success(monkeypatch):
     class MockResponse:
@@ -15,7 +15,7 @@ def test_resolve_pro_name_success(monkeypatch):
         """
         return MockResponse(html)
 
-    monkeypatch.setattr("import_liquipedia.requests.get", mock_get)
+    monkeypatch.setattr("scripts.import_liquipedia.requests.get", mock_get)
 
     result = resolve_pro_name("Razork")
     assert result == ("Razork", "EUW")
@@ -31,7 +31,7 @@ def test_resolve_pro_name_not_found(monkeypatch):
         html = "<div>No id here</div>"
         return MockResponse(html)
 
-    monkeypatch.setattr("import_liquipedia.requests.get", mock_get)
+    monkeypatch.setattr("scripts.import_liquipedia.requests.get", mock_get)
 
     result = resolve_pro_name("UnknownPlayer")
     assert result is None

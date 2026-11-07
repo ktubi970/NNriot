@@ -3,7 +3,7 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from data_collector import _build_training_record, EXCLUDED_GAME_MODES
+from scripts.data_collector import _build_training_record, EXCLUDED_GAME_MODES
 
 
 def _classic_match(team_a_win=True):

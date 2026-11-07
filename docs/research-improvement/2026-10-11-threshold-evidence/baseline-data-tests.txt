@@ -1,0 +1,363 @@
+Using original selective_classification snapshot; workspace files unchanged.
+........FFFFFFF.FFFFFFFFFFF.FFFFFF.FFFFFFF.F                             [100%]
+================================== FAILURES ===================================
+_________ test_snapshot_matches_original_aggregate_exactly[samples0] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples1] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples2] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...tion_ms': '0'} == {'source_sche...tion_ms': '0'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples3] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '-1'} == {'source_sche...ion_ms': '-1'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples4] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '20'} == {'source_sche...ion_ms': '20'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples5] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '10'} == {'source_sche...ion_ms': '10'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+_________ test_snapshot_matches_original_aggregate_exactly[samples6] __________
+tests\analytics\test_extract.py:174: in test_snapshot_matches_original_aggregate_exactly
+    assert source_snapshot(str(snapshot_db)) == {
+E   AssertionError: assert {'source_sche...ion_ms': '10'} == {'source_sche...ion_ms': '10'}
+E     
+E     Omitting 2 identical items, use -vv to show
+E     Differing items:
+E     {'source_schema_version': '14'} != {'source_schema_version': '12'}
+E     Use -v to get more diff
+___ test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable ___
+tests\test_merge_databases.py:84: in test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[json] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[mode] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_invalid_matches_and_all_their_relationships_are_archived[match_id] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_invalid_matches_and_all_their_relationships_are_archived[date] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_invalid_matches_and_all_their_relationships_are_archived[duplicate] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_invalid_matches_and_all_their_relationships_are_archived[synthetic] ___
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_invalid_matches_and_all_their_relationships_are_archived[teams] _____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_invalid_matches_and_all_their_relationships_are_archived[winner] ____
+tests\test_merge_databases.py:125: in test_invalid_matches_and_all_their_relationships_are_archived
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+________ test_identity_precedence_alias_conflicts_and_aggregate_stats _________
+tests\test_merge_databases.py:151: in test_identity_precedence_alias_conflicts_and_aggregate_stats
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____________ test_dry_run_and_invalid_paths_never_create_artifacts ____________
+tests\test_merge_databases.py:170: in test_dry_run_and_invalid_paths_never_create_artifacts
+    report = run(tmp_path, source, target, dry_run=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+____ test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them ____
+tests\test_merge_databases.py:201: in test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them
+    run(tmp_path, source, target)
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_____ test_nested_malformed_values_are_archived_without_aborting[teamId] ______
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_nested_malformed_values_are_archived_without_aborting[championName] ___
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+__ test_nested_malformed_values_are_archived_without_aborting[gameDuration] ___
+tests\test_merge_databases.py:216: in test_nested_malformed_values_are_archived_without_aborting
+    result = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+________ test_compatible_timeline_is_retained_and_adds_training_labels ________
+tests\test_merge_databases.py:229: in test_compatible_timeline_is_retained_and_adds_training_labels
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_________ test_committed_wal_is_included_without_checkpointing_inputs _________
+tests\test_merge_databases.py:247: in test_committed_wal_is_included_without_checkpointing_inputs
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+______ test_alias_target_wins_queue_conflicts_and_full_archive_manifest _______
+tests\test_merge_databases.py:271: in test_alias_target_wins_queue_conflicts_and_full_archive_manifest
+    conn.execute("INSERT INTO crawl_queue VALUES ('Queue','EUW',10,0,'today')")
+E   sqlite3.OperationalError: table crawl_queue has 9 columns but 5 values were supplied
+__ test_orphan_relationship_is_archived_even_if_canonical_has_identical_row ___
+tests\test_merge_databases.py:298: in test_orphan_relationship_is_archived_even_if_canonical_has_identical_row
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__TOMBSTONE__] _
+tests\test_merge_databases.py:310: in test_repository_synthetic_puuids_are_rejected_and_not_created_as_players
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__UNKNOWN_EUW1_1_1] _
+tests\test_merge_databases.py:310: in test_repository_synthetic_puuids_are_rejected_and_not_created_as_players
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_canonical_unknown_identity_is_filled_without_preservation_failure ____
+tests\test_merge_databases.py:321: in test_canonical_unknown_identity_is_filled_without_preservation_failure
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+_ test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts _
+tests\test_merge_databases.py:340: in test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts
+    with pytest.raises(ValueError, match='changed'):
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E   AssertionError: Regex pattern did not match.
+E     Expected regex: 'changed'
+E     Actual message: 'only schema version 12 is supported'
+________ test_null_canonical_alias_is_archived_instead_of_disappearing ________
+tests\test_merge_databases.py:354: in test_null_canonical_alias_is_archived_instead_of_disappearing
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+___ test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic ___
+tests\test_merge_databases.py:405: in test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic
+    report = run(tmp_path, source, target)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests\test_merge_databases.py:61: in run
+    return api().merge_databases(source=source, target=target,
+scripts\merge_databases.py:480: in merge_databases
+    _schema(src)
+scripts\merge_databases.py:69: in _schema
+    raise ValueError("only schema version 12 is supported")
+E   ValueError: only schema version 12 is supported
+=========================== short test summary info ===========================
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples0]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples1]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples2]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples3]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples4]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples5]
+FAILED tests/analytics/test_extract.py::test_snapshot_matches_original_aggregate_exactly[samples6]
+FAILED tests/test_merge_databases.py::test_merge_preserves_canonical_ids_regenerates_source_and_is_repeatable
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[json]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[mode]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[match_id]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[date]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[duplicate]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[synthetic]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[teams]
+FAILED tests/test_merge_databases.py::test_invalid_matches_and_all_their_relationships_are_archived[winner]
+FAILED tests/test_merge_databases.py::test_identity_precedence_alias_conflicts_and_aggregate_stats
+FAILED tests/test_merge_databases.py::test_dry_run_and_invalid_paths_never_create_artifacts
+FAILED tests/test_merge_databases.py::test_latest_nonempty_names_are_used_even_when_newest_match_lacks_them
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[teamId]
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[championName]
+FAILED tests/test_merge_databases.py::test_nested_malformed_values_are_archived_without_aborting[gameDuration]
+FAILED tests/test_merge_databases.py::test_compatible_timeline_is_retained_and_adds_training_labels
+FAILED tests/test_merge_databases.py::test_committed_wal_is_included_without_checkpointing_inputs
+FAILED tests/test_merge_databases.py::test_alias_target_wins_queue_conflicts_and_full_archive_manifest
+FAILED tests/test_merge_databases.py::test_orphan_relationship_is_archived_even_if_canonical_has_identical_row
+FAILED tests/test_merge_databases.py::test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__TOMBSTONE__]
+FAILED tests/test_merge_databases.py::test_repository_synthetic_puuids_are_rejected_and_not_created_as_players[__UNKNOWN_EUW1_1_1]
+FAILED tests/test_merge_databases.py::test_canonical_unknown_identity_is_filled_without_preservation_failure
+FAILED tests/test_merge_databases.py::test_concurrent_input_write_refuses_readiness_report_and_cleans_staged_artifacts
+FAILED tests/test_merge_databases.py::test_null_canonical_alias_is_archived_instead_of_disappearing
+FAILED tests/test_merge_databases.py::test_identity_stats_use_table_scan_and_preserve_integer_null_arithmetic
+32 failed, 12 passed in 50.23s

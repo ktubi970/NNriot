@@ -1,0 +1,3 @@
+# Linux / WSL2 only. Keep the TensorFlow version aligned with .venv312.
+-r requirements.txt
+tensorflow[and-cuda]==2.21.0

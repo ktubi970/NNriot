@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "model_id": "gpu_validation_20260927_133413",
+  "checkpoint": {
+    "path": "runs/gpu_validation_20260927_133413/model.keras",
+    "sha256": "100b6bfd88ee3f9820cc9116278e5021fc0500df45326fa7df2e540fe2efad3c"
+  },
+  "feature_contract": "nnriot.players14.v1",
+  "feature_semantics_status": "layout_verified_training_semantics_unverified",
+  "training": {
+    "status": "split_membership_recorded_training_semantics_unverified",
+    "source_db": null,
+    "bounds_ms": {
+      "train": {
+        "count": 512,
+        "min_ms": 1774677478411,
+        "max_ms": 1774755669197
+      },
+      "validation": {
+        "count": 128,
+        "min_ms": 1778268028027,
+        "max_ms": 1778272681737
+      },
+      "test": {
+        "count": 128,
+        "min_ms": 1778476331517,
+        "max_ms": 1778480595152
+      }
+    },
+    "split_manifest_sha256": "4ed649556f735f8297e87992ef45d11079792e9fbf15d8fa8ae17b7e5dd0d423",
+    "dataset_sha256": null
+  },
+  "calibration": {
+    "path": "runs/gpu_validation_20260927_133413/model.calibration.json",
+    "sha256": "4113996e49e915b5a35ed027065a9f42b1741d5b8c711edd192c95c75a5a1406"
+  },
+  "output_heads": [
+    "winner",
+    "winner_uncertainty",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "team_a_kills",
+    "team_b_kills",
+    "total_kills",
+    "first_blood"
+  ],
+  "has_directional_side_bias": false,
+  "decision_policy": {
+    "action_threshold": 0.04,
+    "high_threshold": 0.08,
+    "origin": "existing defaults; not validated risk guarantees"
+  },
+  "limitations": [
+    "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+    "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+  ]
+}

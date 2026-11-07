@@ -1,0 +1,20 @@
+{
+  "verdict": "SIGNAL_CONFIRMED",
+  "sample_counts": {
+    "train": 3500,
+    "validation": 750,
+    "test": 750
+  },
+  "test_auc": 0.5509214769257051,
+  "auc_standard_error": 0.020949978821988978,
+  "auc_ci_95": [
+    0.5098595184346068,
+    0.5919834354168035
+  ],
+  "p_value_vs_null": 0.00753646778021877,
+  "test_accuracy": 0.5266666666666666,
+  "baseline_accuracy": 0.516,
+  "accuracy_lift": 0.010666666666666602,
+  "val_log_loss": 0.6977235687101709,
+  "test_log_loss": 0.6899870472850941
+}

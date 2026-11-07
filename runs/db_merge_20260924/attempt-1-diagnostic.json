@@ -1,0 +1,18 @@
+{
+  "attempt": 1,
+  "status": "stopped_for_io_performance",
+  "started_local": "2026-09-24T18:21:31+02:00",
+  "source_fingerprint_finished_local": "2026-09-24T18:29:03+02:00",
+  "backup_started_local": "2026-09-24T18:49:12+02:00",
+  "classification_started_local": "2026-09-24T18:52:44+02:00",
+  "stopped_local": "2026-09-24T18:58:22.059916+02:00",
+  "complete_classifications": {
+    "imported": 7977,
+    "archived": 692
+  },
+  "archive_bytes": 9044907,
+  "staged_database_bytes": 1991168000,
+  "last_observed_read_bytes": 8246706778,
+  "last_observed_write_bytes": 2251756712,
+  "reason": "Default 2MiB SQLite cache and random sorted row reads made import roughly 20-25 matches/sec; restart authorized with bounded cache and sequential scans. No original database writes."
+}

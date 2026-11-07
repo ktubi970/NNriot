@@ -171,6 +171,8 @@ def initialize_schema(path: str) -> None:
     """Create or validate the version-one analytical schema."""
 
     with connect_analytics(path) as conn:
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA synchronous=NORMAL")
         conn.executescript(SCHEMA_SQL)
         set_meta(conn, "schema_version", str(ANALYTICS_SCHEMA_VERSION))
 

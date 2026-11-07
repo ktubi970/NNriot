@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-23T19:24:13.611178+00:00",
+  "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+  "dataset_sha256": "e178c61f142f37939508dae0d57c4c7e6896f5fcc3dca8b7d2847864ceb41d7c",
+  "checkpoint": "D:\\projet\\NNriot\\runs\\pre_match_10k_15epochs_20260923_211035\\model.keras",
+  "split_manifest": "D:\\projet\\NNriot\\runs\\pre_match_10k_15epochs_20260923_211035\\model.split.json",
+  "parameters": {
+    "epochs": 15,
+    "batch_size": 64,
+    "dim": 20000,
+    "seed": 42
+  },
+  "tensorflow_version": "2.21.0",
+  "gpu_devices": [],
+  "split_counts": {
+    "train": 7000,
+    "validation": 1500,
+    "test": 1500
+  },
+  "train_positive_rate": 0.5024285714285714,
+  "selection_metric": "validation.winner.log_loss",
+  "selected_epoch": 4,
+  "is_calibrated": false,
+  "evaluation_target": "winner",
+  "baseline_policy": "constant positive rate fitted on training split only",
+  "active_heads": [
+    "winner",
+    "team_b_kill_lead",
+    "first_blood",
+    "first_baron",
+    "first_inhibitor",
+    "first_tower",
+    "both_baron",
+    "both_inhibitor",
+    "both_dragon",
+    "elder_dragon",
+    "total_kills",
+    "total_barons",
+    "total_dragons",
+    "total_towers",
+    "team_a_kills",
+    "team_b_kills",
+    "kill_handicap"
+  ],
+  "disabled_heads": [
+    "kills_odd",
+    "first_to_5_kills",
+    "first_to_10_kills",
+    "first_to_15_kills",
+    "first_to_20_kills"
+  ],
+  "limitations": [
+    "No probability calibration fitted.",
+    "Chronological holdout only; players may overlap between splits.",
+    "Only winner is evaluated; other heads are not validated.",
+    "A small pilot does not establish predictive quality."
+  ],
+  "metrics": {
+    "train": {
+      "model": {
+        "accuracy": 0.5024285714285714,
+        "log_loss": 0.6931354251681497,
+        "brier": 0.2499941223267467,
+        "roc_auc": 0.4997215444511303,
+        "calibration_error": 0.0002101244415555481
+      },
+      "baseline": {
+        "accuracy": 0.5024285714285714,
+        "log_loss": 0.6931353845951962,
+        "brier": 0.24999410204081626,
+        "roc_auc": 0.5,
+        "calibration_error": 1.1102230246251565e-16
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": -4.057295355242019e-08
+    },
+    "validation": {
+      "model": {
+        "accuracy": 0.49933333333333335,
+        "log_loss": 0.6931665242982482,
+        "brier": 0.2500096717619532,
+        "roc_auc": 0.5224498176885648,
+        "calibration_error": 0.0033042005697885846
+      },
+      "baseline": {
+        "accuracy": 0.49933333333333335,
+        "log_loss": 0.6931654528588638,
+        "brier": 0.2500091360544217,
+        "roc_auc": 0.5,
+        "calibration_error": 0.0030952380952378733
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": -1.0714393844368786e-06
+    },
+    "test": {
+      "model": {
+        "accuracy": 0.526,
+        "log_loss": 0.6928861132980094,
+        "brier": 0.24986946755420392,
+        "roc_auc": 0.5139497200429963,
+        "calibration_error": 0.02336337304115299
+      },
+      "baseline": {
+        "accuracy": 0.526,
+        "log_loss": 0.6929064032026508,
+        "brier": 0.24987961224489794,
+        "roc_auc": 0.5,
+        "calibration_error": 0.0235714285714288
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": 2.0289904641423995e-05
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 16.042740765162876,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6932616205594974,
+          "brier": 0.25005721169335177,
+          "roc_auc": 0.5170311413886959,
+          "calibration_error": 0.007682429075241082
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -9.616770063358704e-05
+      }
+    },
+    {
+      "epoch": 2,
+      "train_loss": 15.518232766287667,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6931755927963092,
+          "brier": 0.2500142054687311,
+          "roc_auc": 0.519840924161643,
+          "calibration_error": 0.00401938194036483
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -1.01399374454747e-05
+      }
+    },
+    {
+      "epoch": 3,
+      "train_loss": 15.42307586996896,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6942249717024305,
+          "brier": 0.25053826873331564,
+          "roc_auc": 0.5211787043176965,
+          "calibration_error": 0.023306561986605356
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -0.001059518843566698
+      }
+    },
+    {
+      "epoch": 4,
+      "train_loss": 15.466379356384277,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931665242982482,
+          "brier": 0.2500096717619532,
+          "roc_auc": 0.5224498176885648,
+          "calibration_error": 0.0033042005697885846
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -1.0714393844368786e-06
+      }
+    },
+    {
+      "epoch": 5,
+      "train_loss": 15.400993836539133,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6941249272610002,
+          "brier": 0.2504884323735549,
+          "roc_auc": 0.48241507984903087,
+          "calibration_error": 0.022097265164057356
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -0.0009594744021363955
+      }
+    },
+    {
+      "epoch": 6,
+      "train_loss": 15.412154114859446,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931962782216966,
+          "brier": 0.2500245479836731,
+          "roc_auc": 0.5230035964508382,
+          "calibration_error": 0.005111491998036677
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -3.082536283283144e-05
+      }
+    },
+    {
+      "epoch": 7,
+      "train_loss": 15.378425615583147,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6934991961426358,
+          "brier": 0.2501759535527079,
+          "roc_auc": 0.5235635974463955,
+          "calibration_error": 0.013298294067382754
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -0.00033374328377200335
+      }
+    },
+    {
+      "epoch": 8,
+      "train_loss": 15.370241463797433,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6954049985428046,
+          "brier": 0.25112622533390166,
+          "roc_auc": 0.5222987063088111,
+          "calibration_error": 0.03358418748776121
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -0.0022395456839408023
+      }
+    },
+    {
+      "epoch": 9,
+      "train_loss": 15.358982434953962,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931811232444872,
+          "brier": 0.2500169709632488,
+          "roc_auc": 0.4811644109589528,
+          "calibration_error": 0.004167602380116764
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -1.567038562344525e-05
+      }
+    },
+    {
+      "epoch": 10,
+      "train_loss": 15.354906242370605,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6932045259376597,
+          "brier": 0.25002867038347576,
+          "roc_auc": 0.5171840305493877,
+          "calibration_error": 0.005436940650145217
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -3.907307879591482e-05
+      }
+    },
+    {
+      "epoch": 11,
+      "train_loss": 15.354947685241699,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6938859990195361,
+          "brier": 0.2503691603945191,
+          "roc_auc": 0.48232352413070956,
+          "calibration_error": 0.01922333002090454
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -0.0007205461606722974
+      }
+    },
+    {
+      "epoch": 12,
+      "train_loss": 15.332469687325613,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6936085558439836,
+          "brier": 0.25023059290806454,
+          "roc_auc": 0.5092551275646712,
+          "calibration_error": 0.015200762867927542
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -0.0004431029851198476
+      }
+    },
+    {
+      "epoch": 13,
+      "train_loss": 15.33767295728411,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6932499999936966,
+          "brier": 0.25005140557501604,
+          "roc_auc": 0.523336041486296,
+          "calibration_error": 0.0072080268462498265
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -8.454713483285747e-05
+      }
+    },
+    {
+      "epoch": 14,
+      "train_loss": 15.337608851841518,
+      "validation": {
+        "model": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6937175268482706,
+          "brier": 0.25028502669635583,
+          "roc_auc": 0.48330041475629293,
+          "calibration_error": 0.016893158515294326
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -0.0005520739894068205
+      }
+    },
+    {
+      "epoch": 15,
+      "train_loss": 15.322950517926897,
+      "validation": {
+        "model": {
+          "accuracy": 0.5006666666666667,
+          "log_loss": 0.6933038159414096,
+          "brier": 0.2500783026603596,
+          "roc_auc": 0.4835466374162444,
+          "calibration_error": 0.008870775421460475
+        },
+        "baseline": {
+          "accuracy": 0.49933333333333335,
+          "log_loss": 0.6931654528588638,
+          "brier": 0.2500091360544217,
+          "roc_auc": 0.5,
+          "calibration_error": 0.0030952380952378733
+        },
+        "accuracy_lift": 0.001333333333333353,
+        "log_loss_improvement": -0.00013836308254577823
+      }
+    }
+  ],
+  "elapsed_seconds": 793.3280000000086
+}

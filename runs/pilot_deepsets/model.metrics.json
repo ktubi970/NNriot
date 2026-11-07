@@ -1,0 +1,304 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-26T09:10:22.148638+00:00",
+  "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+  "dataset_sha256": "56d6ff06eaf737dbb504cff19f27368f6202a1b3b07563de6f27fe33f5216a9f",
+  "split_sha256": "bc6870b58f80caf88e750f155119b1fe03fa986df7b49d7b7d425ad39dad4d68",
+  "checkpoint": "D:\\projet\\NNriot\\runs\\pilot_deepsets\\model.keras",
+  "split_manifest": "D:\\projet\\NNriot\\runs\\pilot_deepsets\\model.split.json",
+  "parameters": {
+    "epochs": 2,
+    "batch_size": 32,
+    "dim": 8,
+    "seed": 42,
+    "feature_version": "deepsets"
+  },
+  "tensorflow_version": "2.21.0",
+  "gpu_devices": [],
+  "split_counts": {
+    "train": 70,
+    "validation": 15,
+    "test": 15
+  },
+  "train_positive_rate": 0.5571428571428572,
+  "selection_metric": "validation.winner.log_loss",
+  "selected_epoch": 2,
+  "is_calibrated": false,
+  "evaluation_target": "winner",
+  "baseline_policy": "constant positive rate fitted on training split only",
+  "active_heads": [
+    "winner",
+    "team_b_kill_lead",
+    "first_blood",
+    "first_baron",
+    "first_inhibitor",
+    "first_tower",
+    "both_baron",
+    "both_inhibitor",
+    "both_dragon",
+    "elder_dragon",
+    "total_kills",
+    "total_barons",
+    "total_dragons",
+    "total_towers",
+    "team_a_kills",
+    "team_b_kills",
+    "kill_handicap"
+  ],
+  "disabled_heads": [
+    "kills_odd",
+    "first_to_5_kills",
+    "first_to_10_kills",
+    "first_to_15_kills",
+    "first_to_20_kills"
+  ],
+  "limitations": [
+    "No probability calibration fitted.",
+    "Chronological holdout only; players may overlap between splits.",
+    "Only winner is evaluated; other heads are not validated.",
+    "A small pilot does not establish predictive quality."
+  ],
+  "metrics": {
+    "train": {
+      "model": {
+        "accuracy": 0.42857142857142855,
+        "log_loss": 0.9477758897999761,
+        "brier": 0.3453802217843893,
+        "roc_auc": 0.4077750206782465,
+        "calibration_error": 0.29639462126152855,
+        "diagnostics": {
+          "quantile_ece": 0.2786456361413002,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 10
+          },
+          "brier_decomposition": {
+            "reliability": 0.11163044552517115,
+            "resolution": 0.018163265306122448,
+            "uncertainty": 0.246734693877551,
+            "binned_brier": 0.34020187409659974,
+            "binning_residual": 0.005178347687789575,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "estimated",
+            "slope": -0.26656019526040975,
+            "intercept": 0.24479325688068737,
+            "reason": null
+          }
+        }
+      },
+      "baseline": {
+        "accuracy": 0.5571428571428572,
+        "log_loss": 0.6866022772194197,
+        "brier": 0.2467346938775511,
+        "roc_auc": 0.5,
+        "calibration_error": 1.1102230246251565e-16,
+        "diagnostics": {
+          "quantile_ece": 1.1102230246251565e-16,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 1
+          },
+          "brier_decomposition": {
+            "reliability": 1.232595164407831e-32,
+            "resolution": 0.0,
+            "uncertainty": 0.246734693877551,
+            "binned_brier": 0.24673469387755104,
+            "binning_residual": 5.551115123125783e-17,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "unavailable",
+            "slope": null,
+            "intercept": null,
+            "reason": "constant_predictions"
+          }
+        }
+      },
+      "accuracy_lift": -0.12857142857142861,
+      "log_loss_improvement": -0.2611736125805564
+    },
+    "validation": {
+      "model": {
+        "accuracy": 0.5333333333333333,
+        "log_loss": 0.8161049800070388,
+        "brier": 0.3000590287968456,
+        "roc_auc": 0.5,
+        "calibration_error": 0.3305009469389915,
+        "diagnostics": {
+          "quantile_ece": 0.3391010577479998,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 10
+          },
+          "brier_decomposition": {
+            "reliability": 0.15787096428592626,
+            "resolution": 0.07333333333333335,
+            "uncertainty": 0.24,
+            "binned_brier": 0.32453763095259286,
+            "binning_residual": -0.024478602155747264,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "estimated",
+            "slope": 0.23355952112467537,
+            "intercept": 0.4954111726785872,
+            "reason": null
+          }
+        }
+      },
+      "baseline": {
+        "accuracy": 0.6,
+        "log_loss": 0.6767633725775127,
+        "brier": 0.24183673469387745,
+        "roc_auc": 0.5,
+        "calibration_error": 0.04285714285714293,
+        "diagnostics": {
+          "quantile_ece": 0.04285714285714293,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 1
+          },
+          "brier_decomposition": {
+            "reliability": 0.001836734693877557,
+            "resolution": 0.0,
+            "uncertainty": 0.24,
+            "binned_brier": 0.24183673469387756,
+            "binning_residual": -1.1102230246251565e-16,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "unavailable",
+            "slope": null,
+            "intercept": null,
+            "reason": "constant_predictions"
+          }
+        }
+      },
+      "accuracy_lift": -0.06666666666666665,
+      "log_loss_improvement": -0.13934160742952606
+    },
+    "test": {
+      "model": {
+        "accuracy": 0.4,
+        "log_loss": 0.9343254308241998,
+        "brier": 0.3452581255829378,
+        "roc_auc": 0.3055555555555556,
+        "calibration_error": 0.4375185330708821,
+        "diagnostics": {
+          "quantile_ece": 0.4527129173278808,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 10
+          },
+          "brier_decomposition": {
+            "reliability": 0.30698754507157355,
+            "resolution": 0.12666666666666668,
+            "uncertainty": 0.15999999999999998,
+            "binned_brier": 0.3403208784049069,
+            "binning_residual": 0.004937247178030901,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "estimated",
+            "slope": -0.22345434843673975,
+            "intercept": 1.5124627828787818,
+            "reason": null
+          }
+        }
+      },
+      "baseline": {
+        "accuracy": 0.8,
+        "log_loss": 0.6308484842486127,
+        "brier": 0.21897959183673463,
+        "roc_auc": 0.5,
+        "calibration_error": 0.242857142857143,
+        "diagnostics": {
+          "quantile_ece": 0.242857142857143,
+          "binning": {
+            "method": "quantile",
+            "requested_bins": 10,
+            "effective_bins": 1
+          },
+          "brier_decomposition": {
+            "reliability": 0.05897959183673476,
+            "resolution": 0.0,
+            "uncertainty": 0.15999999999999998,
+            "binned_brier": 0.21897959183673477,
+            "binning_residual": -1.3877787807814457e-16,
+            "identity_target": "binned_probabilities"
+          },
+          "calibration_slope": {
+            "status": "unavailable",
+            "slope": null,
+            "intercept": null,
+            "reason": "constant_predictions"
+          }
+        }
+      },
+      "accuracy_lift": -0.4,
+      "log_loss_improvement": -0.3034769465755871
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 4731.555557517142,
+      "validation": {
+        "model": {
+          "accuracy": 0.5333333333333333,
+          "log_loss": 1.0302714362065906,
+          "brier": 0.3511431543111255,
+          "roc_auc": 0.4814814814814815,
+          "calibration_error": 0.39405657301346464
+        },
+        "baseline": {
+          "accuracy": 0.6,
+          "log_loss": 0.6767633725775127,
+          "brier": 0.24183673469387745,
+          "roc_auc": 0.5,
+          "calibration_error": 0.04285714285714293
+        },
+        "accuracy_lift": -0.06666666666666665,
+        "log_loss_improvement": -0.35350806362907783
+      }
+    },
+    {
+      "epoch": 2,
+      "train_loss": 1345.5834190543912,
+      "validation": {
+        "model": {
+          "accuracy": 0.5333333333333333,
+          "log_loss": 0.8161049800070388,
+          "brier": 0.3000590287968456,
+          "roc_auc": 0.5,
+          "calibration_error": 0.3305009469389915
+        },
+        "baseline": {
+          "accuracy": 0.6,
+          "log_loss": 0.6767633725775127,
+          "brier": 0.24183673469387745,
+          "roc_auc": 0.5,
+          "calibration_error": 0.04285714285714293
+        },
+        "accuracy_lift": -0.06666666666666665,
+        "log_loss_improvement": -0.13934160742952606
+      }
+    }
+  ],
+  "elapsed_seconds": 19.43699999997625,
+  "symmetry_diagnostics": {
+    "is_equivariant": true,
+    "max_symmetry_violation": 5.960464477539063e-08,
+    "anti_symmetry_guarantee": true
+  },
+  "calibrated_heads": [],
+  "calibrated_metrics": null,
+  "calibration_artifact": null
+}

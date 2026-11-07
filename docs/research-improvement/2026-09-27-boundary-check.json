@@ -1,0 +1,45 @@
+{
+  "seed": 20260927,
+  "probabilities": 1100000,
+  "canonical_swap_mismatches": 0,
+  "selection_swap_mismatches": {
+    "0.025": 0,
+    "0.04": 0,
+    "0.08": 0
+  },
+  "random_serving_decision_changes_at_4pct": 0,
+  "examples": [
+    {
+      "p_team_b": 0.46,
+      "tier": "ACTIONABLE",
+      "conviction": 0.04,
+      "retained": 1
+    },
+    {
+      "p_team_b": 0.54,
+      "tier": "ACTIONABLE",
+      "conviction": 0.04,
+      "retained": 1
+    },
+    {
+      "p_team_b": 0.4600005,
+      "tier": "COINFLIP",
+      "conviction": 0.039999,
+      "retained": 0
+    },
+    {
+      "p_team_b": 0.5399995,
+      "tier": "COINFLIP",
+      "conviction": 0.039999,
+      "retained": 0
+    }
+  ],
+  "evaluation_45000_rows_ms": [
+    47.020999947562814,
+    55.70210004225373,
+    85.77849995344877,
+    75.53030003327876,
+    36.412699962966144
+  ],
+  "performance_note": "Post-change smoke measurement during full test run, not a controlled speed comparison."
+}

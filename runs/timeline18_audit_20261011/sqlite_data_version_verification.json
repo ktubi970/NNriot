@@ -1,0 +1,35 @@
+{
+  "status": "passed",
+  "verified_utc": "2026-10-11T11:11:59.271446+00:00",
+  "sqlite_version": "3.49.1",
+  "actual_source_accessed": false,
+  "scope": "Scratch databases only; persistent read-only observer outside transaction detects other connection commits",
+  "cases": [
+    {
+      "journal_mode": "delete",
+      "observer_read_only": true,
+      "observer_in_transaction": false,
+      "before": 1,
+      "after_one_commit": 2,
+      "after_multiple_commits": 3,
+      "after_rollback": 3,
+      "single_commit_detected": true,
+      "multiple_commits_detected": true,
+      "stable_without_commit": true,
+      "rollback_unchanged": true
+    },
+    {
+      "journal_mode": "wal",
+      "observer_read_only": true,
+      "observer_in_transaction": false,
+      "before": 2,
+      "after_one_commit": 3,
+      "after_multiple_commits": 4,
+      "after_rollback": 4,
+      "single_commit_detected": true,
+      "multiple_commits_detected": true,
+      "stable_without_commit": true,
+      "rollback_unchanged": true
+    }
+  ]
+}

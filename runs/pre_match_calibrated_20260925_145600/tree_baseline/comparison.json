@@ -1,0 +1,128 @@
+{
+  "dataset_sha256": "5de7c01f031eeb51fcccff9ae28e0196fbd8bd0b736ceeeecc7dd6d4bb1c46c2",
+  "split_sha256": "3c3a78721345d681f788da0731c4ee018ea06e0e13478d4644c11d98aacdc5ee",
+  "selection_policy": "settings frozen using validation before test access",
+  "test": {
+    "constant": {
+      "accuracy": 0.49133333333333334,
+      "log_loss": 0.6934613780091003,
+      "brier": 0.25015708843537415,
+      "roc_auc": 0.5,
+      "calibration_error": 0.015238095238095106,
+      "diagnostics": {
+        "quantile_ece": 0.015238095238095106,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 1
+        },
+        "brier_decomposition": {
+          "reliability": 0.00023219954648525675,
+          "resolution": 0.0,
+          "uncertainty": 0.24992488888888886,
+          "binned_brier": 0.25015708843537415,
+          "binning_residual": 0.0,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "unavailable",
+          "slope": null,
+          "intercept": null,
+          "reason": "constant_predictions"
+        }
+      }
+    },
+    "tree_raw": {
+      "accuracy": 0.4886666666666667,
+      "log_loss": 0.7287765104754046,
+      "brier": 0.26641981167063494,
+      "roc_auc": 0.49212830165863164,
+      "calibration_error": 0.11148579636021747,
+      "diagnostics": {
+        "quantile_ece": 0.11118104846380975,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 10
+        },
+        "brier_decomposition": {
+          "reliability": 0.017404176357761373,
+          "resolution": 0.001102666666666667,
+          "uncertainty": 0.24992488888888886,
+          "binned_brier": 0.2662263985799836,
+          "binning_residual": 0.00019341309065135093,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "estimated",
+          "slope": -0.03839717525911058,
+          "intercept": -0.03363325237764178,
+          "reason": null
+        }
+      }
+    },
+    "neural_raw": {
+      "accuracy": 0.49133333333333334,
+      "log_loss": 0.6932930963397208,
+      "brier": 0.25007295659679313,
+      "roc_auc": 0.4837622325640949,
+      "calibration_error": 0.01215599850813548,
+      "diagnostics": {
+        "quantile_ece": 0.033401939272880536,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 10
+        },
+        "brier_decomposition": {
+          "reliability": 0.0018807442667720625,
+          "resolution": 0.0017326223415499854,
+          "uncertainty": 0.24992488888888886,
+          "binned_brier": 0.250073010814111,
+          "binning_residual": -5.4217317857485625e-08,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "estimated",
+          "slope": -0.0004886011674886859,
+          "intercept": -0.03466314932214371,
+          "reason": null
+        }
+      }
+    },
+    "neural_calibrated": {
+      "accuracy": 0.49133333333333334,
+      "log_loss": 0.6935074726896859,
+      "brier": 0.2501801313259027,
+      "roc_auc": 0.4837622325640949,
+      "calibration_error": 0.01595671337609622,
+      "diagnostics": {
+        "quantile_ece": 0.03492898526112948,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 10
+        },
+        "brier_decomposition": {
+          "reliability": 0.001987978028526812,
+          "resolution": 0.0017326223415499854,
+          "uncertainty": 0.24992488888888886,
+          "binned_brier": 0.25018024457586574,
+          "binning_residual": -1.1324996301853574e-07,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "estimated",
+          "slope": -0.001020188183939152,
+          "intercept": -0.034640330845835426,
+          "reason": null
+        }
+      }
+    }
+  },
+  "limitations": [
+    "Point estimates; no significance claim.",
+    "Players may overlap between temporal splits.",
+    "Reusing a previously inspected test is retrospective benchmarking."
+  ]
+}

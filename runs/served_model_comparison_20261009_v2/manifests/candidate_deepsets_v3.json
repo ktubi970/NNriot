@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "model_id": "candidate_deepsets_v3",
+  "checkpoint": {
+    "path": "runs/candidate_deepsets_v3/model.keras",
+    "sha256": "b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f"
+  },
+  "feature_contract": "nnriot.players14.v1",
+  "feature_semantics_status": "layout_verified_training_semantics_unverified",
+  "training": {
+    "status": "unknown",
+    "source_db": null,
+    "bounds_ms": null,
+    "split_manifest_sha256": null
+  },
+  "calibration": null,
+  "output_heads": [
+    "winner",
+    "team_b_kill_lead",
+    "kill_handicap",
+    "team_a_kills",
+    "team_b_kills",
+    "total_kills",
+    "total_barons",
+    "total_dragons",
+    "total_towers",
+    "kills_odd",
+    "both_baron",
+    "both_inhibitor",
+    "both_dragon",
+    "elder_dragon",
+    "first_blood",
+    "first_baron",
+    "first_inhibitor",
+    "first_tower",
+    "first_to_5_kills",
+    "first_to_10_kills",
+    "first_to_15_kills",
+    "first_to_20_kills"
+  ],
+  "has_directional_side_bias": false,
+  "decision_policy": {
+    "action_threshold": 0.04,
+    "high_threshold": 0.08,
+    "origin": "existing defaults; not validated risk guarantees"
+  },
+  "limitations": [
+    "No checkpoint-bound training split artifact; training bounds unknown",
+    "Historical training feature provenance/PIT availability is not established by tensor shape or current source code",
+    "Legacy checkpoint has no separate draft_advantage head; do not infer it from winner"
+  ]
+}

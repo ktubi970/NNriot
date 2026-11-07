@@ -22,6 +22,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 .venv/
+.venv*/
+temp_body.html
 venv/
 ENV/
 
@@ -50,17 +52,51 @@ build_maturin_utf8.log
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
+/runs/db_merge_*/*.archive.jsonl.gz
 *.backup*
 analytics_artifacts/
 *.data-00000-of-00001
 *.index
 .env
 loss_plot.html
+crawler_frontier*.json
 .worktrees/
 .superpowers/
 *.keras
 *.h5
+*.joblib
+*.pkl
+*.npz
+*.lock
 BACKLOG.md
+
+# Runtime experiment runs and local caches
+/runs/spatial-runtime-tmp/
+/runs/spatial_history_*/
+/runs/timeline_collection_*/
+/runs/universal_timeline_ingestion_*/
+/runs/gpu_validation_*/
+/runs/accuracy_matchup_*/
+/runs/accuracy_priors_*/
+/runs/candidate_deepsets_v2/
+/runs/candidate_deepsets_v3/
+/runs/ordered_matchup_integration_validation/
+/runs/**/smoke_*/
+/runs/ordered_matchup_integration_evidence_20260927/base-head.txt
+/runs/ordered_matchup_integration_evidence_20260927/benchmark_*.txt
+/runs/ordered_matchup_integration_evidence_20260927/benchmark_*.exitcode
+/runs/ordered_matchup_integration_evidence_20260927/benchmark_summary.json
+/runs/ordered_matchup_integration_evidence_20260927/consumer-wiring.txt
+/runs/ordered_matchup_integration_evidence_20260927/contracts.exitcode
+/runs/ordered_matchup_integration_evidence_20260927/contracts.txt
+/runs/ordered_matchup_integration_evidence_20260927/contracts_hardening_red.txt
+/runs/ordered_matchup_integration_evidence_20260927/corrupt_deflate_red.txt
+/runs/ordered_matchup_integration_evidence_20260927/initial-status.txt
+/runs/ordered_matchup_integration_evidence_20260927/preexisting-changes.patch
+/runs/ordered_matchup_integration_evidence_20260927/replay_provenance_red.txt
+/runs/ordered_matchup_integration_evidence_20260927/review-brief.md
+/runs/ordered_matchup_integration_validation_final/model.result_end_times.json
 
 # Metrics & Benchmark Dumps
 metrics_*.json
@@ -69,8 +105,41 @@ focused_train_history_*.json
 out.txt
 out_verbose.txt
 
-# Temporary Scratch Folders
+# Temporary Scratch Folders & Scripts
 graphify-out/
+ast_extract.py
+semantic_extract.py
+step5.py
+labeler.py
+labels.py
+run_update.py
 claude-skills-tmp-2/
 scratch/
 
+# Node & Playwright
+node_modules/
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
+
+# Local tooling state
+.coverage
+htmlcov/
+.claude/settings.local.json
+.claude/worktrees/
+
+# Generated browser screenshots and traces
+/output/
+
+# Bulky generated run data: commit reports, metrics, protocols and scripts only
+/runs/**/*.gz
+/runs/**/*.jsonl
+/runs/**/*.pid
+/runs/**/matplotlib_config/
+/runs/**/curves.html
+/runs/**/train.json
+/runs/**/validation.json
+/runs/**/sealed_test.json
+/runs/**/dataset.json
+/runs/**/availability.json

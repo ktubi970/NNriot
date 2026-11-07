@@ -6,15 +6,14 @@ import argparse
 import json
 
 from .build import build_analytics
-from .config import AnalyticsConfig
+from core import config as db_config
 from .db import all_meta
 
 
 def main(argv: list[str] | None = None) -> int:
-    config = AnalyticsConfig()
     parser = argparse.ArgumentParser(prog="python -m analytics")
-    parser.add_argument("--source", default=config.source_path)
-    parser.add_argument("--analytics", default=config.analytics_path)
+    parser.add_argument("--source", help="Existing source SQLite database")
+    parser.add_argument("--analytics", help="Analytics SQLite database")
     subcommands = parser.add_subparsers(dest="command", required=True)
     subcommands.add_parser("build")
     subcommands.add_parser("update")
@@ -24,6 +23,13 @@ def main(argv: list[str] | None = None) -> int:
     benchmark = subcommands.add_parser("benchmark")
     benchmark.add_argument("--iterations", type=int, default=30)
     args = parser.parse_args(argv)
+    try:
+        args.source = db_config.get_db_path(args.source, require_exists=True)
+        args.analytics = db_config.get_analytics_db_path(
+            args.analytics, require_exists=args.command not in {"build", "update"}
+        )
+    except (ValueError, FileNotFoundError) as exc:
+        parser.error(str(exc))
 
     if args.command in {"build", "update"}:
         report = build_analytics(

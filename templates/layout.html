@@ -1,199 +1,135 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-gray-900 text-gray-100 antialiased">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}NNriot{% endblock %}</title>
-  <meta name="description" content="NNriot — real-time League of Legends match outcome prediction powered by a trained neural network.">
+  <meta name="description" content="NNriot – real-time League of Legends match outcome prediction powered by a trained neural network.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800;900&family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="{{ url_for('static', filename='design-tokens.css') }}">
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html { scroll-behavior: smooth; }
-    body {
-      font-family: 'Inter', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      min-height: 100vh;
-      overflow-x: hidden;
-    }
-    h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
-    h1 { font-size: var(--fluid-h1); }
-    h2 { font-size: var(--fluid-h2); }
-    h3 { font-size: var(--fluid-h3); }
-    h4 { font-size: var(--fluid-h4); }
-
-    /* ── NAVBAR ── */
-    .navbar {
-      position: sticky; top: 0; z-index: 999;
-      background: rgba(7,11,18,0.85);
-      backdrop-filter: blur(20px);
-      border-bottom: 1px solid var(--border);
-      padding: 0 40px;
-      height: 72px;
-      display: flex; align-items: center; justify-content: space-between;
-      transition: background 0.3s, height 0.3s;
-    }
-    .navbar.scrolled {
-      height: 64px;
-      background: rgba(7,11,18,0.95);
-    }
-    .nav-logo {
-      font-family: 'Outfit', sans-serif;
-      font-size: 1.6rem; font-weight: 900;
-      color: #fff; text-decoration: none;
-      display: flex; align-items: center; gap: 4px;
-      position: relative;
-    }
-    .nav-logo em { 
-      color: var(--accent); font-style: normal; 
-      text-shadow: 0 0 15px var(--glow);
-    }
-    
-    .nav-links { display: flex; gap: 32px; align-items: center; }
-    .nav-link {
-      color: var(--muted); text-decoration: none;
-      font-size: 0.95rem; font-weight: 600;
-      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-      position: relative; padding: 4px 0;
-    }
-    .nav-link:hover { color: #fff; }
-    .nav-link::after {
-      content: ''; position: absolute; bottom: 0; left: 0; width: 0;
-      height: 2px; background: var(--accent); border-radius: 2px;
-      transition: width 0.3s;
-    }
-    .nav-link:hover::after { width: 100%; }
-    .nav-link.active { color: var(--accent); }
-    .nav-link.active::after { width: 100%; }
-
-    .nav-cta {
-      background: linear-gradient(135deg, var(--accent), var(--accent2));
-      color: #070b12; font-family: 'Outfit', sans-serif;
-      font-weight: 800; font-size: 0.9rem;
-      padding: 10px 24px; border-radius: 10px;
-      text-decoration: none; letter-spacing: 0.5px;
-      transition: all 0.3s;
-      box-shadow: 0 4px 15px rgba(0,255,136,0.25);
-      border: 1px solid rgba(255,255,255,0.1);
-    }
-    .nav-cta:hover { 
-      transform: translateY(-2px); 
-      box-shadow: 0 8px 25px rgba(0,255,136,0.4);
-      filter: brightness(1.1);
-    }
-
-    /* ── MOBILE MENU ── */
-    .menu-toggle {
-      display: none;
-      flex-direction: column; gap: 6px;
-      cursor: pointer; padding: 4px; z-index: 1001;
-    }
-    .menu-toggle span {
-      display: block; width: 28px; height: 2px;
-      background: #fff; border-radius: 2px;
-      transition: all 0.3s;
-    }
-    .menu-toggle.open span:nth-child(1) { transform: translateY(8px) rotate(45deg); }
-    .menu-toggle.open span:nth-child(2) { opacity: 0; }
-    .menu-toggle.open span:nth-child(3) { transform: translateY(-8px) rotate(-45deg); }
-
-    @media (max-width: 1024px) {
-      .navbar { padding: 0 24px; }
-      .nav-links { 
-        position: fixed; top: 0; right: -100%; width: 300px; height: 100vh;
-        flex-direction: column; justify-content: center;
-        background: var(--surface2); border-left: 1px solid var(--border);
-        padding: 40px; transition: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        z-index: 1000; box-shadow: -10px 0 30px rgba(0,0,0,0.5);
-        gap: 40px;
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            display: ['Outfit', 'sans-serif'],
+          },
+          colors: {
+            dark: '#070b12',
+            surface: '#111827',
+            surface2: '#1f2937',
+            primary: '#10b981',
+            accent: '#3b82f6',
+          }
+        }
       }
-      .nav-links.open { right: 0; }
-      .menu-toggle { display: flex; }
-      .nav-link { font-size: 1.2rem; }
     }
-
-    /* ── FOOTER ── */
-    footer {
-      text-align: center; padding: 60px 24px 40px;
-      border-top: 1px solid var(--border);
-      color: var(--muted); font-size: 0.9rem; line-height: 1.8;
-      background: rgba(0,0,0,0.2);
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .glass-panel {
+        @apply bg-surface/80 backdrop-blur-md border border-gray-800 rounded-xl shadow-xl;
+      }
+      .nav-link {
+        @apply text-gray-400 hover:text-white transition-colors duration-200 font-medium;
+      }
+      .nav-link.active {
+        @apply text-primary font-semibold;
+      }
     }
-    footer a { color: var(--accent); text-decoration: none; font-weight: 600; }
-    footer a:hover { text-decoration: underline; }
-
+    body { background-color: #070b12; }
   </style>
   {% block styles %}{% endblock %}
 </head>
-<body>
+<body class="flex flex-col min-h-screen">
 
-<nav class="navbar" id="main-nav">
-  <a href="/" class="nav-logo">NN<em>RIOT</em></a>
-  <div class="menu-toggle" id="menu-toggle">
-    <span></span>
-    <span></span>
-    <span></span>
+<nav class="fixed top-0 w-full z-50 transition-all duration-300 bg-dark/90 backdrop-blur-md border-b border-gray-800" id="main-nav">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-16">
+      
+      <!-- Logo -->
+      <div class="flex-shrink-0">
+        <a href="/" class="text-2xl font-display font-black tracking-tight text-white">
+          NN<span class="text-primary italic">RIOT</span>
+        </a>
+      </div>
+      
+      <!-- Desktop Menu -->
+      <div class="hidden md:block">
+        <div class="ml-10 flex items-center space-x-8">
+          <a href="/" class="nav-link {% if active_page == 'index' %}active{% endif %}">Dashboard</a>
+          <a href="/predictor" class="nav-link {% if active_page == 'predictor' %}active{% endif %}">Predictor</a>
+          <a href="/explorer" class="nav-link {% if active_page == 'explorer' %}active{% endif %}">Explorer</a>
+          <a href="/monitor" class="nav-link {% if active_page == 'monitor' %}active{% endif %}">Monitor</a>
+          <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">Analytics</a>
+          
+          <a href="/predictor" class="px-4 py-2 rounded-lg bg-primary/10 text-primary border border-primary/20 hover:bg-primary hover:text-white transition-all font-semibold shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+            ⚡ Quick Predict
+          </a>
+        </div>
+      </div>
+
+      <!-- Mobile menu button -->
+      <div class="-mr-2 flex md:hidden">
+        <button type="button" id="menu-toggle" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 focus:outline-none">
+          <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
-  <div class="nav-links" id="nav-links">
-    <a href="/" class="nav-link {% if active_page == 'index' %}active{% endif %}">Dashboard</a>
-    <a href="/explorer" class="nav-link {% if active_page == 'explorer' %}active{% endif %}">Explorer</a>
-    <a href="/predictor" class="nav-link {% if active_page == 'predictor' %}active{% endif %}">Predictor</a>
-    <a href="/live" class="nav-link {% if active_page == 'live' %}active{% endif %}">Live</a>
-    <a href="/smurfs" class="nav-link {% if active_page == 'smurfs' %}active{% endif %}">Smurfs</a>
-    <a href="/analytics" class="nav-link {% if active_page == 'analytics' %}active{% endif %}">Analytics</a>
-    <a href="/monitor" class="nav-link {% if active_page == 'monitor' %}active{% endif %}">Monitor</a>
-    <a href="/predictor" class="nav-cta">⚡ Quick Predict</a>
+
+  <!-- Mobile Menu -->
+  <div class="md:hidden hidden bg-surface border-b border-gray-800" id="mobile-menu">
+    <div class="px-2 pt-2 pb-3 space-y-1 sm:px-3">
+      <a href="/" class="block px-3 py-2 rounded-md text-base font-medium nav-link {% if active_page == 'index' %}active text-primary{% endif %}">Dashboard</a>
+      <a href="/predictor" class="block px-3 py-2 rounded-md text-base font-medium nav-link {% if active_page == 'predictor' %}active text-primary{% endif %}">Predictor</a>
+      <a href="/explorer" class="block px-3 py-2 rounded-md text-base font-medium nav-link {% if active_page == 'explorer' %}active text-primary{% endif %}">Explorer</a>
+      <a href="/monitor" class="block px-3 py-2 rounded-md text-base font-medium nav-link {% if active_page == 'monitor' %}active text-primary{% endif %}">Monitor</a>
+      <a href="/analytics" class="block px-3 py-2 rounded-md text-base font-medium nav-link {% if active_page == 'analytics' %}active text-primary{% endif %}">Analytics</a>
+    </div>
   </div>
 </nav>
 
-{% block content %}{% endblock %}
+<main class="flex-grow pt-24 pb-12 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
+  {% block content %}{% endblock %}
+</main>
 
-<footer>
-  <p>NNriot · Advanced LoL Match Analysis · Prediction Engine v2.4.0</p>
-  <p style="margin-top:8px">
-    <a href="/">Dashboard</a> · 
-    <a href="/explorer">Explorer</a> · 
-    <a href="/predictor">Predictor</a> · 
-    <a href="/live">Live</a> · 
-    <a href="/analytics">Analytics</a> ·
-    <a href="/monitor">Monitor</a>
-  </p>
-  <p style="margin-top:12px; font-size: 0.75rem; opacity: 0.6;">
-    Powered by TensorFlow, Python & Riot API. Data updated in real-time.
-  </p>
+<footer class="bg-surface border-t border-gray-800 py-8 mt-auto">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center text-gray-400">
+    <p class="font-display font-semibold">NNriot – Advanced LoL Match Analysis & Prediction Engine</p>
+    <div class="mt-4 flex justify-center space-x-6">
+      <a href="/" class="hover:text-primary transition-colors">Dashboard</a>
+      <a href="/predictor" class="hover:text-primary transition-colors">Predictor</a>
+      <a href="/explorer" class="hover:text-primary transition-colors">Explorer</a>
+      <a href="/monitor" class="hover:text-primary transition-colors">Monitor</a>
+      <a href="/analytics" class="hover:text-primary transition-colors">Analytics</a>
+    </div>
+    <p class="mt-6 text-xs text-gray-500">
+      Powered by TensorFlow, Python & Riot API.
+    </p>
+  </div>
 </footer>
 
 <script>
   // Mobile Menu Toggle
   const menuToggle = document.getElementById('menu-toggle');
-  const navLinks = document.getElementById('nav-links');
+  const mobileMenu = document.getElementById('mobile-menu');
   
   menuToggle.addEventListener('click', () => {
-    menuToggle.classList.toggle('open');
-    navLinks.classList.toggle('open');
-  });
-
-  // Scroll effect
-  window.addEventListener('scroll', () => {
-    const nav = document.getElementById('main-nav');
-    if (window.scrollY > 50) {
-      nav.classList.add('scrolled');
-    } else {
-      nav.classList.remove('scrolled');
-    }
+    mobileMenu.classList.toggle('hidden');
   });
 
   // Close menu on click outside
   document.addEventListener('click', (e) => {
-    if (!navLinks.contains(e.target) && !menuToggle.contains(e.target) && navLinks.classList.contains('open')) {
-      menuToggle.classList.remove('open');
-      navLinks.classList.remove('open');
+    if (!mobileMenu.contains(e.target) && !menuToggle.contains(e.target) && !mobileMenu.classList.contains('hidden')) {
+      mobileMenu.classList.add('hidden');
     }
   });
-
 </script>
 {% block scripts %}{% endblock %}
 </body>

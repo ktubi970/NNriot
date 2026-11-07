@@ -1,0 +1,11 @@
+{
+  "verified_at": "2026-10-16T17:19:46.668620+00:00",
+  "sample_matches": 40,
+  "training_records": 40,
+  "participants": 400,
+  "nonnull_timelines": 40,
+  "spatial_rows": 400,
+  "status": "running",
+  "pid": 10540,
+  "deadline_at": "2026-10-17T13:17:34.314516+00:00"
+}

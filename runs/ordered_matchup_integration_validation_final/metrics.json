@@ -1,0 +1,274 @@
+{
+  "created_at": "2026-09-27T14:38:34.445163+00:00",
+  "cache_sha256": "3cb32f1c4a354001a08e392363d8443d50242c81fcd12f037f1a7b94df444b20",
+  "split_sha256": "ba9a87f0171f667988c692c9ec1f84c1717b4ccbb67691793e6ba6037f37c158",
+  "end_times_sha256": "7063edf796263e62e1bb111fe7b6a99f83f370e15ab3bb397b2c8c5bb83c34d7",
+  "enriched_dataset_sha256": "8d358df47c8caca9ab0ac6ff876f927dcd78e02a27b8a83cb5962a75ea7ecb5d",
+  "reference_dir": "D:\\projet\\NNriot\\runs\\accuracy_matchup_20260927",
+  "same_library_versions_as_A3": true,
+  "database_path": "D:\\projet\\NNriot\\runs\\db_merge_20260924\\consolidated.db",
+  "end_time_diagnostics": {
+    "requested": 31500,
+    "found": 31500,
+    "invalid": 0,
+    "valid": 31500,
+    "missing": 0,
+    "excluded": 0
+  },
+  "sklearn_version": "1.9.0",
+  "numpy_version": "2.5.2",
+  "parameters": {
+    "categorical_features": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9
+    ],
+    "max_iter": 200,
+    "learning_rate": 0.05,
+    "max_leaf_nodes": 15,
+    "min_samples_leaf": 30,
+    "l2_regularization": 1.0,
+    "early_stopping": false,
+    "random_state": 42
+  },
+  "matchup_weight": 15.0,
+  "threads": 4,
+  "selection_policy": "Predefined three variants, fixed parameters/seed, no tuning, threshold 0.5, coverage 100%.",
+  "feature_policy": "Same 232 columns; variants change ONLY five lane target statistics.",
+  "availability_policy": "Only training results with explicit gameEndTimestamp < query game_creation_time.",
+  "limitations": [
+    "End timestamp is an optimistic proxy for result availability; ingestion times are unrecorded.",
+    "Player priors are unchanged cache snapshots with their existing temporal assumptions.",
+    "Previously inspected March-May 2026 cohort; no prospective or current-patch accuracy claim.",
+    "No neural retraining or serving checkpoint replacement.",
+    "Paired iid diagnostics do not account for repeated players, temporal dependence or prior test inspection."
+  ],
+  "source_sha256": {
+    "scripts\\benchmark_ordered_matchups.py": "c0ffdb3a7d6a43e38072a7f2847dd36871d93598e5d15c988facf003559f5457",
+    "core\\player_priors.py": "6e70a05bc7292909b29c9547eb6965007ba10c99977a1be859ade39b37020ed1",
+    "core\\features\\pipeline.py": "5cc481ca7033964efbeedd08e7243ac688200f2c1ee89a36865505b95e9d8d03",
+    "core\\features\\matchup_matrix.py": "0f9a06025931c80812a21ad277faed9b9c403f330b7905880b06d89c505386cb",
+    "core\\features\\ordered_matchup.py": "b98b2c0c7091790626872536f2d232de6b760302ac912aecfad5ab90fb9a2968",
+    "core\\point_in_time_dataset.py": "c8c0babbfb75b1308c36e349d48bcfa4ab3b2d34ef80e9e47de4084c8e1a11f9",
+    "core\\experiment.py": "40b48d8321278cf83b1f666ef3c5caf4998beae6150b498a90762e6c00f5a1da"
+  },
+  "time_ranges": {
+    "train": [
+      1774677478411,
+      1778267903757
+    ],
+    "validation": [
+      1778268028027,
+      1778476307175
+    ],
+    "test": [
+      1778476331517,
+      1778605723869
+    ]
+  },
+  "variants": {
+    "greedy": {
+      "diagnostics": {},
+      "feature_sha256": {
+        "train": "fc5566214abd503ed5df1d59a1f96c1c27210978ba25d6a42a4cc28dc6fa0cbb",
+        "validation": "71129a410bafef79f437b494bd986bba0f9aaa29e22c60a2c4b01a5db306e278",
+        "test": "5e298b1def6ed80a5feb57d2902813d466244491454c8d4ba3cd68a75852799d"
+      },
+      "swapped_feature_sha256": {
+        "train": "125672274054dac2b00171ba22e1d4ea8685d04a5c5c30de86f4679111463920",
+        "validation": "3d57fcc17c1600121b9112794fa9403ab7770c74c25c34cc61ce0de71f79bdbd",
+        "test": "5e3c7a64fdeec9959114bd159282bd11d8993d8d85e35af79fed66ce4b78adac"
+      },
+      "metrics": {
+        "train": {
+          "count": 31500,
+          "coverage": 1.0,
+          "accuracy": 0.7752063492063492,
+          "log_loss": 0.4721308288459583,
+          "roc_auc": 0.8652104375484004,
+          "brier": 0.15378942623746353
+        },
+        "validation": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5331851851851852,
+          "log_loss": 0.7907431980322923,
+          "roc_auc": 0.5372521879579155,
+          "brier": 0.2849613218938161
+        },
+        "test": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5305185185185185,
+          "log_loss": 0.7916316057169205,
+          "roc_auc": 0.5354674638104726,
+          "brier": 0.28544138776024464
+        }
+      },
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "reference_matrix_hashes_match": true,
+      "elapsed_seconds": 41.20299999997951
+    },
+    "ordered": {
+      "diagnostics": {
+        "train_results_total": 31500,
+        "train_results_eligible": 31500,
+        "train_results_missing_end": 0,
+        "train_results_invalid_end": 0,
+        "train_results_applied": 31500,
+        "queries_total": 45000,
+        "queries_without_history": 12,
+        "availability_assumption": "recorded_game_end_strictly_before_creation; ingestion_latency_unobserved",
+        "scope": "matchup_tracker_only; attached_player_priors_not_reconstructed",
+        "representation": "tabular",
+        "matchup_weight": 15.0
+      },
+      "feature_sha256": {
+        "train": "9016ed4bdcdfaba1ed61435d4191f45bc0394cd2b42a3f0ef254b64f435f1cb2",
+        "validation": "4b5656e9d37b59d9402531772e0b8a3b8d184622d7d82673ff898cedc1ee2077",
+        "test": "5e298b1def6ed80a5feb57d2902813d466244491454c8d4ba3cd68a75852799d"
+      },
+      "swapped_feature_sha256": {
+        "train": "bc0b8758d17820ad8c323d31732d75c74ac1852ef122769a4efe400dc1d6a577",
+        "validation": "5cf724138977596642cbf8a903661755d5d1b3f70c4626ee0f43f5f074c72a92",
+        "test": "5e3c7a64fdeec9959114bd159282bd11d8993d8d85e35af79fed66ce4b78adac"
+      },
+      "metrics": {
+        "train": {
+          "count": 31500,
+          "coverage": 1.0,
+          "accuracy": 0.7078730158730159,
+          "log_loss": 0.6097864899403231,
+          "roc_auc": 0.78344487893099,
+          "brier": 0.2096556143560649
+        },
+        "validation": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5728888888888889,
+          "log_loss": 0.6742056995455684,
+          "roc_auc": 0.5951162191341651,
+          "brier": 0.24071417351954033
+        },
+        "test": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5755555555555556,
+          "log_loss": 0.6795818068597846,
+          "roc_auc": 0.583120440635448,
+          "brier": 0.24324058518979447
+        }
+      },
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "reference_matrix_hashes_match": true,
+      "elapsed_seconds": 36.31299999996554
+    },
+    "neutral": {
+      "diagnostics": {},
+      "feature_sha256": {
+        "train": "f3f9499d8b9a74a6f24aa8885701cee10dfa0882af20825f3717e28bd047b2dd",
+        "validation": "501652b98d8f26d4ab8cb42cda48bc963031e8616af7b46b77ef657cf8b2c1ba",
+        "test": "76bf11433021f80465c24b285c5c5ae5e679f033c810c868bb6528bda9a6a6c6"
+      },
+      "swapped_feature_sha256": {
+        "train": "6698811638180afc553ae9955f8794d78c7748b4a6559e2ba6ff818e44844f20",
+        "validation": "8f9072ab6d7c41272caada239784b5152d127d7a703a098a1887cad946df843d",
+        "test": "f5fc8c73b04ea0576d15f4be7ec30811c95f414b1d638ae9d7f8668eb1a6ff37"
+      },
+      "metrics": {
+        "train": {
+          "count": 31500,
+          "coverage": 1.0,
+          "accuracy": 0.7086349206349206,
+          "log_loss": 0.6097776210810142,
+          "roc_auc": 0.7833656710971526,
+          "brier": 0.20964904643362162
+        },
+        "validation": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5746666666666667,
+          "log_loss": 0.6744680075515515,
+          "roc_auc": 0.5945156418917951,
+          "brier": 0.24083946595692532
+        },
+        "test": {
+          "count": 6750,
+          "coverage": 1.0,
+          "accuracy": 0.5734814814814815,
+          "log_loss": 0.6794976248053235,
+          "roc_auc": 0.5831257066114149,
+          "brier": 0.24320814828397092
+        }
+      },
+      "reference_comparison": {
+        "train": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "validation": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        },
+        "test": {
+          "max_absolute_difference": 0.0,
+          "classification_differences": 0,
+          "probability_atol": 1e-12,
+          "strict_same_versions": true
+        }
+      },
+      "reference_matrix_hashes_match": true,
+      "elapsed_seconds": 34.53100000007544
+    }
+  },
+  "completed": true
+}

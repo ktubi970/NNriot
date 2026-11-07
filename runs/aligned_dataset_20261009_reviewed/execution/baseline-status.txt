@@ -1,0 +1,101 @@
+ M .env.example
+ D .github/workflows/playwright.yml
+ M AGENTS.md
+ M PROJECT_SUMMARY.md
+ M README.md
+ M app/core.py
+ M app/routes/api.py
+ M core/config.py
+ M core/deepsets_layers.py
+ M core/pcgrad.py
+ M core/prediction_service.py
+ M docs/database_merge.md
+ D e2e/api.spec.ts
+ D e2e/capture_screenshots.spec.ts
+ D e2e/cyber_cockpit.spec.ts
+ D e2e/dashboard.spec.ts
+ D e2e/fixtures/test-fixtures.ts
+ D e2e/pages/dashboard.page.ts
+ D e2e/pages/predictor.page.ts
+ D e2e/predictor.spec.ts
+ D frontend/index.html
+ D frontend/src/App.tsx
+ D frontend/src/components/atoms/CyberBadge.tsx
+ D frontend/src/components/atoms/GlowButton.tsx
+ D frontend/src/components/atoms/RoleIcon.tsx
+ D frontend/src/components/molecules/ChampionSlot.tsx
+ D frontend/src/components/molecules/PlayerAutocomplete.tsx
+ D frontend/src/components/organisms/AnalyticsChatTab.tsx
+ D frontend/src/components/organisms/ChampionPickerModal.tsx
+ D frontend/src/components/organisms/CyberDrawer.tsx
+ D frontend/src/components/organisms/FeatureMatrixSHAP.tsx
+ D frontend/src/components/organisms/LiveSpectatorTab.tsx
+ D frontend/src/components/organisms/MatchHistoryModal.tsx
+ D frontend/src/components/organisms/ModelTrainerTab.tsx
+ D frontend/src/components/organisms/NeuralWinrateGauge.tsx
+ D frontend/src/components/organisms/TeamLineup.tsx
+ D frontend/src/components/organisms/TelemetryHeader.tsx
+ D frontend/src/hooks/usePrediction.ts
+ D frontend/src/index.css
+ D frontend/src/main.tsx
+ D frontend/src/services/api.ts
+ D frontend/src/services/championData.ts
+ D frontend/src/types/index.ts
+ D frontend/src/types/meta.ts
+ D frontend/tsconfig.json
+ D package-lock.json
+ D package.json
+ D playwright.config.ts
+ D postcss.config.cjs
+ M requirements.txt
+ M scripts/backfill_timelines.py
+ M scripts/train_deepsets_v3.py
+ M scripts/train_deepsets_v4_timeline.py
+ M scripts/train_gpu.ps1
+ M start.bat
+ D tailwind.config.cjs
+ M tests/test_config_cli.py
+ M tests/test_draft_multi_output_and_serving.py
+ M tests/test_equivariant_model.py
+ M tests/test_final_web_app.py
+ M tests/test_pcgrad.py
+ M tests/test_predict_api.py
+ M tests/test_selective_infer.py
+ M tests/test_shapley_credit.py
+ M tests/test_train_deepsets_v4_timeline.py
+ D tsconfig.json
+ D vite.config.ts
+?? archive/
+?? core/candidate_inventory.py
+?? core/common_cohort_evaluation.py
+?? core/evaluation_plots.py
+?? core/pre_match_history.py
+?? core/serving_contract.py
+?? core/spatial_rnn.py
+?? docs/model_serving/
+?? docs/superpowers/plans/2026-10-04-blue-side-advantage-architecture.md
+?? docs/superpowers/plans/2026-10-04-timeline-player-priors.md
+?? docs/superpowers/plans/2026-10-09-served-model-comparison.md
+?? docs/superpowers/plans/2026-10-09-training-serving-parity-and-frozen-dataset.md
+?? docs/superpowers/specs/2026-10-09-training-serving-parity-design.md
+?? runs/candidate_deepsets_v4_compiled_gpu/
+?? runs/candidate_deepsets_v4_timeline/
+?? runs/candidate_deepsets_v4_timeline_gpu/
+?? runs/served_model_comparison_20261009_complete/
+?? runs/served_model_comparison_20261009_final/
+?? runs/served_model_comparison_20261009_reproducible/
+?? runs/served_model_comparison_20261009_v2/
+?? runs/served_model_comparison_20261009_verified/
+?? runs/spatial_deepsets_run1/
+?? scripts/benchmark_compiled_pcgrad.py
+?? scripts/benchmark_epoch_loop.py
+?? scripts/compare_served_candidates.py
+?? scripts/formalize_served_model.py
+?? scripts/verify_compiled_invariants.py
+?? tests/serving_fixture.py
+?? tests/test_common_cohort_evaluation.py
+?? tests/test_pre_match_history_serving.py
+?? tests/test_serving_contract.py
+?? tests/test_serving_http.py
+?? tests/test_spatial_integration.py
+?? tests/test_spatial_rnn.py

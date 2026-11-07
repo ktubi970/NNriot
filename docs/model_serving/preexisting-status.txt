@@ -1,0 +1,70 @@
+ D .github/workflows/playwright.yml
+ M AGENTS.md
+ M PROJECT_SUMMARY.md
+ M README.md
+ M core/config.py
+ M core/deepsets_layers.py
+ M core/pcgrad.py
+ M core/prediction_service.py
+ D e2e/api.spec.ts
+ D e2e/capture_screenshots.spec.ts
+ D e2e/cyber_cockpit.spec.ts
+ D e2e/dashboard.spec.ts
+ D e2e/fixtures/test-fixtures.ts
+ D e2e/pages/dashboard.page.ts
+ D e2e/pages/predictor.page.ts
+ D e2e/predictor.spec.ts
+ D frontend/index.html
+ D frontend/src/App.tsx
+ D frontend/src/components/atoms/CyberBadge.tsx
+ D frontend/src/components/atoms/GlowButton.tsx
+ D frontend/src/components/atoms/RoleIcon.tsx
+ D frontend/src/components/molecules/ChampionSlot.tsx
+ D frontend/src/components/molecules/PlayerAutocomplete.tsx
+ D frontend/src/components/organisms/AnalyticsChatTab.tsx
+ D frontend/src/components/organisms/ChampionPickerModal.tsx
+ D frontend/src/components/organisms/CyberDrawer.tsx
+ D frontend/src/components/organisms/FeatureMatrixSHAP.tsx
+ D frontend/src/components/organisms/LiveSpectatorTab.tsx
+ D frontend/src/components/organisms/MatchHistoryModal.tsx
+ D frontend/src/components/organisms/ModelTrainerTab.tsx
+ D frontend/src/components/organisms/NeuralWinrateGauge.tsx
+ D frontend/src/components/organisms/TeamLineup.tsx
+ D frontend/src/components/organisms/TelemetryHeader.tsx
+ D frontend/src/hooks/usePrediction.ts
+ D frontend/src/index.css
+ D frontend/src/main.tsx
+ D frontend/src/services/api.ts
+ D frontend/src/services/championData.ts
+ D frontend/src/types/index.ts
+ D frontend/src/types/meta.ts
+ D frontend/tsconfig.json
+ D package-lock.json
+ D package.json
+ D playwright.config.ts
+ D postcss.config.cjs
+ M scripts/backfill_timelines.py
+ M scripts/train_deepsets_v3.py
+ M scripts/train_deepsets_v4_timeline.py
+ M scripts/train_gpu.ps1
+ M start.bat
+ D tailwind.config.cjs
+ M tests/test_equivariant_model.py
+ M tests/test_pcgrad.py
+ M tests/test_selective_infer.py
+ M tests/test_train_deepsets_v4_timeline.py
+ D tsconfig.json
+ D vite.config.ts
+?? archive/
+?? core/spatial_rnn.py
+?? docs/superpowers/plans/2026-10-04-blue-side-advantage-architecture.md
+?? docs/superpowers/plans/2026-10-04-timeline-player-priors.md
+?? runs/candidate_deepsets_v4_compiled_gpu/
+?? runs/candidate_deepsets_v4_timeline/
+?? runs/candidate_deepsets_v4_timeline_gpu/
+?? runs/spatial_deepsets_run1/
+?? scripts/benchmark_compiled_pcgrad.py
+?? scripts/benchmark_epoch_loop.py
+?? scripts/verify_compiled_invariants.py
+?? tests/test_spatial_integration.py
+?? tests/test_spatial_rnn.py

@@ -1,0 +1,13 @@
+[flake8]
+max-line-length = 120
+extend-exclude =
+    .venv*,
+    .worktrees,
+    .claude,
+    .superpowers,
+    node_modules,
+    archive,
+    runs,
+    scratch,
+    graphify-out,
+    static

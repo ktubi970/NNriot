@@ -1,0 +1,48 @@
+Task 4 training validation (2026-09-27, CPU, .venv312/Scripts/python.exe)
+
+Fixture: smoke_v2_1415/data/ contains 140 complete matches, split 98/21/21,
+distinct roles, both winner classes in each partition, explicit SQLite result
+ends, immutable enriched splits cache, and versioned end-time artifact.
+
+RED 1: pytest tests/test_ordered_training_integration.py -q --tb=short
+  Failed at v2 feature extraction: fixture priors length 5 was incompatible
+  with 14D pipeline's 10 prior slots. Fixture corrected to ten attached priors.
+
+RED 2: same command after fixture correction
+  v2 and v3 each completed real one-epoch training, checkpoint reload,
+  temperature calibration and test evaluation. General trainer failed only
+  with use_pcgrad=False, the existing Keras multi-output target mismatch
+  KeyError 'winner_uncertainty'. The normal PCGrad path was used thereafter.
+
+GREEN: pytest tests/test_ordered_training_integration.py -q --tb=short -k 'not real'
+  7 passed, 1 deselected in 176.85 seconds. Covers new-run refusal,
+  manifest/cache mismatch, missing explicit cache, prior-only mismatch,
+  cache-without-manifest refusal, successful enriched cache replay, fresh v3
+  chronological split to first real batch, and legacy 8D one-epoch training.
+
+GREEN: pytest tests/test_ordered_training_integration.py -q --tb=short -k real_ordered_training_paths
+  Exit 0; 1 passed, 8 deselected in 147.46 seconds. All three one-epoch
+  trainers used the ordered matrices in actual PCGrad batches. Saved models
+  reloaded and returned finite probabilities. Calibration hashes matched their
+  feature contracts.
+
+GREEN: pytest tests/test_ordered_training_integration.py -q --tb=short -k general_cli_replays_enriched_cache_without_rebuilding_priors
+  Exit 0; 1 passed, 8 deselected in 0.49 seconds. Added after the earlier
+  non-real subset run; confirms attached priors reach train_model unchanged.
+
+Durable real v2 command:
+  python -c "from tests.ordered_integration_fixture import make_ordered_fixture; from scripts.train_deepsets_v2 import train_deepsets_v2; p='runs/ordered_matchup_integration_evidence_20260927/smoke_v2_1415'; d=make_ordered_fixture(p+'/data'); train_deepsets_v2(str(d['cache']),p+'/v2',epochs=1,batch_size=32,result_end_times=str(d['ends']))"
+  Exit 0; checkpoint v2/model.keras; selected epoch 1; finite raw and
+  calibrated test metrics; companion manifest, ends, features, calibration.
+
+Durable real v3 command:
+  python -c "from scripts.train_deepsets_v3 import train_deepsets_v3; p='runs/ordered_matchup_integration_evidence_20260927/smoke_v2_1415'; train_deepsets_v3(p+'/data/results.db',p+'/v3',manifest_path=p+'/data/splits.split.json',splits_cache=p+'/data/splits.pkl',epochs=1,batch_size=32,result_end_times=p+'/data/ends.json')"
+  Exit 0; checkpoint v3/model.keras; selected epoch 1; finite raw and
+  calibrated test metrics; companion manifest, ends, features, calibration.
+
+Durable real general command:
+  python -c "import pickle; from scripts.train_pre_match_model import train_model; p='runs/ordered_matchup_integration_evidence_20260927/smoke_v2_1415'; s=pickle.load(open(p+'/data/splits.pkl','rb')); r=[x for n in ('train','validation','test') for x in s[n]]; train_model(r,epochs=1,batch_size=32,checkpoint_path=p+'/general/model.keras',feature_version='deepsets_v2',source_db=p+'/data/results.db',result_end_times=p+'/data/ends.json',calibrate=True,use_pcgrad=True)"
+  Exit 0; checkpoint general/model.keras; selected epoch 1; companion
+  manifest, ends, features, calibration and report.
+
+The durable runs are smoke tests of integration, not evidence of predictive gain.

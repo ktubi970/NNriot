@@ -1,0 +1,29 @@
+{
+  "run": "runs/served_model_comparison_20261009_complete",
+  "frozen_files_verified": true,
+  "runtime_sources_verified": true,
+  "prediction_artifact_verified": true,
+  "predecessor_shared_predictions_exact_except_corrected_tree_context": true,
+  "unchanged_shared_rows": 22000,
+  "total_prediction_rows": 54000,
+  "initial_test_count": 2000,
+  "common_test_count": 2000,
+  "candidate_inventory_count": 22,
+  "probability_variant_coverage_entries": 27,
+  "feature_failures": {
+    "14": {},
+    "18": {}
+  },
+  "artifacts_sha256": {
+    "cohort.jsonl": "530a3ca4226620bb1fcb539a64dd9c9f1e5add322c0596db6c07ef9d794ca7cc",
+    "source_snapshot.json.gz": "47bb50e2709b6b41c4729b664c0585c90f217fc19438c3da4bbd199c84022ec7",
+    "predictions.jsonl": "fe1015c46617430ec5c2fadedba815563360343e8508f907ab2e8a95f9a4b274",
+    "metrics.json": "d4b829649b46e5fe6d86b74e2348a61daa296ef4906694d306d69fb66f86e33f",
+    "protocol.json": "face72e773913ff63af3305fdb1ae5abbfbf0220369199e53cab585e2b0d6355",
+    "curves.html": "4e4accd1a39ee525c571098dafd9787aaa3e5d2a6ea15d207894b034c12a030e",
+    "risk_coverage.csv": "503b1a4645e4775f9555a73f31257b4c05a3a8108b8cfad5e40f51004eb507ca"
+  },
+  "predecessor_shared_predictions_exact": true,
+  "shared_prediction_rows": 24000,
+  "corrected_tree_context_changed_predictions": false
+}

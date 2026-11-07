@@ -1,0 +1,19 @@
+Pre-commit isolated source verification (2026-09-27)
+
+The candidate Git tree was exported with checkout-index into an isolated directory, without unrelated GPU or selective-classification changes. The required extended-priors fix and the A3 parity reference were included.
+
+Command: python -m pytest -q --tb=short tests/test_extended_player_priors.py tests/test_ordered_matchup_features.py tests/test_result_end_times.py tests/test_matchup_provenance.py tests/test_matchup_feature_contract.py tests/test_ordered_benchmark.py tests/test_ordered_ensemble_integration.py tests/test_ordered_training_integration.py -k "not real_ordered_training_paths and not legacy_eight_dim_uses_historical_extractor_without_ends and not v3_without_cache_or_manifest_uses_chronological_split"
+
+........................................................................ [ 67%]
+...................................                                      [100%]
+============================== warnings summary ===============================
+tests/test_ordered_ensemble_integration.py: 62 warnings
+  D:\projet\NNriot\.venv312\Lib\site-packages\keras\src\backend\tensorflow\core.py:172: DeprecationWarning: __array__ implementation doesn't accept a copy keyword, so passing copy=False failed. __array__ must implement 'dtype' and 'copy' keyword arguments. To learn more, see the migration guide https://numpy.org/devdocs/numpy_2_0_migration_guide.html#adapting-to-changes-in-the-copy-keyword
+    return np.array(x)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+107 passed, 3 deselected, 62 warnings in 56.34s
+
+Exit code: 0. This is a focused verification of the commit contents, not a second full-suite or benchmark run. The three deselected training cases were already exercised during integration validation.
+The source, tests and documentation pass git diff --cached --check. Raw captured upstream warning logs retain their original whitespace.
+The commit contains compact reports. Local caches, databases, checkpoints, model bundles, predictions and raw .log files remain preserved on disk and are intentionally not added to Git.

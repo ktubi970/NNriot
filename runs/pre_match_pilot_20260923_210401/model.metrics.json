@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-09-23T19:04:57.003064+00:00",
+  "source_db": "D:\\projet\\NNriot\\runs\\training_data_23h_20260922_191434.db",
+  "dataset_sha256": "c04ccf4546007aa4ab4fd445f32c27baf57908e664d958fea57ef030a7092859",
+  "checkpoint": "D:\\projet\\NNriot\\runs\\pre_match_pilot_20260923_210401\\model.keras",
+  "split_manifest": "D:\\projet\\NNriot\\runs\\pre_match_pilot_20260923_210401\\model.split.json",
+  "parameters": {
+    "epochs": 1,
+    "batch_size": 64,
+    "dim": 20000,
+    "seed": 42
+  },
+  "tensorflow_version": "2.21.0",
+  "gpu_devices": [],
+  "split_counts": {
+    "train": 700,
+    "validation": 150,
+    "test": 150
+  },
+  "train_positive_rate": 0.5271428571428571,
+  "selection_metric": "validation.winner.log_loss",
+  "selected_epoch": 1,
+  "is_calibrated": false,
+  "evaluation_target": "winner",
+  "baseline_policy": "constant positive rate fitted on training split only",
+  "active_heads": [
+    "winner",
+    "team_b_kill_lead",
+    "first_blood",
+    "first_baron",
+    "first_inhibitor",
+    "first_tower",
+    "both_baron",
+    "both_inhibitor",
+    "both_dragon",
+    "elder_dragon",
+    "total_kills",
+    "total_barons",
+    "total_dragons",
+    "total_towers",
+    "team_a_kills",
+    "team_b_kills",
+    "kill_handicap"
+  ],
+  "disabled_heads": [
+    "kills_odd",
+    "first_to_5_kills",
+    "first_to_10_kills",
+    "first_to_15_kills",
+    "first_to_20_kills"
+  ],
+  "limitations": [
+    "No probability calibration fitted.",
+    "Chronological holdout only; players may overlap between splits.",
+    "Only winner is evaluated; other heads are not validated.",
+    "A small pilot does not establish predictive quality."
+  ],
+  "metrics": {
+    "train": {
+      "model": {
+        "accuracy": 0.5271428571428571,
+        "log_loss": 0.6916743951125182,
+        "brier": 0.24926396744191315,
+        "roc_auc": 0.495591088841402,
+        "calibration_error": 0.00015212799821584522
+      },
+      "baseline": {
+        "accuracy": 0.5271428571428571,
+        "log_loss": 0.6916729866137441,
+        "brier": 0.24926326530612244,
+        "roc_auc": 0.5,
+        "calibration_error": 2.220446049250313e-16
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": -1.4084987740581312e-06
+    },
+    "validation": {
+      "model": {
+        "accuracy": 0.4866666666666667,
+        "log_loss": 0.6960752654090574,
+        "brier": 0.25146223730454553,
+        "roc_auc": 0.5424301725671589,
+        "calibration_error": 0.04058919469515476
+      },
+      "baseline": {
+        "accuracy": 0.4866666666666667,
+        "log_loss": 0.696071868916789,
+        "brier": 0.25146054421768704,
+        "roc_auc": 0.5,
+        "calibration_error": 0.04047619047619044
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": -3.396492268437079e-06
+    },
+    "test": {
+      "model": {
+        "accuracy": 0.5133333333333333,
+        "log_loss": 0.6931782421980089,
+        "brier": 0.25001514887037246,
+        "roc_auc": 0.43373065290873514,
+        "calibration_error": 0.0137453365325928
+      },
+      "baseline": {
+        "accuracy": 0.5133333333333333,
+        "log_loss": 0.69317378175243,
+        "brier": 0.250012925170068,
+        "roc_auc": 0.5,
+        "calibration_error": 0.013809523809523827
+      },
+      "accuracy_lift": 0.0,
+      "log_loss_improvement": -4.460445578891026e-06
+    }
+  },
+  "history": [
+    {
+      "epoch": 1,
+      "train_loss": 19.978240182059153,
+      "validation": {
+        "model": {
+          "accuracy": 0.4866666666666667,
+          "log_loss": 0.6960752654090574,
+          "brier": 0.25146223730454553,
+          "roc_auc": 0.5424301725671589,
+          "calibration_error": 0.04058919469515476
+        },
+        "baseline": {
+          "accuracy": 0.4866666666666667,
+          "log_loss": 0.696071868916789,
+          "brier": 0.25146054421768704,
+          "roc_auc": 0.5,
+          "calibration_error": 0.04047619047619044
+        },
+        "accuracy_lift": 0.0,
+        "log_loss_improvement": -3.396492268437079e-06
+      }
+    }
+  ],
+  "elapsed_seconds": 42.98399999999674
+}

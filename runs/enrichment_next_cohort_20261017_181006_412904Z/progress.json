@@ -1,0 +1,18 @@
+{
+  "status": "running",
+  "total": null,
+  "current": 12041,
+  "logs": [],
+  "speed_matches_per_min": 13.050686841774494,
+  "eta_minutes": null,
+  "elapsed_seconds": 55358.005962371826,
+  "error": null,
+  "remaining_seconds": 16500.420999999973,
+  "duration_hours": 20,
+  "deadline_at": "2026-10-18T14:10:16.559960+00:00",
+  "pid": 22732,
+  "database": "D:\\projet\\NNriot\\training_data.db",
+  "updated_at": "2026-10-18T09:35:16.134177+00:00",
+  "free_gib": 152.96,
+  "stop_reason": []
+}

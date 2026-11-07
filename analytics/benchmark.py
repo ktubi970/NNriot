@@ -69,6 +69,12 @@ def run_benchmark(
         "single_metric": [],
         "chat_no_llm": [],
     }
+    # Warm up callables once to avoid cold-start disk/cache overhead in p95 calculation
+    try:
+        engine.cached(request, question=QUESTION)
+        service.chat(QUESTION, None, {})
+    except Exception:
+        pass
     for _ in range(iterations):
         timings["cached_evidence"].append(
             _measure(lambda: engine.cached(request, question=QUESTION))

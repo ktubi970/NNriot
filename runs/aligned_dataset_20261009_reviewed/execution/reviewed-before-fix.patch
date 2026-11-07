@@ -1,0 +1,1814 @@
+--- baseline/core/prediction_service.py
++++ current/core/prediction_service.py
+@@ -16,6 +16,7 @@
+ import numpy as np
+ 
+ from core.features.pipeline import DraftFeaturePipeline, get_feature_pipeline
++from core.aligned_features import extract_aligned_inputs
+ from core.features.matchup_matrix import LaneMatchupTracker
+ from core.selective_infer import (
+     classify_match_conviction,
+@@ -135,7 +136,8 @@
+             match_dict = self.history_provider.enrich(match_dict, include_timeline=self.contract.dim == 18)
+         input_names = set(getattr(self._model, "input_names", None) or [])
+         input_names.update(t.name.split(":")[0] for t in getattr(self._model, "inputs", []) or [])
+-        x_nn = self.contract.extract(match_dict, self.feature_pipeline, macro='macro_clash' in input_names)
++        x_nn = extract_aligned_inputs(match_dict, self.contract.version,
++                                      pipeline=self.feature_pipeline, macro='macro_clash' in input_names)
+ 
+         # 2. Neural model prediction
+         with self._lock:
+--- baseline/core/pre_match_history.py
++++ current/core/pre_match_history.py
+@@ -68,43 +68,72 @@
+             'patch': info.get('gameVersion', 'UNKNOWN'), 'raw_info': info}
+ 
+ 
+-def read_recent_rows(db_path, limit: int, *, before_ms: int | None = None, timelines: bool = True, puuids=None) -> list[dict]:
++def read_recent_rows(db_path, limit: int, *, before_ms: int | None = None, timelines: bool = True, puuids=None, include_labels: bool = False, history_only: bool = False) -> list[dict]:
+     if type(limit) is not int or limit < 1:
+         raise ValueError('History/cohort limit must be positive')
++    if history_only and include_labels:
++        raise ValueError('History-only reads cannot include training labels')
+     uri = Path(db_path).resolve().as_uri() + '?mode=ro'
+     with closing(sqlite3.connect(uri, uri=True)) as conn:
+         conn.row_factory = sqlite3.Row
+         conn.execute('PRAGMA query_only=ON')
++        conn.execute('PRAGMA temp_store=MEMORY')
++        conn.execute('PRAGMA cache_size=-65536')
++        conn.execute('BEGIN')
+         has_timeline = timelines and conn.execute("SELECT 1 FROM sqlite_master WHERE name='match_timelines'").fetchone()
++        training_columns = {r[1] for r in conn.execute('PRAGMA table_info(training_dataset)')}
++        labels_expr = 't.labels_json' if include_labels and 'labels_json' in training_columns else 'NULL'
++        winner_expr = 'NULL' if history_only else 't.winner_label'
++        training_join = '' if history_only else ' LEFT JOIN training_dataset t ON m.match_id=t.match_id'
+         timeline_expr = '(SELECT timeline_json FROM match_timelines mt WHERE mt.match_id=m.match_id)' if has_timeline else 'NULL'
+         if puuids is not None:
+             puuids = sorted(set(p for p in puuids if p))
+             if not puuids:
+                 return []
++        # Creation and mode indexes cover rowids, avoiding metadata after the
++        # huge raw_json column. Resolve match-ID ordering only at the boundary
++        # tie; fetch the final selected payloads in rowid order. All reads share
++        # the explicit transaction, including boundary resolution.
++        table = conn.execute("SELECT type,sql FROM sqlite_master WHERE name='matches'").fetchone()
++        prefix = ''
++        if table and table['type'] == 'table' and 'WITHOUT ROWID' not in table['sql'].upper():
++            mode_filter = "+rowid IN (SELECT rowid FROM matches WHERE game_mode='CLASSIC')"
++            window = conn.execute(f'''SELECT rowid,game_creation_time FROM matches
++                WHERE {mode_filter} AND game_creation_time>0 AND typeof(game_creation_time)='integer'
++                AND game_creation_time < ? ORDER BY game_creation_time DESC LIMIT ?''',
++                (before_ms or 2**63-1, limit)).fetchall()
++            rowids = [r[0] for r in window]
++            if len(window) == limit:
++                boundary = window[-1][1]
++                rowids = [r[0] for r in window if r[1] > boundary]
++                tied = conn.execute(f'''SELECT rowid FROM matches WHERE {mode_filter}
++                    AND game_creation_time=? ORDER BY match_id DESC LIMIT ?''',
++                    (boundary, limit - len(rowids))).fetchall()
++                rowids.extend(r[0] for r in tied)
++            tail = 'FROM matches m' + training_join + ' WHERE m.rowid IN (SELECT value FROM json_each(?))'
++            params = (json_dumps(rowids),)
++        else:
++            # General schemas lack usable rowids; sort headers before payloads.
++            prefix = '''WITH recent AS MATERIALIZED (
++                SELECT match_id,game_creation_time FROM matches
++                WHERE +game_mode='CLASSIC' AND game_creation_time>0 AND typeof(game_creation_time)='integer'
++                AND game_creation_time < ? ORDER BY game_creation_time DESC,match_id DESC LIMIT ?)
++            '''
++            tail = 'FROM recent r JOIN matches m ON m.match_id=r.match_id' + training_join + ' WHERE 1=1'
++            params = (before_ms or 2**63-1, limit)
++        if puuids is not None:
+             # Select the SAME global creation window first, then fetch only
+             # player-relevant raw payloads via the indexed participant table.
+-            header = '''WITH recent AS MATERIALIZED (
+-                SELECT match_id,game_creation_time FROM matches
+-                WHERE game_mode='CLASSIC' AND game_creation_time>0 AND typeof(game_creation_time)='integer'
+-                AND game_creation_time < ? ORDER BY game_creation_time DESC,match_id DESC LIMIT ?)
+-            '''
+             # Older rows can have raw payloads without the backfilled index.
+             # Fetch incomplete indexes too, then filter identities from raw;
+             # otherwise live features would differ from frozen evaluation.
+             extra = (' AND (EXISTS (SELECT 1 FROM match_participants mp WHERE mp.match_id=m.match_id AND mp.puuid IN ('
+                      + ','.join('?' for _ in puuids) + ')) OR '
+                      '(SELECT COUNT(DISTINCT mp.puuid) FROM match_participants mp WHERE mp.match_id=m.match_id) != 10)')
+-            tail = 'FROM recent r JOIN matches m ON m.match_id=r.match_id LEFT JOIN training_dataset t ON m.match_id=t.match_id WHERE 1=1' + extra
+-            query = header + f'SELECT m.match_id,m.game_creation_time,m.raw_json,t.winner_label,{timeline_expr} AS timeline_json ' + tail + ' ORDER BY m.game_creation_time DESC,m.match_id DESC'
+-            params = (before_ms or 2**63-1,limit,*puuids)
+-        else:
+-            query = f'''SELECT m.match_id,m.game_creation_time,m.raw_json,t.winner_label,
+-                                      {timeline_expr} AS timeline_json
+-                               FROM matches m LEFT JOIN training_dataset t ON m.match_id=t.match_id
+-                               WHERE m.game_mode='CLASSIC' AND m.game_creation_time>0 AND typeof(m.game_creation_time)='integer'
+-                               AND m.game_creation_time < ?
+-                               ORDER BY m.game_creation_time DESC, m.match_id DESC LIMIT ?'''
+-            params = (before_ms or 2**63-1,limit)
++            tail += extra
++            params = (*params, *puuids)
++        query = prefix + f'''SELECT m.match_id,m.game_creation_time,m.raw_json,{winner_expr} AS winner_label,
++                             {timeline_expr} AS timeline_json,{labels_expr} AS labels_json ''' + tail
+         cursor = conn.execute(query,params)
+         rows = []
+         # Riot payloads contain hundreds of post-match fields. Retain only the
+@@ -125,7 +154,7 @@
+                     rows.append(compact)
+                     continue
+                 parts = [{k:p[k] for k in part_keys if k in p} for p in source_parts]
+-                small = {k:info[k] for k in ('gameStartTimestamp','gameEndTimestamp','gameDuration','gameVersion','gameMode') if k in info}
++                small = {k:info[k] for k in ('gameStartTimestamp','gameEndTimestamp','gameDuration','gameVersion','gameMode','queueId') if k in info}
+                 small['gameCreation'] = row['game_creation_time']
+                 small['participants'] = parts
+                 compact['raw_json'] = json_dumps({'info':small})
+@@ -144,7 +173,7 @@
+             if len(rows) % 1000 == 0:
+                 import logging
+                 logging.getLogger(__name__).info('Read and compacted %d historical source rows', len(rows))
+-    return [dict(r) for r in reversed(rows)]
++    return sorted(rows, key=lambda r: (r['game_creation_time'], r['match_id']))
+ 
+ 
+ class ResultOrderedHistory:
+@@ -221,7 +250,7 @@
+             raise ContractError('prediction_time_ms must be integer UTC milliseconds')
+         identities = {p.get('puuid') for k in ('team_a','team_b') for p in match.get(k, []) if p.get('puuid')}
+         records = []
+-        for row in read_recent_rows(self.db_path, self.history_limit, before_ms=as_of, timelines=include_timeline, puuids=identities):
++        for row in read_recent_rows(self.db_path, self.history_limit, before_ms=as_of, timelines=include_timeline, puuids=identities, history_only=True):
+             try:
+                 rec = decode_history_row(row)
+             except ContractError:
+--- baseline/core/serving_contract.py
++++ current/core/serving_contract.py
+@@ -26,7 +26,7 @@
+ 
+ CONTRACT_DIMS = {'nnriot.players14.v1': 14, 'nnriot.players18.v1': 18}
+ HISTORY_POLICY = 'result_end_strictly_before_start.v1'
+-FEATURE_SOURCE_FILES = ('core/features/pipeline.py', 'core/player_priors.py', 'core/champion_registry.py',
++FEATURE_SOURCE_FILES = ('core/aligned_features.py', 'core/features/pipeline.py', 'core/player_priors.py', 'core/champion_registry.py',
+                         'core/features/static_meta.py', 'core/features/draft_composition.py', 'core/pre_match_history.py',
+                         'core/features/matchup_matrix.py', 'core/pre_match_dataset.py',
+                         'core/deepsets_layers.py', 'core/equivariant_model.py', 'core/draft_features.py',
+--- baseline/scripts/train_deepsets_v3.py
++++ current/scripts/train_deepsets_v3.py
+@@ -26,6 +26,7 @@
+ 
+ _ORIGINAL_PCGRAD_STEP = pcgrad_step
+ from core.training_metrics import evaluate_winner
++from core.aligned_training import prepare_aligned_training, finish_aligned_pilot
+ from core.calibration import fit_temperature, apply_temperature_to_probabilities, save_calibration_artifact
+ from core.experiment import (build_manifest, read_manifest, restore_splits,
+                              resolve_result_end_times, validate_replay_feature_provenance)
+@@ -51,6 +52,7 @@
+     *,
+     result_end_times: str | None = None,
+     missing_result_end: str = "error",
++    dataset_dir: str | None = None,
+ ) -> dict:
+     tf.keras.utils.set_random_seed(seed)
+     np.random.seed(seed)
+@@ -60,62 +62,68 @@
+         raise FileExistsError(f"Refusing occupied output directory: {out_path}")
+     checkpoint_path = out_path / "model.keras"
+ 
+-    # 1. Load or build splits
+-    splits = None
+-    cache_was_loaded = False
+-    if splits_cache:
+-        cache_file = Path(splits_cache).resolve()
+-        if not cache_file.is_file():
+-            raise FileNotFoundError(f"Splits cache not found: {cache_file}")
+-        logger.info("Loading cached splits from %s...", cache_file)
+-        with open(cache_file, "rb") as f:
+-            splits = pickle.load(f)
+-        cache_was_loaded = True
+-        logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
+-
+-    if cache_was_loaded and manifest_path:
+-        manifest = read_manifest(manifest_path)
+-        rows = [r for name in ("train", "validation", "test") for r in splits[name]]
+-        splits = restore_splits(rows, manifest)
+-        validate_replay_feature_provenance(manifest_path, splits)
+-
+-    if splits is None:
+-        logger.info("Streaming %d enriched records (warmup=%d) from %s...", samples, warmup, db_path)
+-        records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
++    if dataset_dir is not None:
++        if any(v is not None for v in (manifest_path, splits_cache, result_end_times)):
++            raise ValueError('dataset_dir is exclusive with legacy inputs')
++        x, splits, aligned_manifest = prepare_aligned_training(
++            Path(dataset_dir), out_path, 'nnriot.players14.v1')
++    else:
++        # 1. Load or build splits
++        splits = None
++        cache_was_loaded = False
++        if splits_cache:
++            cache_file = Path(splits_cache).resolve()
++            if not cache_file.is_file():
++                raise FileNotFoundError(f"Splits cache not found: {cache_file}")
++            logger.info("Loading cached splits from %s...", cache_file)
++            with open(cache_file, "rb") as f:
++                splits = pickle.load(f)
++            cache_was_loaded = True
++            logger.info("Loaded splits: %s", {k: len(v) for k, v in splits.items()})
++
++        if cache_was_loaded and manifest_path:
++            manifest = read_manifest(manifest_path)
++            rows = [r for name in ("train", "validation", "test") for r in splits[name]]
++            splits = restore_splits(rows, manifest)
++            validate_replay_feature_provenance(manifest_path, splits)
++
++        if splits is None:
++            logger.info("Streaming %d enriched records (warmup=%d) from %s...", samples, warmup, db_path)
++            records = load_enriched_records(db_path=db_path, limit=samples, warmup_matches=warmup)
+         
++            if manifest_path:
++                logger.info("Restoring exact splits from manifest %s...", manifest_path)
++                manifest = read_manifest(Path(manifest_path))
++                splits = restore_splits(records, manifest)
++                validate_replay_feature_provenance(manifest_path, splits)
++            else:
++                logger.info("No manifest provided, creating chronological 70/15/15 splits...")
++                from core.pre_match_dataset import split_records
++                splits, split_meta = split_records(records, strategy="chronological")
++
++            # Input caches are never created or rewritten by an ordered run.
++
++        logger.info("Using splits: %s", {k: len(v) for k, v in splits.items()})
++
++        resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
++                                            missing=missing_result_end)
++        out_path.mkdir(parents=True, exist_ok=False)
+         if manifest_path:
+-            logger.info("Restoring exact splits from manifest %s...", manifest_path)
+-            manifest = read_manifest(Path(manifest_path))
+-            splits = restore_splits(records, manifest)
+-            validate_replay_feature_provenance(manifest_path, splits)
+-        else:
+-            logger.info("No manifest provided, creating chronological 70/15/15 splits...")
+-            from core.pre_match_dataset import split_records
+-            splits, split_meta = split_records(records, strategy="chronological")
+-
+-        # Input caches are never created or rewritten by an ordered run.
+-
+-    logger.info("Using splits: %s", {k: len(v) for k, v in splits.items()})
+-
+-    resolved = resolve_result_end_times(splits, db_path=db_path, artifact_path=result_end_times,
+-                                        missing=missing_result_end)
+-    out_path.mkdir(parents=True, exist_ok=False)
+-    if manifest_path:
+-        split_meta = read_manifest(manifest_path)["split_metadata"]
+-    elif cache_was_loaded:
+-        split_meta = {
+-            "requested_strategy": "cached", "effective_strategy": "cached",
+-            "fallback_reason": None,
+-        }
+-    manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
+-    with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
+-        json.dump(manifest, f, indent=2, allow_nan=False)
+-    x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
+-        splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
+-        missing_result_end=missing_result_end, representation="v3",
+-        matchup_weight=5.0, source_cache=splits_cache if cache_was_loaded else None,
+-        resolved=resolved,
+-    )
++            split_meta = read_manifest(manifest_path)["split_metadata"]
++        elif cache_was_loaded:
++            split_meta = {
++                "requested_strategy": "cached", "effective_strategy": "cached",
++                "fallback_reason": None,
++            }
++        manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
++        with (out_path / "model.split.json").open("x", encoding="utf-8") as f:
++            json.dump(manifest, f, indent=2, allow_nan=False)
++        x, matchup_diagnostics, feature_contract_sha = prepare_ordered_training(
++            splits, checkpoint_path, db_path=db_path, result_end_times=result_end_times,
++            missing_result_end=missing_result_end, representation="v3",
++            matchup_weight=5.0, source_cache=splits_cache if cache_was_loaded else None,
++            resolved=resolved,
++        )
+ 
+     y = {name: np.asarray([r["labels_json"]["winner"] for r in rows], dtype=int)
+          for name, rows in splits.items()}
+@@ -220,6 +228,13 @@
+     # 7. Fit Temperature Scaling on Validation Split
+     val_preds = best_model.predict(x["validation"], batch_size=128, verbose=0)
+     raw_val_probs = np.asarray(val_preds["winner"])[:, 1]
++    if dataset_dir is not None:
++        return finish_aligned_pilot(
++            output_dir=out_path, dataset_dir=Path(dataset_dir),
++            dataset_manifest=aligned_manifest, input_dim=14,
++            validation_probabilities=raw_val_probs,
++            validation_labels=y['validation'], history=history,
++            best_epoch=best_epoch, best_val_loss=best_val_loss)
+     fit_res = fit_temperature(raw_val_probs, y["validation"])
+     fitted_temp = float(fit_res["temperature"]) if isinstance(fit_res, dict) else float(fit_res)
+     logger.info("Fitted temperature scaling: T = %.4f", fitted_temp)
+@@ -289,8 +304,9 @@
+     parser = argparse.ArgumentParser()
+     parser.add_argument("--db-path", default="runs/db_merge_20260924/consolidated.db")
+     parser.add_argument("--output-dir", default="runs/candidate_deepsets_v3")
+-    parser.add_argument("--manifest-path", default="runs/candidate_selective_prod/model.split.json")
+-    parser.add_argument("--splits-cache", default="runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl")
++    parser.add_argument("--manifest-path", default=None)
++    parser.add_argument("--splits-cache", default=None)
++    parser.add_argument("--dataset-dir", default=None)
+     parser.add_argument("--samples", type=int, default=45000)
+     parser.add_argument("--warmup", type=int, default=3000)
+     parser.add_argument("--epochs", type=int, default=5)
+@@ -303,9 +319,10 @@
+ 
+     train_deepsets_v3(
+         db_path=args.db_path,
++        dataset_dir=args.dataset_dir,
+         output_dir=args.output_dir,
+-        manifest_path=args.manifest_path,
+-        splits_cache=args.splits_cache,
++        manifest_path=args.manifest_path if args.dataset_dir else (args.manifest_path or "runs/candidate_selective_prod/model.split.json"),
++        splits_cache=args.splits_cache if args.dataset_dir else (args.splits_cache or "runs/candidate_deepsets_v3/splits_cache_45000_v3.pkl"),
+         samples=args.samples,
+         warmup=args.warmup,
+         epochs=args.epochs,
+--- baseline/scripts/train_deepsets_v4_timeline.py
++++ current/scripts/train_deepsets_v4_timeline.py
+@@ -24,6 +24,7 @@
+ from core.training_utils import _build_targets
+ from core.pcgrad import pcgrad_step, create_compiled_pcgrad_step
+ from core.training_metrics import evaluate_winner
++from core.aligned_training import prepare_aligned_training, finish_aligned_pilot
+ from core.calibration import (
+     fit_temperature,
+     apply_temperature_to_probabilities,
+@@ -52,6 +53,7 @@
+     patience: int | None = 2,
+     *,
+     manifest_path: str | None = None,
++    dataset_dir: str | None = None,
+ ) -> dict[str, Any]:
+     """Train Equivariant DeepSets v4 with timeline player priors and evaluate artifacts."""
+     tf.keras.utils.set_random_seed(seed)
+@@ -60,70 +62,76 @@
+     out_path = Path(output_dir).resolve()
+     if out_path.exists() and any(out_path.iterdir()):
+         raise FileExistsError(f"Refusing non-empty output directory: {out_path}")
+-    out_path.mkdir(parents=True, exist_ok=True)
+     checkpoint_path = out_path / "model.keras"
+     split_manifest_path = out_path / "model.split.json"
+ 
+-    # 1. Load chronologically streaming enriched records with timeline priors enabled
+-    logger.info(
+-        "Loading enriched records with include_timeline=True (limit=%d, warmup=%d) from %s...",
+-        samples, warmup, db_path,
+-    )
+-    records = load_enriched_records(
+-        db_path=db_path,
+-        limit=samples,
+-        warmup_matches=warmup,
+-        include_timeline=True,
+-    )
+-    if not records:
+-        raise ValueError(f"No valid records loaded from database: {db_path}")
+-
+-    # 2. Build or restore splits
+-    if manifest_path:
+-        logger.info("Restoring exact splits from manifest %s...", manifest_path)
+-        manifest = read_manifest(Path(manifest_path))
+-        splits = restore_splits(records, manifest)
++    if dataset_dir is not None:
++        if manifest_path is not None:
++            raise ValueError('dataset_dir is exclusive with legacy manifest')
++        x, splits, aligned_manifest = prepare_aligned_training(
++            Path(dataset_dir), out_path, 'nnriot.players18.v1')
+     else:
+-        logger.info("Creating chronological 70/15/15 splits...")
+-        splits, split_meta = split_records(records, strategy="chronological")
+-        manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
+-
+-    with split_manifest_path.open("w", encoding="utf-8") as f:
+-        json.dump(manifest, f, indent=2, allow_nan=False)
+-
+-    logger.info("Split record counts: %s", {k: len(v) for k, v in splits.items()})
+-
+-    # 3. Extract 18-dim player tensors and 15-dim macro clash features
+-    pipeline = DraftFeaturePipeline()
+-    x: dict[str, dict[str, np.ndarray]] = {}
+-
+-    for split_name in ("train", "validation", "test"):
+-        rows = splits[split_name]
+-        n_rows = len(rows)
+-        ta_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
+-        tb_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
+-        mc_arr = np.zeros((n_rows, MACRO_CLASH_FEATURE_DIM), dtype=np.float32)
+-
+-        for i, r in enumerate(rows):
+-            feat = r.get("feature_json") or {}
+-            ta, tb = pipeline.extract_tensors(feat, include_timeline=True)
+-            mc = pipeline.extract_macro_clash(feat)
+-            ta_arr[i] = ta
+-            tb_arr[i] = tb
+-            mc_arr[i] = mc
+-
+-        x[split_name] = {
+-            "team_a": ta_arr,
+-            "team_b": tb_arr,
+-            "macro_clash": mc_arr,
+-        }
++        out_path.mkdir(parents=True, exist_ok=True)
++        # 1. Load chronologically streaming enriched records with timeline priors enabled
++        logger.info(
++            "Loading enriched records with include_timeline=True (limit=%d, warmup=%d) from %s...",
++            samples, warmup, db_path,
++        )
++        records = load_enriched_records(
++            db_path=db_path,
++            limit=samples,
++            warmup_matches=warmup,
++            include_timeline=True,
++        )
++        if not records:
++            raise ValueError(f"No valid records loaded from database: {db_path}")
++
++        # 2. Build or restore splits
++        if manifest_path:
++            logger.info("Restoring exact splits from manifest %s...", manifest_path)
++            manifest = read_manifest(Path(manifest_path))
++            splits = restore_splits(records, manifest)
++        else:
++            logger.info("Creating chronological 70/15/15 splits...")
++            splits, split_meta = split_records(records, strategy="chronological")
++            manifest = build_manifest(splits, source_db=db_path, split_metadata=split_meta)
++
++        with split_manifest_path.open("w", encoding="utf-8") as f:
++            json.dump(manifest, f, indent=2, allow_nan=False)
++
++        logger.info("Split record counts: %s", {k: len(v) for k, v in splits.items()})
++
++        # 3. Extract 18-dim player tensors and 15-dim macro clash features
++        pipeline = DraftFeaturePipeline()
++        x: dict[str, dict[str, np.ndarray]] = {}
++
++        for split_name in ("train", "validation", "test"):
++            rows = splits[split_name]
++            n_rows = len(rows)
++            ta_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
++            tb_arr = np.zeros((n_rows, 5, ENRICHED_PLAYER_TIMELINE_TENSOR_DIM), dtype=np.float32)
++            mc_arr = np.zeros((n_rows, MACRO_CLASH_FEATURE_DIM), dtype=np.float32)
++
++            for i, r in enumerate(rows):
++                feat = r.get("feature_json") or {}
++                ta, tb = pipeline.extract_tensors(feat, include_timeline=True)
++                mc = pipeline.extract_macro_clash(feat)
++                ta_arr[i] = ta
++                tb_arr[i] = tb
++                mc_arr[i] = mc
++
++            x[split_name] = {
++                "team_a": ta_arr,
++                "team_b": tb_arr,
++                "macro_clash": mc_arr,
++            }
+ 
+     y = {
+         name: np.asarray([r["labels_json"].get("winner", 0) for r in rows], dtype=int)
+         for name, rows in splits.items()
+     }
+     train_rate = float(y["train"].mean()) if len(y["train"]) > 0 else 0.5
+-    targets = {name: _build_targets(splits[name]) for name in ("train", "validation", "test")}
++    targets = {name: _build_targets(splits[name]) for name in splits}
+ 
+     # 4. Build Equivariant DeepSets Model with 18-dim player tensors and 15-dim macro clash
+     logger.info(
+@@ -250,6 +258,13 @@
+     # 7. Temperature calibration on Validation Split
+     val_preds = best_model.predict(x["validation"], batch_size=128, verbose=0)
+     raw_val_probs = np.asarray(val_preds["winner"])[:, 1]
++    if dataset_dir is not None:
++        return finish_aligned_pilot(
++            output_dir=out_path, dataset_dir=Path(dataset_dir),
++            dataset_manifest=aligned_manifest, input_dim=18,
++            validation_probabilities=raw_val_probs,
++            validation_labels=y['validation'], history=history,
++            best_epoch=best_epoch, best_val_loss=best_val_loss)
+ 
+     fitted_temp = 1.0
+     calib_sidecar = checkpoint_path.with_suffix(".calibration.json")
+@@ -341,6 +356,7 @@
+     parser.add_argument("--db-path", default="training_data.db")
+     parser.add_argument("--output-dir", default="runs/candidate_deepsets_v4_timeline")
+     parser.add_argument("--manifest-path", default=None)
++    parser.add_argument("--dataset-dir", default=None)
+     parser.add_argument("--samples", type=int, default=45000)
+     parser.add_argument("--warmup", type=int, default=3000)
+     parser.add_argument("--epochs", type=int, default=5)
+@@ -352,6 +368,7 @@
+ 
+     train_deepsets_v4_timeline(
+         db_path=args.db_path,
++        dataset_dir=args.dataset_dir,
+         output_dir=args.output_dir,
+         samples=args.samples,
+         warmup=args.warmup,
+--- baseline/docs/pre_match_training.md
++++ current/docs/pre_match_training.md
+@@ -1,6 +1,9 @@
+ # Premier entraînement pré-match
+ 
+-Le parcours recommandé est `scripts/train_pre_match_model.py`. Il charge une
++Pour les nouveaux entraînements DeepSets v3/v4, utiliser le dataset aligné au
++service décrit dans la section « Dataset aligné 14D/18D » ci-dessous.
++
++Le parcours général est `scripts/train_pre_match_model.py`. Il charge une
+ base explicitement choisie en lecture seule et produit un modèle candidat,
+ un manifeste des partitions et un rapport d'évaluation. Il ne remplace pas
+ le modèle chargé par l'application.
+@@ -212,3 +215,77 @@
+ indique explicitement si elle a été appliquée ; un fichier de calibration présent
+ mais lié à un autre contrat est refusé. Une absence de calibration ne transforme
+ pas les probabilités brutes en probabilités calibrées.
++
++
++## Dataset aligné 14D/18D
++
++Le service demande une lecture `history_only` des faits Riot : il ne consulte
++pas les données ML pour calculer les priors. Les autres lecteurs conservent
++leurs labels habituels. La fenêtre globale est sélectionnée via les index de
++mode/création et les ex æquo par ID, dans une transaction unique en lecture
++seule ; temporaires SQLite en mémoire et cache de pages plafonné à 64 MiB
++par connexion.
++
++Le contrat `nnriot.serving_aligned_dataset.v1` fige une seule source SQLite
++ouverte en lecture seule. Les cibles sont les queues 420/440, avec cinq rôles
++canoniques par équipe, labels multitâches valides et vainqueur cohérent avec
++Riot. Les 10 000 premières créations du snapshot servent au contexte ; les
++créations ex æquo à sa frontière ne deviennent pas des cibles. Pour chaque
++cible, le replay utilise exactement les 10 000 créations CLASSIC strictement
++antérieures, puis uniquement les résultats terminés avant sa création.
++Les résultats historiques sans label ML restent utilisables.
++
++```powershell
++.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset inventory --db training_data.db --db runs/training_data_23h_20260922_191434.db --db runs/db_merge_20260924/consolidated.db
++.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset freeze --db runs/db_merge_20260924/consolidated.db --after-cohort runs/served_model_comparison_20261009_complete/cohort.jsonl --output-dir runs/aligned_dataset_20261009_verified --source-limit 61000
++.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset verify --dataset-dir runs/aligned_dataset_20261009_verified
++```
++
++Les sorties exigent un répertoire neuf. Le test compte au moins 3 000 cibles
++créées après le cohort exploratoire antérieur ; la validation en compte au
++moins 3 000. Les créations ex æquo restent ensemble. Un résultat train dont
++la fin atteint le début de validation est purgé ; la même règle s'applique
++entre validation et test. Les IDs du test exploratoire antérieur sont exclus
++des nouvelles cibles. Les exclusions et les purges sont enregistrées.
++
++`dataset.json` lie les hashes de code, les règles, la disponibilité par contrat
++et les SHA-256 de chaque fichier. `source_rows.json.gz` conserve les faits
++compactés ; `model.split.json` conserve les IDs et créations ; `train.json`
++et `validation.json` portent leurs labels. `sealed_test.json` et
++`sealed_test14.npz` réservent le test pour la prochaine expérience. Les
++fichiers `train14.npz`/`validation14.npz` contiennent les équipes float32
++`(N,5,14)` et le macro float32 `(N,15)`. Les fichiers 18D n'existent que si
++leur disponibilité est complète sur les mêmes partitions. Les causes
++individuelles figurent dans `availability.json`.
++
++Les deux bases récentes inventoriées ne contiennent pas de timelines.
++Le dataset récent peut être disponible en 14D tout en étant bloqué en 18D.
++Le trainer v4 refuse ce statut ; les anciennes timelines d'une autre base
++ne sont pas ajoutées implicitement. Leur acquisition récente est un chantier
++séparé. Ni les defaults de cold start ni un padding ne remplacent une source
++18D absente.
++
++Après fixation du protocole de la prochaine expérience, commandes de pilot :
++
++```powershell
++.\.venv312\Scripts\python.exe -m scripts.train_deepsets_v3 --dataset-dir runs/aligned_dataset_20261009_verified --output-dir runs/aligned_v3_pilot --epochs 1 --batch-size 64 --seed 42
++.\.venv312\Scripts\python.exe -m scripts.train_deepsets_v4_timeline --dataset-dir runs/aligned_dataset_20261009_verified --output-dir runs/aligned_v4_pilot --epochs 1 --batch-size 64 --seed 42
++```
++
++La commande v4 exige `availability["nnriot.players18.v1"].status == "ready"`.
++Dans ce mode, les trainers rejettent les caches/manifests legacy explicites,
++construisent des poids neufs, utilisent uniquement train/validation et
++retournent avant toute métrique test. La calibration stricte est ajustée sur
++validation avec au moins 20 observations et les deux classes ; une validation
++insuffisante ne produit aucun faux sidecar calibré. `model.metrics.json`
++lie le checkpoint au manifeste du dataset et conserve `test_status=reserved`
++et `validation_status=unverified`.
++
++Le replay d'audit peut vérifier les features et hashes du test, sans mesurer
++accuracy/log-loss ou distribuer les labels. Cette réservation est une
++discipline d'expérience : les faits Riot archivés contiennent les résultats.
++L'absence de timestamps d'acquisition impose l'hypothèse rétrospective
++« résultats observables à la fin de partie ». Les profils statiques de
++champions conservent leurs limites de provenance historique. La parité de
++features ne démontre ni gain prédictif ni éligibilité à la production.
++Voir [l'audit de réception](model_serving/aligned_dataset_verification.md).
+--- baseline/docs/model_serving/README.md
++++ current/docs/model_serving/README.md
+@@ -48,3 +48,27 @@
+ [preexisting-status.txt](preexisting-status.txt) records local work before this task: frontend archival deletions/moves, README and architecture updates, PCGrad, timeline/GPU training and spatial experiments. This task adds contracts/manifests, shared history, evaluation and tests, and extends the existing service/configuration and documentation. It does not reset local work, alter checkpoints, publish a model or migrate the source database. React/Vite remains in `archive/frontend-2026-10-09/`.
+ 
+ The targeted command used the repository `.venv312` interpreter and test-only TEMP/TMP under `scratch/serving-tests`. Test coverage includes shape/prior/role errors, hash tampering, failed calibration fits, missing and empty timelines, overlapping result ends, raw/calibrated response separation, endpoint facade routing, player permutation and the distinct composition/side-bias invariants. Final command counts and artifact hashes are recorded in [verification.md](verification.md).
++
++
++## Serving-aligned training dataset
++
++The subsequent dataset work shares `extract_aligned_inputs` with the actual
++facade and `FrozenHistoryProvider` with immutable training replay. Both use
++result-end availability, the same global 10,000-creation history window and
++neutral matchup priors. New v3/v4 runs accept `--dataset-dir`; that path reads
++only train/validation and leaves the reserved test unevaluated. It does not
++certify legacy runs or change the configured checkpoint's validation status.
++
++The consolidated recent source has no timelines, so 18D availability must
++remain explicitly blocked until suitable data are acquired. The dataset
++includes per-match failure causes, hashes, temporal purges and exclusions of
++the previously explored test IDs. See [aligned_dataset_verification.md](aligned_dataset_verification.md)
++for observed counts, exact live/frozen parity and the targeted regression run,
++and [pre_match_training.md](../pre_match_training.md) for commands.
++
++Feature source hashes in the current serving manifests were regenerated after
++this extension; checkpoint/calibration bytes and `unverified` statuses remain
++unchanged. The former comparison protocol and its verification record retain
++their original runtime hashes. Replaying that comparison with changed source
++code must reject the mismatch; old provenance is not rewritten to match a new
++runtime.
+--- baseline/core/frozen_history.py
++++ current/core/frozen_history.py
+@@ -0,0 +1,50 @@
++# core/frozen_history.py
++from bisect import bisect_left
++import copy
++from core.pre_match_history import decode_history_row, build_target_history
++from core.serving_contract import ContractError
++
++class FrozenHistoryProvider:
++    def __init__(self, rows, *, history_limit=10000):
++        if type(history_limit) is not int or history_limit < 1:
++            raise ValueError('history_limit must be a positive integer')
++        self.rows = sorted(copy.deepcopy(rows), key=lambda r: (
++            r['game_creation_time'], r['match_id']))
++        ids = [r['match_id'] for r in self.rows]
++        if len(ids) != len(set(ids)):
++            raise ValueError('duplicate match_id')
++        self.times = [r['game_creation_time'] for r in self.rows]
++        self.history_limit = history_limit
++        self.facts, self.positions, self.invalid = [], {}, []
++        for index, row in enumerate(self.rows):
++            try:
++                fact = decode_history_row(row)
++            except ContractError:
++                fact = None
++                self.invalid.append(index)
++            self.facts.append(fact)
++            if fact is not None:
++                for puuid in {p.get('puuid') for p in fact['participants']} - {None}:
++                    self.positions.setdefault(puuid, []).append(index)
++
++    def enrich(self, match, *, include_timeline):
++        as_of = match.get('prediction_time_ms')
++        if type(as_of) is not int or as_of <= 0:
++            raise ContractError('Frozen replay requires positive prediction_time_ms')
++        stop = bisect_left(self.times, as_of)
++        start = max(0, stop - self.history_limit)
++        identities = {p.get('puuid') for k in ('team_a', 'team_b')
++                      for p in match.get(k, []) if p.get('puuid')}
++        indexes = set()
++        for puuid in identities:
++            positions = self.positions.get(puuid, [])
++            indexes.update(positions[bisect_left(positions, start):
++                                     bisect_left(positions, stop)])
++        indexes.update(self.invalid[bisect_left(self.invalid, start):
++                                    bisect_left(self.invalid, stop)])
++        facts = [self.facts[i] for i in sorted(indexes)]
++        history = build_target_history(facts, match, as_of_ms=as_of)
++        enriched = history.enrich(match, include_timeline=include_timeline,
++                                  as_of_ms=as_of)
++        enriched['priors_provenance']['history_window_limit'] = self.history_limit
++        return enriched
+--- baseline/core/aligned_features.py
++++ current/core/aligned_features.py
+@@ -0,0 +1,9 @@
++# core/aligned_features.py
++from core.features.pipeline import DraftFeaturePipeline
++from core.features.matchup_matrix import LaneMatchupTracker
++from core.serving_contract import FeatureContract
++
++def extract_aligned_inputs(match, contract_version, *, macro=True, pipeline=None):
++    actual = pipeline if pipeline is not None else DraftFeaturePipeline(
++        matchup_tracker=LaneMatchupTracker())
++    return FeatureContract(contract_version).extract(match, actual, macro=macro)
+--- baseline/core/aligned_partitions.py
++++ current/core/aligned_partitions.py
+@@ -0,0 +1,82 @@
++# core/aligned_partitions.py
++from core.pre_match_dataset import _decode, _valid_labels
++from core.pre_match_history import decode_history_row
++from core.serving_contract import ContractError, FeatureContract
++
++def select_targets(rows, *, excluded_ids, warmup_rows=10000):
++    if type(warmup_rows) is not int or warmup_rows < 0:
++        raise ValueError('warmup_rows must be nonnegative')
++    selected, rejected, seen = [], [], set()
++    ordered = sorted(rows, key=lambda r: (r['game_creation_time'], r['match_id']))
++    for index, row in enumerate(ordered):
++        mid = row['match_id']
++        if mid in seen:
++            raise ValueError(f'duplicate match_id: {mid}')
++        seen.add(mid)
++        if index < warmup_rows:
++            continue
++        try:
++            if warmup_rows and row['game_creation_time'] <= ordered[warmup_rows - 1]['game_creation_time']:
++                raise ValueError('history_context_incomplete')
++            if mid in excluded_ids:
++                raise ValueError('previous_test')
++            rec = decode_history_row(row)
++            info = rec['raw_info']
++            if info.get('queueId') not in (420, 440):
++                raise ValueError('unsupported_queue')
++            if rec['result_end_ms'] is None:
++                raise ValueError('invalid_result_end')
++            FeatureContract('nnriot.players14.v1').validate_match(rec['feature_json'])
++            parts = rec['participants']
++            blue = [p for p in parts if p.get('teamId') == 100]
++            red = [p for p in parts if p.get('teamId') == 200]
++            if len(blue) != 5 or len(red) != 5 or any(
++                    type(p.get('win')) is not bool for p in parts):
++                raise ValueError('invalid_riot_winner')
++            if len({p['win'] for p in blue}) != 1 or len({p['win'] for p in red}) != 1 or blue[0]['win'] == red[0]['win']:
++                raise ValueError('invalid_riot_winner')
++            winner = row['winner_label']
++            if type(winner) is not int or winner != int(red[0]['win']):
++                raise ValueError('winner_disagrees_with_riot')
++            labels = _decode(row.get('labels_json'))
++            if not _valid_labels(labels, winner):
++                raise ValueError('invalid_multitask_labels')
++            selected.append(dict(match_id=mid, game_creation_time=rec['game_creation_time'],
++                result_end_ms=rec['result_end_ms'], feature_json=rec['feature_json'],
++                labels_json=labels, queue_id=info['queueId'], patch=rec['patch'],
++                region=rec['feature_json'].get('region')))
++        except (ValueError, TypeError, KeyError) as exc:
++            rejected.append(dict(match_id=mid, reason=str(exc)))
++    return selected, rejected
++
++def partition_targets(targets, *, after_ms, validation_count=3000, test_count=3000):
++    if any(type(n) is not int or n < 1 for n in (validation_count, test_count)):
++        raise ValueError('partition counts must be positive integers')
++    if type(after_ms) is not int or after_ms < 0:
++        raise ValueError('after_ms must be nonnegative UTC milliseconds')
++    ordered = sorted(targets, key=lambda r: (r['game_creation_time'], r['match_id']))
++    new = [r for r in ordered if r['game_creation_time'] > after_ms]
++    if len(new) < test_count:
++        raise ValueError('Insufficient new test targets')
++    test_start = new[-test_count]['game_creation_time']
++    before_test = [r for r in ordered if r['game_creation_time'] < test_start]
++    if len(before_test) <= validation_count:
++        raise ValueError('Insufficient train/validation targets')
++    available_validation = [r for r in before_test if r['result_end_ms'] < test_start]
++    if len(available_validation) <= validation_count:
++        raise ValueError('Insufficient completed validation targets')
++    validation_start = available_validation[-validation_count]['game_creation_time']
++    splits = {'train': [], 'validation': [], 'test': []}
++    purged = []
++    for row in ordered:
++        start = row['game_creation_time']
++        name = 'test' if start >= test_start else 'validation' if start >= validation_start else 'train'
++        cutoff = validation_start if name == 'train' else test_start if name == 'validation' else None
++        if cutoff is not None and row['result_end_ms'] >= cutoff:
++            purged.append(dict(match_id=row['match_id'], game_creation_time=start,
++                               reason='result_not_available_at_partition_start'))
++        else:
++            splits[name].append(row)
++    if not splits['train'] or len(splits['validation']) < validation_count or len(splits['test']) < test_count:
++        raise ValueError('Insufficient targets after temporal purge')
++    return splits, purged
+--- baseline/core/aligned_artifacts.py
++++ current/core/aligned_artifacts.py
+@@ -0,0 +1,135 @@
++# core/aligned_artifacts.py: noyau d'écriture
++import gzip
++import json
++import logging
++from pathlib import Path
++import numpy as np
++from core.aligned_features import extract_aligned_inputs
++from core.frozen_history import FrozenHistoryProvider
++from core.calibration import sha256_file
++from core.experiment import build_manifest, read_manifest
++from core.serving_contract import ContractError, runtime_feature_sources
++from core.config import PROJECT_ROOT
++
++def canonical(value, *, sort_keys=True):
++    return (json.dumps(value, sort_keys=sort_keys, separators=(',', ':'),
++                       allow_nan=False, ensure_ascii=False) + '\n').encode('utf-8')
++
++def dataset_runtime_sources():
++    names = ('core/frozen_history.py', 'core/aligned_partitions.py',
++             'core/aligned_artifacts.py', 'core/serving_contract.py',
++             'scripts/prepare_aligned_dataset.py')
++    return {**runtime_feature_sources(), **{
++        name: sha256_file(PROJECT_ROOT / name) for name in names}}
++
++def write_dataset(output, rows, splits, *, source_db, selection, exclusions):
++    output = Path(output)
++    if output.exists():
++        raise FileExistsError(f'occupied output directory: {output}')
++    split_manifest = build_manifest(splits, source_db=source_db, split_metadata=selection)
++    source_ids = {row['match_id'] for row in rows}
++    for partition in splits.values():
++        for record in partition:
++            if record['match_id'] not in source_ids:
++                raise ValueError('target absent from source snapshot')
++            if record['feature_json'].get('prediction_time_ms') != record['game_creation_time']:
++                raise ValueError('prediction cutoff mismatch')
++    output.mkdir(parents=True, exist_ok=False)
++    provider = FrozenHistoryProvider(rows)
++    files, availability = {}, {}
++    def register(name):
++        files[name] = {'path': name, 'sha256': sha256_file(output / name)}
++    def save_json(name, value, *, sort_keys=True):
++        with (output / name).open('xb') as handle:
++            handle.write(canonical(value, sort_keys=sort_keys))
++        register(name)
++    (output / 'source_rows.json.gz').write_bytes(gzip.compress(canonical(rows), mtime=0))
++    register('source_rows.json.gz')
++    for partition in ('train', 'validation', 'test'):
++        prefix = 'sealed_test' if partition == 'test' else partition
++        save_json(prefix + '.json', splits[partition])
++    for dim in (14, 18):
++        version = f'nnriot.players{dim}.v1'
++        arrays, errors = {}, []
++        processed = 0
++        total = sum(len(part) for part in splits.values())
++        for partition, records in splits.items():
++            extracted = []
++            for record in records:
++                try:
++                    enriched = provider.enrich(record['feature_json'], include_timeline=dim == 18)
++                    extracted.append(extract_aligned_inputs(enriched, version))
++                except ContractError as exc:
++                    errors.append({'match_id': record['match_id'], 'partition': partition,
++                                   'reason': type(exc).__name__ + ': ' + str(exc)})
++                processed += 1
++                if processed % 1000 == 0:
++                    logging.getLogger(__name__).info('Materialized %s: %d/%d targets', version, processed, total)
++            if extracted:
++                arrays[partition] = {name: np.concatenate([x[name] for x in extracted])
++                                     for name in ('team_a', 'team_b', 'macro_clash')}
++        availability[version] = {'status': 'blocked' if errors else 'ready',
++            'eligible': total - len(errors), 'total': total,
++            'coverage': (total - len(errors)) / total, 'errors': errors}
++        if not errors:
++            for partition, x in arrays.items():
++                prefix = 'sealed_test' if partition == 'test' else partition
++                name = f'{prefix}{dim}.npz'
++                np.savez(output / name, **x)
++                register(name)
++    if availability['nnriot.players14.v1']['status'] != 'ready':
++        save_json('availability.json', availability)
++        raise ValueError('14D feature materialization unavailable; inspect availability.json')
++    split_manifest = build_manifest(splits, source_db=source_db, split_metadata=selection)
++    save_json('model.split.json', split_manifest, sort_keys=False)
++    save_json('exclusions.json', exclusions)
++    save_json('availability.json', availability)
++    manifest = dict(schema_version=1, kind='nnriot.serving_aligned_dataset.v1',
++        source_db=str(Path(source_db).resolve()), selection=selection,
++        files=files, runtime_sources=dataset_runtime_sources(), availability=availability,
++        split_sha256=split_manifest['split_sha256'],
++        dataset_sha256=split_manifest['dataset_sha256'], test_status='reserved',
++        availability_assumption='Riot results observable at result end; ingestion timestamps unknown')
++    (output / 'dataset.json').write_bytes(canonical(manifest))
++    return manifest
++
++def checked_path(root, manifest, name):
++    path = (root / manifest['files'][name]['path']).resolve()
++    if not path.is_relative_to(root.resolve()):
++        raise ValueError('artifact path outside dataset')
++    if sha256_file(path) != manifest['files'][name]['sha256']:
++        raise ValueError(f'SHA-256 mismatch: {name}')
++    return path
++
++
++def validate_tensor_inputs(inputs, count, dim, partition):
++    expected = {'team_a': (count, 5, dim), 'team_b': (count, 5, dim),
++                'macro_clash': (count, 15)}
++    if set(inputs) != set(expected) or any(
++            inputs[key].shape != shape or inputs[key].dtype != np.float32
++            or not np.isfinite(inputs[key]).all() for key, shape in expected.items()):
++        raise ValueError(f'{partition}: invalid tensor contract')
++
++def read_train_validation(dataset_dir, contract_version):
++    root = Path(dataset_dir).resolve()
++    manifest = json.loads((root / 'dataset.json').read_text(encoding='utf-8'))
++    if manifest.get('schema_version') != 1 or manifest.get('kind') != 'nnriot.serving_aligned_dataset.v1':
++        raise ValueError('unsupported aligned dataset')
++    if manifest['runtime_sources'] != dataset_runtime_sources():
++        raise ValueError('feature runtime SHA-256 mismatch')
++    if manifest['availability'].get(contract_version, {}).get('status') != 'ready':
++        raise ValueError(f'{contract_version} unavailable')
++    dim = {'nnriot.players14.v1': 14, 'nnriot.players18.v1': 18}[contract_version]
++    split_manifest = read_manifest(checked_path(root, manifest, 'model.split.json'))
++    if split_manifest['split_sha256'] != manifest['split_sha256'] or split_manifest['dataset_sha256'] != manifest['dataset_sha256']:
++        raise ValueError('dataset split manifest mismatch')
++    records, inputs = {}, {}
++    for name in ('train', 'validation'):
++        records[name] = json.loads(checked_path(root, manifest, name + '.json').read_text(encoding='utf-8'))
++        membership = [{'match_id': r['match_id'], 'game_creation_time': r['game_creation_time']} for r in records[name]]
++        if membership != split_manifest['splits'][name]:
++            raise ValueError(f'{name}: record order differs from split manifest')
++        with np.load(checked_path(root, manifest, f'{name}{dim}.npz'), allow_pickle=False) as data:
++            inputs[name] = {key: data[key].copy() for key in data.files}
++        validate_tensor_inputs(inputs[name], len(records[name]), dim, name)
++    return inputs, records, manifest
+--- baseline/core/aligned_training.py
++++ current/core/aligned_training.py
+@@ -0,0 +1,41 @@
++# core/aligned_training.py
++import json
++from pathlib import Path
++import numpy as np
++from core.aligned_artifacts import read_train_validation, checked_path, canonical
++from core.calibration import fit_temperature, save_calibration_artifact, sha256_file
++
++def prepare_aligned_training(dataset_dir, output_dir, contract_version):
++    root, output = Path(dataset_dir), Path(output_dir)
++    x, records, manifest = read_train_validation(root, contract_version)
++    split_source = checked_path(root, manifest, 'model.split.json')
++    output.mkdir(parents=True, exist_ok=False)
++    (output / 'model.split.json').write_bytes(split_source.read_bytes())
++    return x, records, manifest
++
++def finish_aligned_pilot(*, output_dir, dataset_dir, dataset_manifest, input_dim,
++                         validation_probabilities, validation_labels, history,
++                         best_epoch, best_val_loss):
++    output = Path(output_dir)
++    checkpoint = output / 'model.keras'
++    probs = np.asarray(validation_probabilities, dtype=float)
++    labels = np.asarray(validation_labels, dtype=int)
++    if len(labels) < 20 or len(np.unique(labels)) != 2:
++        fit = {'status': 'insufficient_validation', 'partition': 'validation',
++               'count': len(labels)}
++    else:
++        fit = fit_temperature(probs, labels)
++    calibrated = False
++    if fit.get('status') == 'fitted' and fit.get('optimizer_success') is True:
++        save_calibration_artifact(checkpoint_path=checkpoint,
++            split_manifest_path=output / 'model.split.json', fit=fit, input_dim=input_dim)
++        calibrated = True
++    metrics = dict(player_feature_dim=input_dim, best_epoch=best_epoch,
++        best_val_log_loss=float(best_val_loss), history=history,
++        calibration_status=fit.get('status'), calibrated=calibrated,
++        test_status='reserved', validation_status='unverified',
++        dataset_manifest_sha256=sha256_file(Path(dataset_dir) / 'dataset.json'),
++        checkpoint_sha256=sha256_file(checkpoint),
++        split_sha256=dataset_manifest['split_sha256'])
++    (output / 'model.metrics.json').write_bytes(canonical(metrics))
++    return metrics
+--- baseline/scripts/prepare_aligned_dataset.py
++++ current/scripts/prepare_aligned_dataset.py
+@@ -0,0 +1,131 @@
++# scripts/prepare_aligned_dataset.py : imports et inventaire
++import argparse
++from contextlib import closing
++import json
++import logging
++from pathlib import Path
++import sqlite3
++import sys
++
++def inspect_sources(paths):
++    results = []
++    for path in paths:
++        path = Path(path).resolve()
++        with closing(sqlite3.connect(path.as_uri() + '?mode=ro', uri=True)) as conn:
++            conn.execute('PRAGMA query_only=ON')
++            tables = {r[0] for r in conn.execute(
++                "SELECT name FROM sqlite_master WHERE type='table'")}
++            count, first, last = conn.execute(
++                'SELECT COUNT(*), MIN(game_creation_time), MAX(game_creation_time) FROM matches').fetchone()
++            timelines = conn.execute('SELECT COUNT(*) FROM match_timelines').fetchone()[0] if 'match_timelines' in tables else 0
++            results.append(dict(path=str(path), bytes=path.stat().st_size,
++                matches=count, first_creation_ms=first, last_creation_ms=last,
++                timeline_rows=timelines))
++    return results
++
++def main(argv=None):
++    from core.serving_contract import ContractError
++    parser = argparse.ArgumentParser(description='Prepare and audit serving-aligned datasets')
++    commands = parser.add_subparsers(dest='command', required=True)
++    inventory = commands.add_parser('inventory')
++    inventory.add_argument('--db', type=Path, action='append', required=True)
++    freeze = commands.add_parser('freeze')
++    freeze.add_argument('--db', type=Path, required=True)
++    freeze.add_argument('--after-cohort', type=Path, required=True)
++    freeze.add_argument('--output-dir', type=Path, required=True)
++    freeze.add_argument('--source-limit', type=int, default=61000)
++    replay = commands.add_parser('verify')
++    replay.add_argument('--dataset-dir', type=Path, required=True)
++    args = parser.parse_args(argv)
++    try:
++        if args.command == 'inventory':
++            result = inspect_sources(args.db)
++        elif args.command == 'freeze':
++            result = prepare(args.db, args.output_dir, args.after_cohort,
++                             source_limit=args.source_limit)
++        else:
++            result = verify(args.dataset_dir)
++        report = result if args.command in ('inventory', 'verify') else {
++            'dataset_dir': str(args.output_dir.resolve()), 'status': 'ready_14d',
++            'availability': {v: {k: info[k] for k in ('status', 'eligible', 'total', 'coverage')}
++                             for v, info in result['availability'].items()}}
++        if args.command == 'verify':
++            report = {**result, 'availability': {v: {k: info[k] for k in ('status', 'eligible', 'total', 'coverage')}
++                      for v, info in result['availability'].items()}}
++        print(json.dumps(report, allow_nan=False, ensure_ascii=False))
++        return 0
++    except (ValueError, FileExistsError, FileNotFoundError, ContractError, sqlite3.Error) as exc:
++        print(f'{type(exc).__name__}: {exc}', file=sys.stderr)
++        return 2
++
++def verify(dataset_dir):
++    import gzip
++    import json
++    import numpy as np
++    from core.aligned_artifacts import checked_path, dataset_runtime_sources, validate_tensor_inputs
++    from core.aligned_features import extract_aligned_inputs
++    from core.frozen_history import FrozenHistoryProvider
++    root = Path(dataset_dir).resolve()
++    meta = json.loads((root / 'dataset.json').read_text(encoding='utf-8'))
++    if meta['runtime_sources'] != dataset_runtime_sources():
++        raise ValueError('feature runtime SHA-256 mismatch')
++    for name in meta['files']:
++        checked_path(root, meta, name)
++    rows = json.loads(gzip.decompress(checked_path(root, meta, 'source_rows.json.gz').read_bytes()))
++    provider = FrozenHistoryProvider(rows)
++    comparisons = 0
++    for version, availability in meta['availability'].items():
++        if availability['status'] != 'ready':
++            continue
++        dim = {'nnriot.players14.v1': 14, 'nnriot.players18.v1': 18}[version]
++        for prefix in ('train', 'validation', 'sealed_test'):
++            records = json.loads(checked_path(root, meta, prefix + '.json').read_text(encoding='utf-8'))
++            with np.load(checked_path(root, meta, f'{prefix}{dim}.npz'), allow_pickle=False) as archive:
++                arrays = {key: archive[key] for key in archive.files}
++                validate_tensor_inputs(arrays, len(records), dim, prefix)
++                for index, record in enumerate(records):
++                    enriched = provider.enrich(record['feature_json'], include_timeline=dim == 18)
++                    x = extract_aligned_inputs(enriched, version)
++                    for key in ('team_a', 'team_b', 'macro_clash'):
++                        if not np.array_equal(x[key][0], arrays[key][index]):
++                            raise ValueError(f'tensor mismatch: {record["match_id"]}/{key}/{dim}')
++                        comparisons += 1
++    return {'status': 'verified', 'tensor_comparisons': comparisons,
++            'test_metrics_computed': False, 'availability': meta['availability']}
++
++def prepare(db, output, after_cohort, *, source_limit=61000):
++    import json
++    from core.pre_match_history import read_recent_rows
++    from core.aligned_partitions import select_targets, partition_targets
++    from core.aligned_artifacts import write_dataset
++    from core.calibration import sha256_file
++    if Path(output).exists():
++        raise FileExistsError(f'occupied output directory: {output}')
++    cohort = [json.loads(line) for line in Path(after_cohort).read_text(
++        encoding='utf-8').splitlines() if line.strip()]
++    if not cohort or any(type(r.get('game_creation_time')) is not int
++            or r['game_creation_time'] <= 0
++            or r.get('partition') not in ('history', 'validation', 'test')
++            or not isinstance(r.get('match_id'), str) or not r['match_id'] for r in cohort):
++        raise ValueError('invalid previous cohort')
++    if len({r['match_id'] for r in cohort}) != len(cohort):
++        raise ValueError('duplicate match_id in previous cohort')
++    if not any(r['partition'] == 'test' for r in cohort):
++        raise ValueError('previous cohort has no test partition')
++    after_ms = max(row['game_creation_time'] for row in cohort)
++    excluded_ids = {row['match_id'] for row in cohort if row['partition'] == 'test'}
++    rows = read_recent_rows(db, source_limit, timelines=True, include_labels=True)
++    targets, exclusions = select_targets(rows, excluded_ids=excluded_ids)
++    splits, purged = partition_targets(targets, after_ms=after_ms)
++    selection = dict(target_queues=[420, 440], mode='CLASSIC', source_limit=source_limit,
++        warmup_rows=10000, history_window_limit=10000, after_ms=after_ms,
++        validation_minimum=3000, test_minimum=3000,
++        after_cohort_sha256=sha256_file(after_cohort), excluded_test_ids=sorted(excluded_ids),
++        history_policy='result_end_strictly_before_start.v1',
++        test_scope='reserved for this future experiment; prior research limitations declared')
++    return write_dataset(output, rows, splits, source_db=str(db),
++                         selection=selection, exclusions=exclusions + purged)
++
++if __name__ == '__main__':
++    logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
++    raise SystemExit(main())
+--- baseline/tests/aligned_dataset_fixture.py
++++ current/tests/aligned_dataset_fixture.py
+@@ -0,0 +1,32 @@
++# tests/aligned_dataset_fixture.py
++import json
++from core.feature_labels import LABEL_KEYS
++from core.pre_match_history import decode_history_row
++
++ROLES = ['TOP', 'JUNGLE', 'MIDDLE', 'BOTTOM', 'UTILITY']
++
++def source_row(mid, creation, end, winner=0, *, timeline=False):
++    parts = [dict(puuid=f'p{tid}_{slot}', participantId=i + 1,
++                  teamId=tid, championName='Ahri' if tid == 100 else 'Lux',
++                  teamPosition=ROLES[slot], win=(winner == (tid == 200)),
++                  kills=2, deaths=1, assists=3, totalMinionsKilled=100,
++                  neutralMinionsKilled=0, goldEarned=5000)
++             for i, (tid, slot) in enumerate(
++                 (tid, slot) for tid in (100, 200) for slot in range(5))]
++    labels = dict.fromkeys(LABEL_KEYS, 0)
++    labels.update(winner=winner, team_b_kill_lead=winner,
++                  total_kills=20, team_a_kills=10, team_b_kills=10,
++                  kill_handicap=0)
++    metrics = {p['puuid']: dict(gd15=1., csd15=2., xpd15=3., fbi10=0.)
++               for p in parts} if timeline else None
++    return dict(match_id=mid, game_creation_time=creation,
++                winner_label=winner, labels_json=json.dumps(labels),
++                timeline_json=None, timeline_metrics=metrics,
++                raw_json=json.dumps({'info': dict(
++                    gameCreation=creation, gameStartTimestamp=creation + 1,
++                    gameEndTimestamp=end, gameDuration=100,
++                    gameVersion='16.18.1', gameMode='CLASSIC', queueId=420,
++                    participants=parts)}))
++
++def target(row):
++    return decode_history_row(row)['feature_json']
+--- baseline/tests/test_frozen_history.py
++++ current/tests/test_frozen_history.py
+@@ -0,0 +1,42 @@
++# tests/test_frozen_history.py
++import numpy as np
++import pytest
++from core.aligned_features import extract_aligned_inputs
++from core.frozen_history import FrozenHistoryProvider
++from tests.aligned_dataset_fixture import source_row, target
++
++def test_strict_end_and_global_window():
++    rows = [source_row('NA1_1', 10, 100), source_row('NA1_2', 20, 30, 1)]
++    query = target(source_row('NA1_q', 30, 130))
++    frozen = FrozenHistoryProvider(rows, history_limit=1)
++    at_end = frozen.enrich(query, include_timeline=False)
++    assert at_end['priors_provenance']['history_matches'] == 0
++    query['prediction_time_ms'] = 31
++    later = frozen.enrich(query, include_timeline=False)
++    assert later['priors_provenance']['history_matches'] == 1
++    assert later['priors_provenance']['latest_result_end_ms'] == 30
++
++def test_label_free_history_and_strict_shapes():
++    old = source_row('NA1_1', 10, 20, timeline=True)
++    old['winner_label'] = None
++    old['labels_json'] = None
++    query = target(source_row('NA1_2', 30, 130))
++    for dim in (14, 18):
++        enriched = FrozenHistoryProvider([old]).enrich(
++            query, include_timeline=dim == 18)
++        assert enriched['priors_provenance']['history_matches'] == 1
++        x = extract_aligned_inputs(enriched, f'nnriot.players{dim}.v1')
++        assert x['team_a'].shape == (1, 5, dim)
++        assert x['macro_clash'].shape == (1, 15)
++        assert all(v.dtype == np.float32 for v in x.values())
++
++def test_creation_ties_are_not_history():
++    old = source_row('NA1_1', 30, 40)
++    query = target(source_row('NA1_2', 30, 140))
++    assert FrozenHistoryProvider([old]).enrich(
++        query, include_timeline=False)['priors_provenance']['history_matches'] == 0
++
++def test_duplicate_sources_fail():
++    row = source_row('NA1_1', 10, 20)
++    with pytest.raises(ValueError, match='duplicate'):
++        FrozenHistoryProvider([row, row])
+--- baseline/tests/test_aligned_partitions.py
++++ current/tests/test_aligned_partitions.py
+@@ -0,0 +1,161 @@
++import pytest
++from core.aligned_partitions import select_targets, partition_targets
++from tests.aligned_dataset_fixture import source_row
++
++def test_bad_current_label_rejected_but_not_removed_from_history():
++    row = source_row('NA1_1', 10, 20)
++    row['winner_label'] = 1
++    selected, rejected = select_targets([row], excluded_ids=set(), warmup_rows=0)
++    assert selected == []
++    assert rejected[0]['reason'] == 'winner_disagrees_with_riot'
++    assert row['raw_json']
++
++def test_ties_and_result_purge_at_boundaries():
++    rows = [source_row(f'NA1_{i}', t, e) for i, (t, e) in enumerate(
++        [(10, 19), (20, 31), (30, 39), (30, 39), (40, 51), (50, 59), (60, 69)])]
++    targets, _ = select_targets(rows, excluded_ids=set(), warmup_rows=0)
++    parts, purged = partition_targets(targets, after_ms=40,
++                                     validation_count=2, test_count=2)
++    assert [r['game_creation_time'] for r in parts['train']] == [10]
++    assert [r['game_creation_time'] for r in parts['validation']] == [30, 30]
++    assert [r['game_creation_time'] for r in parts['test']] == [50, 60]
++    assert {r['game_creation_time'] for r in purged} == {20, 40}
++
++def test_insufficient_new_test_is_an_error():
++    rows = [source_row(f'NA1_{i}', 10*i+10, 10*i+19) for i in range(4)]
++    targets, _ = select_targets(rows, excluded_ids=set(), warmup_rows=0)
++    with pytest.raises(ValueError, match='Insufficient'):
++        partition_targets(targets, after_ms=35, validation_count=1, test_count=2)
++
++def test_previous_test_id_excluded_and_unknown_queue_rejected():
++    import json
++    known = source_row('NA1_seen', 10, 20)
++    unknown = source_row('NA1_unknown', 30, 40)
++    raw = json.loads(unknown['raw_json']); raw['info'].pop('queueId')
++    unknown['raw_json'] = json.dumps(raw)
++    selected, errors = select_targets([known, unknown],
++        excluded_ids={'NA1_seen'}, warmup_rows=0)
++    assert selected == []
++    assert {e['reason'] for e in errors} == {'previous_test', 'unsupported_queue'}
++
++def test_snapshot_labels_are_opt_in_and_queue_survives(tmp_path):
++    import json
++    import sqlite3
++    from core.pre_match_history import read_recent_rows
++    db = tmp_path / 'snapshot.db'
++    row = source_row('NA1_1', 10, 20)
++    with sqlite3.connect(db) as conn:
++        conn.executescript('''
++            CREATE TABLE matches(match_id TEXT, game_creation_time INTEGER,
++                                 game_mode TEXT, raw_json TEXT);
++            CREATE TABLE training_dataset(match_id TEXT, winner_label INTEGER);
++            CREATE TABLE match_participants(match_id TEXT, puuid TEXT);
++        ''')
++        conn.execute('INSERT INTO matches VALUES(?,?,?,?)',
++                     (row['match_id'], 10, 'CLASSIC', row['raw_json']))
++        conn.execute('INSERT INTO training_dataset VALUES(?,?)', (row['match_id'], 0))
++    assert read_recent_rows(db, 10, include_labels=True)[0]['labels_json'] is None
++    with sqlite3.connect(db) as conn:
++        conn.execute('ALTER TABLE training_dataset ADD COLUMN labels_json TEXT')
++        conn.execute('UPDATE training_dataset SET labels_json=?', (row['labels_json'],))
++    assert read_recent_rows(db, 10)[0]['labels_json'] is None
++    stored = read_recent_rows(db, 10, include_labels=True)[0]
++    assert stored['labels_json'] == row['labels_json']
++    assert json.loads(stored['raw_json'])['info']['queueId'] == 420
++
++
++def test_warmup_ties_do_not_use_an_incomplete_global_history_window():
++    rows = [source_row(f'NA1_{i}', t, t + 9)
++            for i, t in enumerate((10, 20, 20, 30))]
++    selected, errors = select_targets(rows, excluded_ids=set(), warmup_rows=2)
++    assert [r['game_creation_time'] for r in selected] == [30]
++    assert errors[0]['reason'] == 'history_context_incomplete'
++def test_source_window_limits_payload_reads_before_sorting(tmp_path, monkeypatch):
++    import sqlite3
++    from core.pre_match_history import read_recent_rows
++    from tests.aligned_dataset_fixture import source_row
++    db = tmp_path / 'bounded.db'
++    original_connect = sqlite3.connect
++    with original_connect(db) as conn:
++        conn.executescript('''
++            CREATE TABLE source_matches(match_id TEXT PRIMARY KEY, game_creation_time INTEGER,
++                                        game_mode TEXT, raw_json TEXT);
++            CREATE VIEW matches AS SELECT match_id,game_creation_time,game_mode,
++                                          payload_read(raw_json) AS raw_json FROM source_matches;
++            CREATE TABLE training_dataset(match_id TEXT PRIMARY KEY, winner_label INTEGER);
++        ''')
++        for number in range(20):
++            row = source_row(f'm{number:02}', 10 + number, 50 + number)
++            conn.execute('INSERT INTO source_matches VALUES(?,?,?,?)',
++                         (row['match_id'], row['game_creation_time'], 'CLASSIC', row['raw_json']))
++    reads = []
++    def payload_read(value):
++        reads.append(value)
++        return value
++    def connect(*args, **kwargs):
++        conn = original_connect(*args, **kwargs)
++        conn.create_function('payload_read', 1, payload_read)
++        return conn
++    monkeypatch.setattr(sqlite3, 'connect', connect)
++    rows = read_recent_rows(db, 3, before_ms=29, timelines=False)
++    assert [r['match_id'] for r in rows] == ['m16', 'm17', 'm18']
++    assert len(reads) == 3
++
++
++@pytest.mark.parametrize('without_rowid', [False, True])
++@pytest.mark.parametrize('complete_index', [False, True])
++def test_global_boundary_ties_precede_identity_filter(tmp_path, without_rowid, complete_index):
++    import json
++    import sqlite3
++    from core.pre_match_history import DatabaseHistoryProvider, read_recent_rows
++    db = tmp_path / 'ties.db'
++    with sqlite3.connect(db) as conn:
++        conn.execute('CREATE TABLE matches(match_id TEXT PRIMARY KEY, raw_json TEXT, '
++                     'game_mode TEXT, game_creation_time INTEGER)' +
++                     (' WITHOUT ROWID' if without_rowid else ''))
++        conn.executescript('''CREATE INDEX idx_matches_game_creation ON matches(game_creation_time);
++            CREATE INDEX idx_matches_game_mode ON matches(game_mode);
++            CREATE TABLE training_dataset(match_id TEXT PRIMARY KEY, winner_label INTEGER);
++            CREATE TABLE match_participants(match_id TEXT, puuid TEXT);''')
++        for mid in ('NA1_y', 'NA1_z'):
++            row = source_row(mid, 30, 35)
++            raw = json.loads(row['raw_json'])
++            if mid == 'NA1_z':
++                raw['info']['participants'][0]['puuid'] = 'other'
++            conn.execute('INSERT INTO matches VALUES(?,?,?,?)',
++                         (mid, json.dumps(raw), 'CLASSIC', 30))
++            if complete_index:
++                conn.executemany('INSERT INTO match_participants VALUES(?,?)',
++                    [(mid, p['puuid']) for p in raw['info']['participants']])
++    rows = read_recent_rows(db, 1, before_ms=40, timelines=False)
++    assert [r['match_id'] for r in rows] == ['NA1_z']
++    query = {'prediction_time_ms': 40, 'team_a': [
++        {'puuid': 'p100_0', 'champion': 'Ahri', 'role': 'TOP'}], 'team_b': []}
++    enriched = DatabaseHistoryProvider(db, history_limit=1).enrich(query, include_timeline=False)
++    assert enriched['priors_provenance']['history_matches'] == 0
++
++
++def test_live_history_never_reads_multitask_training_data(tmp_path, monkeypatch):
++    import sqlite3
++    from core.pre_match_history import DatabaseHistoryProvider
++    from tests.aligned_dataset_fixture import target
++    original_connect = sqlite3.connect
++    db = tmp_path / 'raw_only.db'
++    row = source_row('NA1_old', 10, 20)
++    with original_connect(db) as conn:
++        conn.executescript('''CREATE TABLE matches(match_id TEXT PRIMARY KEY, raw_json TEXT,
++            game_mode TEXT, game_creation_time INTEGER);
++            CREATE TABLE training_dataset(match_id TEXT PRIMARY KEY, winner_label INTEGER);
++            CREATE TABLE match_participants(match_id TEXT, puuid TEXT);''')
++        conn.execute('INSERT INTO matches VALUES(?,?,?,?)',
++                     (row['match_id'], row['raw_json'], 'CLASSIC', 10))
++    def connect(*args, **kwargs):
++        conn = original_connect(*args, **kwargs)
++        conn.set_authorizer(lambda action, table, *_: sqlite3.SQLITE_DENY
++            if action == sqlite3.SQLITE_READ and table == 'training_dataset' else sqlite3.SQLITE_OK)
++        return conn
++    monkeypatch.setattr(sqlite3, 'connect', connect)
++    enriched = DatabaseHistoryProvider(db).enrich(
++        target(source_row('NA1_current', 30, 40)), include_timeline=False)
++    assert enriched['priors_provenance']['history_matches'] == 1
++    assert enriched['team_a'][0]['priors'][0] == pytest.approx(6/11)
+--- baseline/tests/test_aligned_artifacts.py
++++ current/tests/test_aligned_artifacts.py
+@@ -0,0 +1,78 @@
++import json
++import numpy as np
++import pytest
++from pathlib import Path
++from core.aligned_artifacts import write_dataset, read_train_validation
++from core.aligned_partitions import select_targets, partition_targets
++from tests.aligned_dataset_fixture import source_row
++
++def tiny_bundle(tmp_path, *, timeline=False):
++    rows = [source_row(f'NA1_{i}', 10*i+10, 10*i+19, i % 2,
++                       timeline=timeline) for i in range(10)]
++    targets, excluded = select_targets(rows, excluded_ids=set(), warmup_rows=1)
++    splits, purged = partition_targets(targets, after_ms=60,
++                                       validation_count=2, test_count=2)
++    directory = tmp_path / 'dataset'
++    manifest = write_dataset(directory, rows, splits, source_db='fixture.db',
++        selection={'history_window_limit': 10000}, exclusions=excluded + purged)
++    return directory, manifest
++
++def test_missing_timelines_are_reported_and_18d_refused(tmp_path):
++    directory, meta = tiny_bundle(tmp_path)
++    x, records, loaded = read_train_validation(directory, 'nnriot.players14.v1')
++    assert set(x) == set(records) == {'train', 'validation'}
++    assert meta['availability']['nnriot.players18.v1']['status'] == 'blocked'
++    with pytest.raises(ValueError, match='unavailable'):
++        read_train_validation(directory, 'nnriot.players18.v1')
++
++def test_exact_shared_membership_and_changed_tensor_rejected(tmp_path):
++    directory, meta = tiny_bundle(tmp_path, timeline=True)
++    for version in ('nnriot.players14.v1', 'nnriot.players18.v1'):
++        x, records, _ = read_train_validation(directory, version)
++        assert len(x['train']['team_a']) == len(records['train'])
++    tensor = directory / 'train14.npz'
++    tensor.write_bytes(tensor.read_bytes() + b'changed')
++    with pytest.raises(ValueError, match='SHA-256'):
++        read_train_validation(directory, 'nnriot.players14.v1')
++
++def test_manifest_path_cannot_escape_dataset(tmp_path):
++    directory, meta = tiny_bundle(tmp_path)
++    meta['files']['train14.npz']['path'] = '../foreign.npz'
++    (directory / 'dataset.json').write_text(json.dumps(meta), encoding='utf-8')
++    with pytest.raises(ValueError, match='outside dataset'):
++        read_train_validation(directory, 'nnriot.players14.v1')
++
++def test_occupied_output_is_preserved(tmp_path):
++    directory, _ = tiny_bundle(tmp_path)
++    sentinel = directory / 'keep.txt'; sentinel.write_text('keep')
++    with pytest.raises(FileExistsError):
++        write_dataset(directory, [], {}, source_db='unused', selection={}, exclusions=[])
++    assert sentinel.read_text() == 'keep'
++
++def test_target_cutoff_must_match_row_creation(tmp_path):
++    rows = [source_row(f'NA1_{i}', 10*i+10, 10*i+19) for i in range(10)]
++    targets, _ = select_targets(rows, excluded_ids=set(), warmup_rows=1)
++    splits, _ = partition_targets(targets, after_ms=60, validation_count=2, test_count=2)
++    splits['train'][0]['feature_json']['prediction_time_ms'] += 1
++    with pytest.raises(ValueError, match='prediction cutoff'):
++        write_dataset(tmp_path / 'bad', rows, splits, source_db='fixture', selection={}, exclusions=[])
++
++@pytest.mark.parametrize('rows', [[], [{'match_id': 'NA1_1',
++    'game_creation_time': True, 'partition': 'test'}]])
++def test_invalid_previous_cohort_fails_before_database_read(tmp_path, rows):
++    from scripts.prepare_aligned_dataset import prepare
++    cohort = tmp_path / 'cohort.jsonl'
++    cohort.write_text(''.join(json.dumps(r) + '\n' for r in rows), encoding='utf-8')
++    with pytest.raises(ValueError, match='previous cohort'):
++        prepare(tmp_path / 'absent.db', tmp_path / 'output', cohort)
++    assert not (tmp_path / 'output').exists()
++
++
++def test_verify_cli_has_no_prediction_metrics(tmp_path, capsys):
++    from scripts.prepare_aligned_dataset import main
++    directory, _ = tiny_bundle(tmp_path, timeline=True)
++    assert main(['verify', '--dataset-dir', str(directory)]) == 0
++    text = capsys.readouterr().out
++    assert 'verified' in text
++    assert 'test_metrics_computed' in text
++    assert 'accuracy' not in text and 'log_loss' not in text
+--- baseline/tests/test_aligned_training.py
++++ current/tests/test_aligned_training.py
+@@ -0,0 +1,81 @@
++import json
++from pathlib import Path
++import pytest
++from tests.test_aligned_artifacts import tiny_bundle
++
++@pytest.mark.parametrize('name', ['train_deepsets_v3', 'train_deepsets_v4_timeline'])
++def test_aligned_training_does_not_read_legacy_or_test(tmp_path, monkeypatch, name):
++    import importlib
++    trainer = importlib.import_module('scripts.' + name)
++    directory, _ = tiny_bundle(tmp_path, timeline=True)
++    original = Path.open
++    def guarded(path, *args, **kwargs):
++        if path.name.startswith('sealed_test') or path.name == 'source_rows.json.gz':
++            raise AssertionError('training attempted to open reserved outcomes')
++        return original(path, *args, **kwargs)
++    monkeypatch.setattr(Path, 'open', guarded)
++    def legacy_forbidden(*args, **kwargs):
++        raise AssertionError('legacy data path used')
++    monkeypatch.setattr(trainer, 'load_enriched_records', legacy_forbidden)
++    if name == 'train_deepsets_v3':
++        monkeypatch.setattr(trainer, 'prepare_ordered_training', legacy_forbidden)
++    class FirstBatchReached(Exception):
++        pass
++    def stop(*args, **kwargs):
++        raise FirstBatchReached
++    monkeypatch.setattr(trainer, 'pcgrad_step', stop)
++    with pytest.raises(FirstBatchReached):
++        getattr(trainer, name)('unused.db', str(tmp_path / name),
++                              dataset_dir=str(directory), epochs=1)
++
++def test_aligned_and_legacy_cache_are_mutually_exclusive(tmp_path):
++    from scripts.train_deepsets_v3 import train_deepsets_v3
++    with pytest.raises(ValueError, match='exclusive'):
++        train_deepsets_v3('unused.db', str(tmp_path / 'out'),
++            dataset_dir='frozen', splits_cache='old.pkl')
++    assert not (tmp_path / 'out').exists()
++
++import numpy as np
++from core.aligned_training import finish_aligned_pilot, prepare_aligned_training
++from core.calibration import load_calibration_artifact
++from core.aligned_artifacts import write_dataset
++from core.aligned_partitions import select_targets, partition_targets
++from tests.aligned_dataset_fixture import source_row
++
++@pytest.mark.parametrize('labels', [np.array([0,1,0,1]), np.zeros(20, dtype=int)])
++def test_insufficient_calibration_has_no_fallback_or_test(tmp_path, labels):
++    directory, meta = tiny_bundle(tmp_path)
++    output = tmp_path / 'pilot'; output.mkdir()
++    (output / 'model.keras').write_bytes(b'fixture-checkpoint')
++    result = finish_aligned_pilot(output_dir=output, dataset_dir=directory,
++        dataset_manifest=meta, input_dim=14, validation_probabilities=np.full(len(labels), .5),
++        validation_labels=labels, history=[], best_epoch=1, best_val_loss=.7)
++    assert result['calibration_status'] == 'insufficient_validation'
++    assert result['calibrated'] is False
++    assert result['test_status'] == 'reserved'
++    assert 'test_raw' not in result and 'test_calibrated' not in result
++    assert not (output / 'model.calibration.json').exists()
++
++def test_completed_pilot_calibration_binds_dataset_manifest(tmp_path, monkeypatch):
++    rows = [source_row(f'NA1_{i:03d}', 10*i+10, 10*i+19, i % 2) for i in range(70)]
++    targets, _ = select_targets(rows, excluded_ids=set(), warmup_rows=1)
++    splits, purged = partition_targets(targets, after_ms=400,
++                                      validation_count=20, test_count=20)
++    directory = tmp_path / 'dataset'
++    meta = write_dataset(directory, rows, splits, source_db='fixture',
++                         selection={}, exclusions=purged)
++    output = tmp_path / 'pilot'
++    original = Path.open
++    def guarded(path, *args, **kwargs):
++        if path.name.startswith('sealed_test') or path.name == 'source_rows.json.gz':
++            raise AssertionError('pilot accessed reserved outcomes')
++        return original(path, *args, **kwargs)
++    monkeypatch.setattr(Path, 'open', guarded)
++    _, records, loaded = prepare_aligned_training(directory, output, 'nnriot.players14.v1')
++    (output / 'model.keras').write_bytes(b'fixture-checkpoint')
++    labels = np.array([r['labels_json']['winner'] for r in records['validation']])
++    result = finish_aligned_pilot(output_dir=output, dataset_dir=directory,
++        dataset_manifest=loaded, input_dim=14, validation_probabilities=np.full(len(labels), .55),
++        validation_labels=labels, history=[], best_epoch=1, best_val_loss=.7)
++    assert result['calibrated'] is True
++    assert load_calibration_artifact(output / 'model.keras', input_dim=14) is not None
+--- baseline/tests/test_aligned_parity.py
++++ current/tests/test_aligned_parity.py
+@@ -0,0 +1,141 @@
++import copy
++import numpy as np
++import pytest
++from core.aligned_features import extract_aligned_inputs
++from core.frozen_history import FrozenHistoryProvider
++from core.serving_contract import FeatureUnavailableError
++from scripts.prepare_aligned_dataset import verify
++from tests.test_aligned_artifacts import tiny_bundle
++from tests.aligned_dataset_fixture import source_row, target
++
++def test_frozen_replay_is_exact(tmp_path):
++    directory, _ = tiny_bundle(tmp_path, timeline=True)
++    report = verify(directory)
++    assert report['status'] == 'verified'
++    assert report['tensor_comparisons'] > 0
++
++def test_permutation_swap_and_target_outcomes_do_not_change_features():
++    history = [source_row('NA1_1', 10, 20, timeline=True)]
++    match = target(source_row('NA1_2', 30, 130))
++    provider = FrozenHistoryProvider(history)
++    for dim in (14, 18):
++        version = f'nnriot.players{dim}.v1'
++        original = provider.enrich(match, include_timeline=dim == 18)
++        expected = extract_aligned_inputs(original, version)
++        permuted = copy.deepcopy(original)
++        for team in ('team_a', 'team_b'):
++            permuted[team].reverse()
++            for p in permuted[team]:
++                p.update(kills=999999, win=False, goldEarned=999999)
++        got = extract_aligned_inputs(permuted, version)
++        for key in expected:
++            assert np.array_equal(expected[key], got[key])
++        swapped = dict(original, team_a=original['team_b'], team_b=original['team_a'])
++        reverse = extract_aligned_inputs(swapped, version)
++        assert np.array_equal(expected['team_a'], reverse['team_b'])
++        assert np.array_equal(expected['team_b'], reverse['team_a'])
++        assert np.array_equal(expected['macro_clash'], -reverse['macro_clash'])
++
++def test_no_timeline_outside_global_window_can_rescue_18d():
++    old = source_row('NA1_1', 10, 20, timeline=True)
++    recent = source_row('NA1_2', 30, 40, timeline=False)
++    match = target(source_row('NA1_3', 50, 150))
++    enriched = FrozenHistoryProvider([old, recent], history_limit=1).enrich(
++        match, include_timeline=True)
++    with pytest.raises(FeatureUnavailableError):
++        extract_aligned_inputs(enriched, 'nnriot.players18.v1')
++
++def test_replay_refuses_changed_feature_runtime(tmp_path, monkeypatch):
++    import core.aligned_artifacts as artifacts
++    directory, _ = tiny_bundle(tmp_path)
++    monkeypatch.setattr(artifacts, 'dataset_runtime_sources', lambda: {'changed': '0'*64})
++    with pytest.raises(ValueError, match='runtime SHA-256'):
++        verify(directory)
++
++
++def test_replay_rejects_float64_even_with_matching_values(tmp_path):
++    import json
++    from core.calibration import sha256_file
++    directory, meta = tiny_bundle(tmp_path)
++    path = directory / 'sealed_test14.npz'
++    with np.load(path, allow_pickle=False) as data:
++        x = {key: data[key].astype(np.float64) for key in data.files}
++    np.savez(path, **x)
++    meta['files'][path.name]['sha256'] = sha256_file(path)
++    (directory / 'dataset.json').write_text(json.dumps(meta), encoding='utf-8')
++    with pytest.raises(ValueError, match='tensor contract'):
++        verify(directory)
++
++
++def test_replay_loads_each_archive_array_once(tmp_path, monkeypatch):
++    directory, _ = tiny_bundle(tmp_path)
++    original = np.load
++    accesses = []
++
++    class Archive:
++        def __init__(self, path, **kwargs):
++            self.data = original(path, **kwargs)
++            self.files = self.data.files
++
++        def __enter__(self):
++            return self
++
++        def __exit__(self, *args):
++            self.data.close()
++
++        def __getitem__(self, key):
++            accesses.append(key)
++            return self.data[key]
++
++    monkeypatch.setattr(np, 'load', Archive)
++    verify(directory)
++    assert len(accesses) == 9  # Three inputs for each of three 14D partitions.
++
++@pytest.mark.parametrize('complete_index', [False, True])
++@pytest.mark.parametrize('dim', [14, 18])
++def test_sqlite_and_frozen_priors_and_tensors_are_equal(tmp_path, complete_index, dim):
++    import json
++    import sqlite3
++    from core.pre_match_history import DatabaseHistoryProvider, read_recent_rows
++    from tests.test_point_in_time_timeline import _create_sample_timeline
++    db = tmp_path / 'parity.db'
++    old = source_row('NA1_1', 1000, 1001000)
++    raw = json.loads(old['raw_json'])
++    raw['info']['gameDuration'] = 1000
++    participants = raw['info']['participants']
++    timeline = _create_sample_timeline()
++    timeline['info']['participants'] = [
++        {'participantId': p['participantId'], 'puuid': p['puuid'],
++         'teamPosition': p['teamPosition']} for p in participants]
++    with sqlite3.connect(db) as conn:
++        conn.executescript('''
++            CREATE TABLE matches(match_id TEXT, game_creation_time INTEGER,
++                                 game_mode TEXT, raw_json TEXT);
++            CREATE TABLE training_dataset(match_id TEXT, winner_label INTEGER,
++                                          labels_json TEXT);
++            CREATE TABLE match_participants(match_id TEXT, puuid TEXT);
++            CREATE TABLE match_timelines(match_id TEXT, timeline_json TEXT);
++        ''')
++        conn.execute('INSERT INTO matches VALUES(?,?,?,?)',
++                     ('NA1_1', 1000, 'CLASSIC', json.dumps(raw)))
++        # History is usable even with no ML label.
++        conn.execute('INSERT INTO training_dataset VALUES(?,?,?)', ('NA1_1', None, None))
++        conn.execute('INSERT INTO match_timelines VALUES(?,?)', ('NA1_1', json.dumps(timeline)))
++        if complete_index:
++            conn.executemany('INSERT INTO match_participants VALUES(?,?)',
++                             [('NA1_1', p['puuid']) for p in participants])
++    rows = read_recent_rows(db, 10000, timelines=True)
++    query = target(source_row('NA1_query', 2000000, 2100000))
++    a = FrozenHistoryProvider(rows).enrich(query, include_timeline=dim == 18)
++    b = DatabaseHistoryProvider(db).enrich(query, include_timeline=dim == 18)
++    assert [p['priors'] for team in ('team_a', 'team_b') for p in a[team]] == [
++        p['priors'] for team in ('team_a', 'team_b') for p in b[team]]
++    xa = extract_aligned_inputs(a, f'nnriot.players{dim}.v1')
++    xb = extract_aligned_inputs(b, f'nnriot.players{dim}.v1')
++    for key in xa:
++        assert np.array_equal(xa[key], xb[key])
++    for enriched in (a, b):
++        provenance = enriched['priors_provenance']
++        assert provenance['as_of_ms'] == 2000000
++        assert provenance['history_window_limit'] == 10000
++        assert provenance['latest_result_end_ms'] == 1001000
+--- baseline/docs/model_serving/aligned_dataset_verification.md
++++ current/docs/model_serving/aligned_dataset_verification.md
+@@ -0,0 +1,104 @@
++# Réception du dataset aligné entraînement/service
++
++Réception du 9 octobre 2026. Le dataset **14D est prêt pour une future expérience**, avec parité de features vérifiée. Le contrat 18D est bloqué par l'absence de timelines dans la source récente. Aucun entraînement réel, métrique prédictive du test réservé ou changement de modèle servi n'a été effectué dans ce chantier.
++
++## Source et sélection
++
++Source SQLite en lecture seule : `D:\projet\NNriot\runs\db_merge_20260924\consolidated.db`. Inventaire enregistré dans [source_inventory.json](../../runs/aligned_dataset_20261009_verified/source_inventory.json). Le snapshot contient **61,000 créations CLASSIC**, de 2026-09-15T23:03:48.025000+00:00 à 2026-09-24T14:06:27.690000+00:00. Les 10 000 premières lignes constituent le contexte historique et ne sont pas des cibles. Les créations ex æquo à la dernière ligne de warmup sont également exclues. Population cible : queues 420/440, cinq rôles valides par équipe, vainqueur Riot cohérent avec les labels ML multitâches.
++
++Le cutoff exploratoire antérieur est **2026-09-17T11:38:52.620000+00:00**. Le SHA-256 du cohort antérieur est `530a3ca4226620bb1fcb539a64dd9c9f1e5add322c0596db6c07ef9d794ca7cc` ; ses 2,000 IDs test sont exclus des cibles. Le nouveau test commence strictement après ce cutoff.
++
++| Partition | Cibles | Première création UTC | Dernière création UTC |
++|---|---:|---|---|
++| train | 43,486 | 2026-09-17T00:58:59.947000+00:00 | 2026-09-23T07:56:59.919000+00:00 |
++| validation | 3,000 | 2026-09-23T08:18:01.718000+00:00 | 2026-09-23T23:24:57.184000+00:00 |
++| test | 3,000 | 2026-09-23T23:38:33.848000+00:00 | 2026-09-24T14:06:27.690000+00:00 |
++
++Les créations identiques restent groupées. Le train est purgé de toute partie finissant à partir du début de validation ; la validation de toute partie finissant à partir du début du test. Les minima de 3 000 cibles validation et test ont été conservés. Causes enregistrées dans [exclusions.json](../../runs/aligned_dataset_20261009_verified/exclusions.json) :
++
++| Cause | Lignes |
++|---|---:|
++| previous_test | 1,198 |
++| result_not_available_at_partition_start | 310 |
++| team_a roles must contain each canonical role exactly once | 5 |
++| team_b roles must contain each canonical role exactly once | 1 |
++
++## Population, sans lecture de métriques prédictives
++
++| Partition | Attribut connu avant match | Effectifs |
++|---|---|---|
++| train | queue_id | 420: 43,486 |
++| train | region | EUW: 1,130, LA1: 3, LA2: 83, NA: 42,270 |
++| train | patch | 16.18.817.5716: 43,486 |
++| validation | queue_id | 420: 3,000 |
++| validation | region | LA1: 1, LA2: 9, NA: 2,990 |
++| validation | patch | 16.18.817.5716: 47, 16.19.820.7193: 2,953 |
++| test | queue_id | 420: 3,000 |
++| test | region | LA2: 1, NA: 2,999 |
++| test | patch | 16.19.820.7193: 726, 16.19.821.7343: 2,274 |
++
++## Contrats et audits
++
++| Contrat | Statut | Éligibles/total | Couverture | Causes |
++|---|---|---:|---:|---|
++| nnriot.players14.v1 | ready | 49,486/49,486 | 100.0% |  |
++| nnriot.players18.v1 | blocked | 0/49,486 | 0.0% | FeatureUnavailableError: 18D timeline history source unavailable; cannot replace missing source with cold defaults (49,486) |
++
++Les tensors sont float32 : équipes `(N, 5, 14)` et macro `(N, 15)`. Le replay complet a vérifié **148,458 comparaisons exactes** par `np.array_equal`, à partir des faits figés, sans relire la base. Il contrôle également formes, dtype, valeurs finies, chemins internes et SHA-256. Le test réservé est rejoué pour vérifier ses features ; aucune accuracy, log-loss ou sélection d'hyperparamètres n'en est extraite. Voir [replay_verification.json](../../runs/aligned_dataset_20261009_verified/replay_verification.json).
++
++Un panel déterministe de **20 cibles train/validation**, fixé avant comparaison avec des positions régulièrement espacées incluant les extrêmes, a été rejoué au même cutoff via `DatabaseHistoryProvider`. Priors et tenseurs sont exactement égaux sur les 20 cibles. Provenance vérifiée : même création, fenêtre globale de 10 000 créations antérieures, dernier résultat strictement antérieur au cutoff. Voir [live_panel.json](../../runs/aligned_dataset_20261009_verified/live_panel.json), [live_parity.json](../../runs/aligned_dataset_20261009_verified/live_parity.json) et [script d'audit](../../runs/aligned_dataset_20261009_verified/live_audit.py).
++
++Les tests des trainers ont branché les tenseurs alignés jusqu'au premier batch et contrôlé la clôture/calibration sur validation. L'ouverture des faits sources et des fichiers du test réservé est interdite par les tests du loader. Le trainer v4 refuse la disponibilité 18D bloquée avant de créer un modèle. Les chemins legacy restent exploratoires.
++
++## Commandes exécutées et vérifications
++
++```powershell
++.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset inventory --db training_data.db --db runs/training_data_23h_20260922_191434.db --db runs/db_merge_20260924/consolidated.db
++.\.venv312\Scripts\python.exe -u scratch/trace_aligned_freeze.py freeze --db runs/db_merge_20260924/consolidated.db --after-cohort runs/served_model_comparison_20261009_complete/cohort.jsonl --output-dir runs/aligned_dataset_20261009 --source-limit 61000
++.\.venv312\Scripts\python.exe -u scratch/refreeze_aligned.py
++.\.venv312\Scripts\python.exe -m scripts.prepare_aligned_dataset verify --dataset-dir runs/aligned_dataset_20261009_verified
++.\.venv312\Scripts\python.exe scratch/audit_aligned_live.py
++.\.venv312\Scripts\python.exe -m scripts.formalize_served_model
++$env:TEMP='D:\projet\NNriot\scratch\aligned-tests'
++$env:TMP=$env:TEMP
++.\.venv312\Scripts\python.exe -m pytest tests/test_frozen_history.py tests/test_aligned_partitions.py tests/test_aligned_artifacts.py tests/test_aligned_training.py tests/test_aligned_parity.py tests/test_serving_contract.py tests/test_pre_match_history_serving.py tests/test_serving_http.py tests/test_predict_api.py tests/test_config_cli.py tests/test_ordered_training_integration.py tests/test_train_deepsets_v4_timeline.py tests/test_equivariant_model.py tests/test_deepsets_layers.py -q
++```
++
++Résultat de la suite ciblée : **144 passed, 325 warnings in 721.92s (0:12:01)**, exit 0. Ceci couvre les 14 suites listées, sans prétendre que tous les tests du dépôt ont été exécutés. Les avertissements Keras/NumPy déjà présents sont conservés dans le journal.
++
++Le gel initial sous `runs/aligned_dataset_20261009` a exécuté la sous-commande `freeze` via le wrapper diagnostique `scratch/trace_aligned_freeze.py`, avec les mêmes paramètres ; il ajoute uniquement une trace de pile périodique et un journal de progression. Les premières lectures ont été interrompues avant création d'un dataset, pour corriger le coût de la sélection SQLite. La fenêtre finale utilise les index couvrant les rowids et dates, résout les IDs ex æquo à sa frontière et lit les payloads retenus en ordre de rowid, dans une seule transaction en lecture seule. Les temporaires SQLite sont en mémoire ; aucune écriture ni création d'index sur la source.
++
++Après suppression des lectures ML inutiles dans `DatabaseHistoryProvider`, `scratch/refreeze_aligned.py` a créé le répertoire final `runs/aligned_dataset_20261009_verified` à partir des faits et records initiaux vérifiés par SHA-256, sans relire SQLite. SHA des faits, identifiants/ordre de partitions et fingerprint de données sont identiques ; le nouveau manifeste lie le runtime corrigé et le SHA du manifeste d'origine. L'original reste archivé. Pour préparer une nouvelle expérience, exécuter directement `python -m scripts.prepare_aligned_dataset freeze` avec les arguments de la commande diagnostique ci-dessus et un répertoire neuf ; aucun wrapper n'est nécessaire au fonctionnement du CLI.
++
++Les 22 entrées d'inventaire et manifestes ont été régénérées avec les sources de features actuelles. Le checkpoint de référence reste lié à `b19429597f8b9747aa413b42cdefdd0739556378ab692ee25904c12e98f19f0f` et le statut de service reste `unverified`. Les calibrations et checkpoints existants n'ont pas été réécrits. Les anciens protocoles de comparaison gardent leurs hashes d'origine ; leurs replays doivent refuser le nouveau runtime.
++
++## Empreintes des artefacts
++
++[dataset.json](../../runs/aligned_dataset_20261009_verified/dataset.json) lie partitions, tenseurs, faits sources, disponibilité, règles et hashes de code. [artifact_checks.json](../../runs/aligned_dataset_20261009_verified/artifact_checks.json) enregistre les contrôles ainsi que les preuves SQLite supplémentaires.
++
++| Artefact | SHA-256 |
++|---|---|
++| `availability.json` | `c44db98cdd7fe66c3967a3bfa7941ed6fd76c277b8e7141e2b7e7454cfba704f` |
++| `exclusions.json` | `d975f64e4c8e17ae2febb1d0b31495203d85c448d489972d304d608149d0d7ac` |
++| `model.split.json` | `691f25383adc73fbed6d9b9002b8a9c57373d415184073a919df2c4db6d8b733` |
++| `sealed_test.json` | `5c556e0314362db1acfd0963d725d9ecdc8ea4c830758df0a8f6dd34cc20400e` |
++| `sealed_test14.npz` | `7f2a0de4dc0f471c2661c1cb37d3d352a58d1d6adcff75e2d1f4a9f0f06ce851` |
++| `source_rows.json.gz` | `a3392790b27eba57fcb50f44d0e61d104cd16e64fab7453f07225b34fd9235bf` |
++| `train.json` | `ca8b3d1c9a03960e5c58913b57aef6241345fe5bc024f7ad3aa422592c92e5ab` |
++| `train14.npz` | `0cbf98c5a687d645fcf1be44054f0f85baf42e82dcc268a74e4d8fe91e709969` |
++| `validation.json` | `1484d853b4a4a9a94d9ea0a4d425d6bea3d9186725779bc7d88b7d25ee3fa54d` |
++| `validation14.npz` | `ecfd1390a4b07bed15e7333970fbf308dd6541f83930cc101ab8cded6b2e1aa4` |
++| `dataset.json` | `4ada0db3c2d9fd39da0e35e6e4f03a60d5f0cfe3c49ea75d475f17fb143da650` |
++| `live_panel.json` | `8af24261c6e02e0acad4ac6ee12d2c10a34beac8e65f39980dec209783b78a58` |
++| `live_parity.json` | `852b088885509236c3d2e242a8c163de5658638589544ffcce8585119f04bb9e` |
++| `live_audit.py` | `fbcc2663e3a2cc2008110b33f444ad4a3e2c478ec07221ae7ba1b5767f7fadc6` |
++| `replay_verification.json` | `bf1c570bab19b90f866cf4811581ddc57cc95e0521ddb14dcacdab862fe982f4` |
++| `source_inventory.json` | `955a8d798701fcb036589b8632070e51854e9eb35802841f6df2395569f120c3` |
++| `freeze_driver.py` | `0aa72de25f219d61ed6f9a8fe0a5117bd24b04f2e5e33381ce744eae88d0d7dc` |
++| `refreeze_driver.py` | `3a0a537c2e3bee628bbddbaefa400caf5460658e34695331c6be3f0a88f0ac2f` |
++
++## Limites et étape suivante
++
++Les temps d'acquisition historiques ne sont pas stockés : disponibilité présumée à la fin Riot du résultat. Les profils statiques des champions sont hashés, mais leur disponibilité historique par patch n'est pas certifiée. Le test est réservé à la future expérience de ce chantier ; cela ne prouve pas que toute la base a toujours été inconnue lors de recherches antérieures. Les fichiers de faits contiennent les résultats Riot : la réservation est une discipline d'expérience.
++
++La suite logique est un protocole d'expérience 14D utilisant train/validation pour entraîner, calibrer et choisir, puis une seule évaluation finale réservée. Les commandes de pilots sont documentées dans [pre_match_training.md](../pre_match_training.md) et n'ont pas été exécutées ici. Le 18D récent exige une acquisition de timelines utilisable également au service, dans un chantier séparé ; ni remplissage de zéros ni fusion implicite avec une autre base.
+--- baseline/scratch/audit_aligned_live.py
++++ current/scratch/audit_aligned_live.py
+@@ -0,0 +1,55 @@
++"""Read-only live parity audit; never loads reserved test outcomes."""
++import gzip
++import json
++from pathlib import Path
++import sys
++
++ROOT = Path(__file__).resolve().parents[1]
++sys.path.insert(0, str(ROOT))
++
++import numpy as np
++from core.aligned_artifacts import checked_path, read_train_validation, canonical
++from core.aligned_features import extract_aligned_inputs
++from core.calibration import sha256_file
++from core.frozen_history import FrozenHistoryProvider
++from core.pre_match_history import DatabaseHistoryProvider
++
++root = ROOT / 'runs/aligned_dataset_20261009_verified'
++x, records, meta = read_train_validation(root, 'nnriot.players14.v1')
++combined = [(name, index, row) for name in ('train', 'validation')
++            for index, row in enumerate(records[name])]
++indices = np.linspace(0, len(combined) - 1, 20, dtype=int)
++panel = [combined[int(index)] for index in indices]
++selection = [{'partition': name, 'index': index, 'match_id': row['match_id'],
++              'prediction_time_ms': row['game_creation_time']}
++             for name, index, row in panel]
++(root / 'live_panel.json').write_bytes(canonical(selection))
++rows = json.loads(gzip.decompress(checked_path(root, meta, 'source_rows.json.gz').read_bytes()))
++frozen = FrozenHistoryProvider(rows)
++live = DatabaseHistoryProvider(meta['source_db'])
++results = []
++for name, index, row in panel:
++    query = row['feature_json']
++    a = frozen.enrich(query, include_timeline=False)
++    b = live.enrich(query, include_timeline=False)
++    priors_a = [p['priors'] for team in ('team_a', 'team_b') for p in a[team]]
++    priors_b = [p['priors'] for team in ('team_a', 'team_b') for p in b[team]]
++    if priors_a != priors_b:
++        raise AssertionError(f"Live prior mismatch: {row['match_id']}")
++    inputs = extract_aligned_inputs(b, 'nnriot.players14.v1')
++    for key in inputs:
++        if not np.array_equal(inputs[key][0], x[name][key][index]):
++            raise AssertionError(f"Live tensor mismatch: {row['match_id']}/{key}")
++    for enriched in (a, b):
++        provenance = enriched['priors_provenance']
++        assert provenance['as_of_ms'] == row['game_creation_time']
++        assert provenance['history_window_limit'] == 10000
++        end = provenance['latest_result_end_ms']
++        assert end is None or end < row['game_creation_time']
++    results.append(dict(match_id=row['match_id'], priors_equal=True, tensors_equal=True))
++    print(f"Live parity {len(results)}/20: {row['match_id']}", flush=True)
++report = dict(status='verified', source_db=meta['source_db'], panel_count=20,
++              panel_sha256=sha256_file(root / 'live_panel.json'),
++              audit_script_sha256=sha256_file(__file__), test_metrics_computed=False,
++              results=results)
++(root / 'live_parity.json').write_bytes(canonical(report))

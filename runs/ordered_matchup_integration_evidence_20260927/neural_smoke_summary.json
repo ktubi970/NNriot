@@ -1,0 +1,78 @@
+{
+  "v2": {
+    "checkpoint": "D:\\projet\\NNriot\\runs\\ordered_matchup_integration_evidence_20260927\\smoke_v2_1415\\v2\\model.keras",
+    "representation": "tensors",
+    "weight": 5.0,
+    "split_counts": {
+      "train": 98,
+      "validation": 21,
+      "test": 21
+    },
+    "calibration_contract_matches": true,
+    "temperature": 0.06663110491745652,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 27.446809436555725,
+        "val_log_loss": 0.6930012654197453,
+        "val_accuracy": 0.5238095238095238
+      }
+    ]
+  },
+  "v3": {
+    "checkpoint": "D:\\projet\\NNriot\\runs\\ordered_matchup_integration_evidence_20260927\\smoke_v2_1415\\v3\\model.keras",
+    "representation": "v3",
+    "weight": 5.0,
+    "split_counts": {
+      "train": 98,
+      "validation": 21,
+      "test": 21
+    },
+    "calibration_contract_matches": true,
+    "temperature": 0.4115319750298442,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 27.618456765629197,
+        "val_log_loss": 0.6924057472935363,
+        "val_accuracy": 0.5238095238095238
+      }
+    ]
+  },
+  "general": {
+    "checkpoint": "D:\\projet\\NNriot\\runs\\ordered_matchup_integration_evidence_20260927\\smoke_v2_1415\\general\\model.keras",
+    "representation": "tensors",
+    "weight": 15.0,
+    "split_counts": {
+      "train": 98,
+      "validation": 21,
+      "test": 21
+    },
+    "calibration_contract_matches": true,
+    "temperature": 0.1295352294458524,
+    "history": [
+      {
+        "epoch": 1,
+        "train_loss": 27.13909665875289,
+        "validation": {
+          "model": {
+            "accuracy": 0.5238095238095238,
+            "log_loss": 0.692872406981107,
+            "brier": 0.24986261489353861,
+            "roc_auc": 0.4636363636363636,
+            "calibration_error": 0.020723767223812306
+          },
+          "baseline": {
+            "accuracy": 0.47619047619047616,
+            "log_loss": 0.6931471805599453,
+            "brier": 0.25,
+            "roc_auc": 0.5,
+            "calibration_error": 0.023809523809523836
+          },
+          "accuracy_lift": 0.04761904761904767,
+          "log_loss_improvement": 0.00027477357883831655
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,328 @@
+{
+  "model_type": "equivariant_deepsets_spatial_dual_gru",
+  "player_feature_dim": 46,
+  "n_samples": 108703,
+  "temperature": 1.4588,
+  "test_eval_raw": {
+    "model": {
+      "accuracy": 0.5266304847760096,
+      "log_loss": 0.6919113200420937,
+      "brier": 0.2493792562174899,
+      "roc_auc": 0.5222363087722012,
+      "calibration_error": 0.015222951524468857,
+      "diagnostics": {
+        "quantile_ece": 0.02054347189301106,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 10
+        },
+        "brier_decomposition": {
+          "reliability": 0.0005122356750234835,
+          "resolution": 0.0006248444106355138,
+          "uncertainty": 0.24949000725097187,
+          "binned_brier": 0.2493773985153598,
+          "binning_residual": 1.85770213009806e-06,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "estimated",
+          "slope": 0.7670261068004606,
+          "intercept": -0.025879756430348778,
+          "reason": null
+        },
+        "selective_metrics": {
+          "conviction_ge_0pct": {
+            "threshold": 0.0,
+            "coverage": 1.0,
+            "accuracy": 0.5266304847760096,
+            "count": 10871,
+            "wilson_lower": 0.5172370348873776,
+            "wilson_upper": 0.5360051206136911
+          },
+          "conviction_ge_2pct": {
+            "threshold": 0.02,
+            "coverage": 0.7704902952810229,
+            "accuracy": 0.5306829035339063,
+            "count": 8376,
+            "wilson_lower": 0.5199836712774786,
+            "wilson_upper": 0.5413540046828413
+          },
+          "conviction_ge_4pct": {
+            "threshold": 0.04,
+            "coverage": 0.47502529666084076,
+            "accuracy": 0.536599535243997,
+            "count": 5164,
+            "wilson_lower": 0.5229767491087303,
+            "wilson_upper": 0.5501679096452285
+          },
+          "conviction_ge_6pct": {
+            "threshold": 0.06,
+            "coverage": 0.185723484500046,
+            "accuracy": 0.546310054482417,
+            "count": 2019,
+            "wilson_lower": 0.5245265974642442,
+            "wilson_upper": 0.5679176221183521
+          },
+          "conviction_ge_8pct": {
+            "threshold": 0.08,
+            "coverage": 0.044890074510164656,
+            "accuracy": 0.5491803278688525,
+            "count": 488,
+            "wilson_lower": 0.5048206893747661,
+            "wilson_upper": 0.592771734238915
+          },
+          "conviction_ge_10pct": {
+            "threshold": 0.1,
+            "coverage": 0.00671511360500414,
+            "accuracy": 0.5753424657534246,
+            "count": 73,
+            "wilson_lower": 0.4609938046379387,
+            "wilson_upper": 0.6821580845742112
+          },
+          "conviction_ge_12pct": {
+            "threshold": 0.12,
+            "coverage": 0.0008278907184251678,
+            "accuracy": 0.5555555555555556,
+            "count": 9,
+            "wilson_lower": 0.26665129349549305,
+            "wilson_upper": 0.8112214789023355
+          },
+          "conviction_ge_15pct": {
+            "threshold": 0.15,
+            "coverage": 0.0,
+            "accuracy": 0.0,
+            "count": 0,
+            "wilson_lower": 0.0,
+            "wilson_upper": 0.0
+          }
+        }
+      }
+    },
+    "baseline": {
+      "accuracy": 0.5225830190414865,
+      "log_loss": 0.6931471805599454,
+      "brier": 0.25,
+      "roc_auc": 0.5,
+      "calibration_error": 0.02258301904148652,
+      "diagnostics": {
+        "quantile_ece": 0.02258301904148652,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 1
+        },
+        "brier_decomposition": {
+          "reliability": 0.0005099927490281427,
+          "resolution": 0.0,
+          "uncertainty": 0.24949000725097187,
+          "binned_brier": 0.25,
+          "binning_residual": 0.0,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "unavailable",
+          "slope": null,
+          "intercept": null,
+          "reason": "constant_predictions"
+        }
+      }
+    },
+    "accuracy_lift": 0.004047465734523081,
+    "log_loss_improvement": 0.001235860517851739
+  },
+  "test_eval_cal": {
+    "model": {
+      "accuracy": 0.5266304847760096,
+      "log_loss": 0.6914041181618517,
+      "brier": 0.24912933247818303,
+      "roc_auc": 0.5222363087722012,
+      "calibration_error": 0.003394941606788107,
+      "diagnostics": {
+        "quantile_ece": 0.01391237384061385,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 10
+        },
+        "brier_decomposition": {
+          "reliability": 0.0002687819812123613,
+          "resolution": 0.0006248444106355138,
+          "uncertainty": 0.24949000725097187,
+          "binned_brier": 0.2491339448215487,
+          "binning_residual": -4.612343365656413e-06,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "estimated",
+          "slope": 1.1180794670993373,
+          "intercept": -0.025901811973507913,
+          "reason": null
+        },
+        "selective_metrics": {
+          "conviction_ge_0pct": {
+            "threshold": 0.0,
+            "coverage": 1.0,
+            "accuracy": 0.5266304847760096,
+            "count": 10871,
+            "wilson_lower": 0.5172370348873776,
+            "wilson_upper": 0.5360051206136911
+          },
+          "conviction_ge_2pct": {
+            "threshold": 0.02,
+            "coverage": 0.6413393432066967,
+            "accuracy": 0.5365748709122203,
+            "count": 6972,
+            "wilson_lower": 0.524852856642265,
+            "wilson_upper": 0.5482566030566971
+          },
+          "conviction_ge_4pct": {
+            "threshold": 0.04,
+            "coverage": 0.20982430319197864,
+            "accuracy": 0.5423060061376589,
+            "count": 2281,
+            "wilson_lower": 0.521806564944141,
+            "wilson_upper": 0.5626631908259663
+          },
+          "conviction_ge_6pct": {
+            "threshold": 0.06,
+            "coverage": 0.023824855119124275,
+            "accuracy": 0.5791505791505791,
+            "count": 259,
+            "wilson_lower": 0.5182982518918283,
+            "wilson_upper": 0.6376893163706409
+          },
+          "conviction_ge_8pct": {
+            "threshold": 0.08,
+            "coverage": 0.0011958421488363535,
+            "accuracy": 0.6153846153846154,
+            "count": 13,
+            "wilson_lower": 0.355228915126657,
+            "wilson_upper": 0.8229029220223743
+          },
+          "conviction_ge_10pct": {
+            "threshold": 0.1,
+            "coverage": 0.0,
+            "accuracy": 0.0,
+            "count": 0,
+            "wilson_lower": 0.0,
+            "wilson_upper": 0.0
+          },
+          "conviction_ge_12pct": {
+            "threshold": 0.12,
+            "coverage": 0.0,
+            "accuracy": 0.0,
+            "count": 0,
+            "wilson_lower": 0.0,
+            "wilson_upper": 0.0
+          },
+          "conviction_ge_15pct": {
+            "threshold": 0.15,
+            "coverage": 0.0,
+            "accuracy": 0.0,
+            "count": 0,
+            "wilson_lower": 0.0,
+            "wilson_upper": 0.0
+          }
+        }
+      }
+    },
+    "baseline": {
+      "accuracy": 0.5225830190414865,
+      "log_loss": 0.6931471805599454,
+      "brier": 0.25,
+      "roc_auc": 0.5,
+      "calibration_error": 0.02258301904148652,
+      "diagnostics": {
+        "quantile_ece": 0.02258301904148652,
+        "binning": {
+          "method": "quantile",
+          "requested_bins": 10,
+          "effective_bins": 1
+        },
+        "brier_decomposition": {
+          "reliability": 0.0005099927490281427,
+          "resolution": 0.0,
+          "uncertainty": 0.24949000725097187,
+          "binned_brier": 0.25,
+          "binning_residual": 0.0,
+          "identity_target": "binned_probabilities"
+        },
+        "calibration_slope": {
+          "status": "unavailable",
+          "slope": null,
+          "intercept": null,
+          "reason": "constant_predictions"
+        }
+      }
+    },
+    "accuracy_lift": 0.004047465734523081,
+    "log_loss_improvement": 0.001743062398093742
+  },
+  "selective_stratification": {
+    "conviction_ge_0pct": {
+      "threshold": 0.0,
+      "coverage": 1.0,
+      "accuracy": 0.5266304847760096,
+      "count": 10871,
+      "wilson_lower": 0.5172370348873776,
+      "wilson_upper": 0.5360051206136911
+    },
+    "conviction_ge_2pct": {
+      "threshold": 0.02,
+      "coverage": 0.6413393432066967,
+      "accuracy": 0.5365748709122203,
+      "count": 6972,
+      "wilson_lower": 0.524852856642265,
+      "wilson_upper": 0.5482566030566971
+    },
+    "conviction_ge_4pct": {
+      "threshold": 0.04,
+      "coverage": 0.20982430319197864,
+      "accuracy": 0.5423060061376589,
+      "count": 2281,
+      "wilson_lower": 0.521806564944141,
+      "wilson_upper": 0.5626631908259663
+    },
+    "conviction_ge_6pct": {
+      "threshold": 0.06,
+      "coverage": 0.023824855119124275,
+      "accuracy": 0.5791505791505791,
+      "count": 259,
+      "wilson_lower": 0.5182982518918283,
+      "wilson_upper": 0.6376893163706409
+    },
+    "conviction_ge_8pct": {
+      "threshold": 0.08,
+      "coverage": 0.0011958421488363535,
+      "accuracy": 0.6153846153846154,
+      "count": 13,
+      "wilson_lower": 0.355228915126657,
+      "wilson_upper": 0.8229029220223743
+    },
+    "conviction_ge_10pct": {
+      "threshold": 0.1,
+      "coverage": 0.0,
+      "accuracy": 0.0,
+      "count": 0,
+      "wilson_lower": 0.0,
+      "wilson_upper": 0.0
+    },
+    "conviction_ge_12pct": {
+      "threshold": 0.12,
+      "coverage": 0.0,
+      "accuracy": 0.0,
+      "count": 0,
+      "wilson_lower": 0.0,
+      "wilson_upper": 0.0
+    },
+    "conviction_ge_15pct": {
+      "threshold": 0.15,
+      "coverage": 0.0,
+      "accuracy": 0.0,
+      "count": 0,
+      "wilson_lower": 0.0,
+      "wilson_upper": 0.0
+    }
+  }
+}
