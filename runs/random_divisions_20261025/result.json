@@ -1,0 +1,44 @@
+{
+  "outcome": "error",
+  "error": "database is locked",
+  "auth_failed": false,
+  "stop_reason": [],
+  "elapsed_seconds": 5876.39,
+  "started_at": "2026-10-26T15:07:50.131403+00:00",
+  "finished_at": "2026-10-26T16:45:47.613992+00:00",
+  "before": {
+    "matches": 5103,
+    "training_dataset": 5103,
+    "match_participants": 51030,
+    "match_timelines": 5103,
+    "crawl_queue": 46192,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 400,
+      "discovery_only": 813,
+      "missing": 9,
+      "rejected": 178,
+      "stored": 5103
+    }
+  },
+  "after": {
+    "matches": 10267,
+    "training_dataset": 10267,
+    "match_participants": 102670,
+    "match_timelines": 10229,
+    "crawl_queue": 83888,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 693,
+      "discovery_only": 1137,
+      "missing": 9,
+      "rejected": 342,
+      "stored": 10248
+    }
+  },
+  "api_calls": 11124
+}

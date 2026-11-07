@@ -1,0 +1,56 @@
+{
+  "created_utc": "2026-10-24T17:48:02.997389+00:00",
+  "status": "frozen before any official-validation read",
+  "features": {
+    "file": "feat_v4m.npz",
+    "sha256": "16190e876446a580b7bc4e40ce8bddeaf8abc76ca3a99a086f7b7951ce3e2b4f"
+  },
+  "sources": {
+    "extract_raw.py": "188b9053a32ac3d28aa27150bb7d7fd8d4e74a9e0ef42e28cc584c4ce32e315d",
+    "build_features_v4.py": "c76267c0d3101ecd77c54961859cb101dda8b4eb0e87087493308607ea272e9b",
+    "join_macro.py": "741d5030e02dc99daa8bdd8994bb35604b1bff3fb257f07a02688988208eb667",
+    "evaluate2.py": "faf42a4ea2398c1273eafe22455ac14df9bc7b06edb525f5990dc809a7fda17a",
+    "final_report.py": "b15b2151b037c42b1789e9ea6925011ba48088f63662afbc4b22df4190fb6e91"
+  },
+  "lr": {
+    "C": 0.001,
+    "features": "difference/team-diff/tail columns, standardized on train, clip +-6"
+  },
+  "lgb": {
+    "swap": true,
+    "lr": 0.02,
+    "leaves": 15,
+    "min_leaf": 400,
+    "ff": 0.5,
+    "l2": 5.0,
+    "max_bin": 63,
+    "dev_best_iter": 2126,
+    "final_rounds": "int(2126*len(train)/len(fit))"
+  },
+  "blend_weight_lr": 0.4,
+  "blend_weight_rule": "min dev log-loss on grid 0..1 step 0.1",
+  "selective_rule": "conviction threshold = median |p-0.5| on dev (50% coverage), fixed",
+  "evaluation": "official validation 5000 matches (16-17 Oct 2026), scored once; sealed test untouched",
+  "dev_results": {
+    "blend": {
+      "acc": 0.5962,
+      "auc": 0.635,
+      "logloss": 0.66364
+    },
+    "lr": {
+      "acc": 0.5958,
+      "auc": 0.6317,
+      "logloss": 0.66515
+    },
+    "lgbB": {
+      "acc": 0.5914,
+      "auc": 0.6328,
+      "logloss": 0.66433
+    },
+    "existing18_lgb": {
+      "acc": 0.5685,
+      "auc": 0.5905,
+      "logloss": 0.67951
+    }
+  }
+}

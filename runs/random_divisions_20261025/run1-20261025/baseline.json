@@ -1,0 +1,26 @@
+{
+  "database": "D:\\projet\\NNriot\\runs\\random_divisions_20261025\\random_divisions.db",
+  "code_commit": "1545d29a25e1732bcda8a154dce3a0bc6c21e23d",
+  "started_at": "2026-10-25T13:59:47.113787+00:00",
+  "deadline_at": "2026-10-26T09:59:47.113787+00:00",
+  "hours": 20.0,
+  "regions": [
+    "EUW",
+    "KR",
+    "NA"
+  ],
+  "seed_strategy": "random_divisions",
+  "seeds_per_region": 50,
+  "random_seed": 20261025,
+  "days_back": 14,
+  "batch_size": 10,
+  "counts": {
+    "matches": 0,
+    "training_dataset": 0,
+    "match_participants": 0,
+    "match_timelines": 0,
+    "crawl_queue": 0,
+    "anchor_selections": {},
+    "match_sightings": {}
+  }
+}

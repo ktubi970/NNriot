@@ -1,0 +1,76 @@
+{
+  "status": "preregistered",
+  "created_utc": "2026-10-23T19:02:38.968994+00:00",
+  "kind": "prospective_architecture_comparison",
+  "dataset_dir": "D:\\projet\\NNriot\\runs\\aligned_dataset_20261023_prospective",
+  "source_db": "D:\\projet\\NNriot\\training_data.db",
+  "source_snapshot": "C:\\Users\\ktubi\\AppData\\Local\\Temp\\claude\\D--projet-NNriot\\7b480b51-cff3-4235-aa95-5cffdb5c449f\\scratchpad\\snapshot\\training_data.db",
+  "source_snapshot_method": "file copy of database and WAL with no writer running; WAL checkpointed into the copy",
+  "source_state": {
+    "classic_matches": 146241,
+    "last_creation_ms": 1792314146562,
+    "max_rowid": 154503,
+    "training_rows": 146239,
+    "training_max_id": 150239,
+    "timelines": 154501
+  },
+  "source_limit": 150000,
+  "warmup_rows": 10000,
+  "history_window_limit": 10000,
+  "validation_count": 5000,
+  "test_count": 10000,
+  "test_after_utc": "2026-10-11T10:22:30.047000+00:00",
+  "previously_evaluated_ids": 6844,
+  "previously_evaluated_policy": "never in validation or test; allowed in train",
+  "common_eligibility": "18D extraction succeeds; applied to both dimensions before partitioning",
+  "deepsets": {
+    "scripts": {
+      "14": "scripts/train_deepsets_v3.py",
+      "18": "scripts/train_deepsets_v4_timeline.py"
+    },
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "epochs": 5,
+    "batch_size": 64,
+    "learning_rate": 0.0008,
+    "early_stopping": false,
+    "side_prior_init": "training Blue rate",
+    "checkpoint_selection": "minimum validation winner log-loss",
+    "ensemble": "mean of the three calibrated seed probabilities; no fitting"
+  },
+  "baselines": {
+    "module": "core/tabular_baselines.py",
+    "families": [
+      "logistic",
+      "lightgbm"
+    ],
+    "seed": 42,
+    "selection": "validation only (C grid / early stopping)"
+  },
+  "calibration_partition": "validation",
+  "constant_baseline": "training P(Red)",
+  "primary_metrics": [
+    "calibrated test log-loss: DeepSets 18D ensemble minus LightGBM 18D",
+    "calibrated test log-loss: DeepSets 18D ensemble minus logistic 18D"
+  ],
+  "secondary_metrics": [
+    "each calibrated model minus constant",
+    "18D minus 14D within each family",
+    "per-seed DeepSets spread",
+    "AUC, Brier, accuracy, fixed-threshold selective risk"
+  ],
+  "bootstrap": {
+    "method": "paired moving chronological block bootstrap",
+    "block_size": 100,
+    "repeats": 2000,
+    "seed": 20261023
+  },
+  "decision_rule": "DeepSets shows added value only if both primary 95% intervals lie entirely below 0; otherwise the simpler baseline is preferred",
+  "test_policy": "lock every checkpoint, calibration and baseline, then score the test once; no tuning after",
+  "collection_restarted": false,
+  "production_promotion": false,
+  "preparation_script_sha256": "f23e38a28a759ea85bcc88a01da7162bad9bdf9e321f1ffb91483caf52680483"
+}

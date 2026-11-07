@@ -1,0 +1,36 @@
+{
+  "outcome": "error",
+  "error": "Riot authentication failed; current queue entry retained for retry",
+  "auth_failed": true,
+  "stop_reason": [],
+  "elapsed_seconds": 5033.56,
+  "started_at": "2026-10-25T13:59:47.113787+00:00",
+  "finished_at": "2026-10-25T15:23:40.669829+00:00",
+  "before": {
+    "matches": 0,
+    "training_dataset": 0,
+    "match_participants": 0,
+    "match_timelines": 0,
+    "crawl_queue": 0,
+    "anchor_selections": {},
+    "match_sightings": {}
+  },
+  "after": {
+    "matches": 968,
+    "training_dataset": 968,
+    "match_participants": 9680,
+    "match_timelines": 968,
+    "crawl_queue": 12385,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 50,
+      "discovery_only": 570,
+      "missing": 9,
+      "rejected": 47,
+      "stored": 968
+    }
+  },
+  "api_calls": 3857
+}

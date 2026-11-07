@@ -1,0 +1,35 @@
+{
+  "database": "D:\\projet\\NNriot\\runs\\random_divisions_20261025\\random_divisions.db",
+  "code_commit": "a76c759bb18fd907beaf6d1c61d22a5d81d46913",
+  "started_at": "2026-10-26T15:07:50.131403+00:00",
+  "deadline_at": "2026-10-27T09:07:50.131403+00:00",
+  "hours": 18.0,
+  "regions": [
+    "EUW",
+    "KR",
+    "NA"
+  ],
+  "seed_strategy": "random_divisions",
+  "seeds_per_region": 50,
+  "random_seed": 2026102603,
+  "days_back": 14,
+  "batch_size": 10,
+  "parallel_regions": true,
+  "counts": {
+    "matches": 5103,
+    "training_dataset": 5103,
+    "match_participants": 51030,
+    "match_timelines": 5103,
+    "crawl_queue": 46192,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 400,
+      "discovery_only": 813,
+      "missing": 9,
+      "rejected": 178,
+      "stored": 5103
+    }
+  }
+}
