@@ -1,0 +1,830 @@
+{
+  "status": "verified",
+  "dataset_dir": "D:\\projet\\NNriot\\runs\\aligned_dataset_20261023_prospective",
+  "cohort": {
+    "source_rows": 146241,
+    "source_first_utc": "2024-06-17T13:24:46.858000+00:00",
+    "source_last_utc": "2026-10-18T09:02:26.562000+00:00",
+    "splits": {
+      "train": {
+        "count": 118600,
+        "first_utc": "2026-04-12T05:34:44.162000+00:00",
+        "last_utc": "2026-10-16T14:25:17.703000+00:00",
+        "red_win_rate": 0.5346880269814502
+      },
+      "validation": {
+        "count": 5000,
+        "first_utc": "2026-10-16T14:44:34.155000+00:00",
+        "last_utc": "2026-10-17T11:24:47.393000+00:00",
+        "red_win_rate": 0.5126
+      },
+      "test": {
+        "count": 10000,
+        "first_utc": "2026-10-17T11:43:50.958000+00:00",
+        "last_utc": "2026-10-18T09:02:26.562000+00:00",
+        "red_win_rate": 0.524
+      }
+    },
+    "previously_evaluated_in_train": 3844,
+    "exclusions": {
+      "unsupported_queue": 2051,
+      "team_a roles must contain each canonical role exactly once": 41,
+      "team_b roles must contain each canonical role exactly once": 45,
+      "timeline18_unavailable": 81,
+      "result_not_available_at_partition_start": 423
+    },
+    "temporal_purge_count": 423
+  },
+  "availability": {
+    "nnriot.players14.v1": {
+      "status": "ready",
+      "eligible": 133600,
+      "total": 133600,
+      "coverage": 1.0
+    },
+    "nnriot.players18.v1": {
+      "status": "ready",
+      "eligible": 133600,
+      "total": 133600,
+      "coverage": 1.0
+    }
+  },
+  "independent_replay_panel": [
+    {
+      "partition": "train",
+      "match_id": "KR_8170448233"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3937984490"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7821138411"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3939020058"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7823602356"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7824720155"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3940420236"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7827811739"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7829333982"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5546243367"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8188005918"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8205068386"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5555880803"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3949015794"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5556993177"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8211572627"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5557998210"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3950140973"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5558435482"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3950494440"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7851710807"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8215035445"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5559896904"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3951427344"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8216395474"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7854331706"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5560972216"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7855460460"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5561688183"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8220015149"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUN1_3952898010"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5634871010"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8369565317"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7975030424"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8372819067"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7977115563"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8374545756"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7978967548"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7979588351"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7980227933"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5640468927"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8379162977"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7982339497"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7983094642"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7983465158"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7984002075"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7984379066"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7984710974"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5642923092"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_7985487909"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8383859446"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8384060573"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5654940989"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5656458851"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5657270250"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_8010109960"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_8011302574"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8417890944"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5659791329"
+    },
+    {
+      "partition": "train",
+      "match_id": "EUW1_8013402685"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8419812004"
+    },
+    {
+      "partition": "train",
+      "match_id": "NA1_5660783134"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8420796140"
+    },
+    {
+      "partition": "train",
+      "match_id": "KR_8421525636"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015169266"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015186091"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015197218"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015225550"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015230384"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661348019"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015266213"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8421767191"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015308699"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015329557"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015334294"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015361889"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015376230"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015394364"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661389341"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661398161"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015470015"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015493088"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015514455"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015545042"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015563370"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015604513"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015620901"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015650605"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015670117"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661477034"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015727456"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661490566"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015758448"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015784334"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015817612"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015834663"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015845787"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015854286"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015870189"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015889976"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015901954"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015920848"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422366380"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422379501"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422386640"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015937719"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015932226"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015948597"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422440657"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422456470"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661890694"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015964691"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015961163"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015975484"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422507664"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422517767"
+    },
+    {
+      "partition": "validation",
+      "match_id": "NA1_5661904604"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422547479"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8015988385"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422577131"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016014557"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016009120"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016012311"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016028591"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016023284"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016037950"
+    },
+    {
+      "partition": "validation",
+      "match_id": "EUW1_8016043892"
+    },
+    {
+      "partition": "validation",
+      "match_id": "KR_8422677436"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8422699772"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016086926"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016100784"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8422783782"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016131578"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016132328"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016145355"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016168752"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5661941965"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8422939950"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016203133"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016222646"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016232836"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5661951161"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016266632"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016268386"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423148105"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423168207"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016315882"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016338556"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016346867"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016353216"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423268357"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5661980680"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016406551"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423305897"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423337163"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016445736"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016457902"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016469209"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016482368"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016500260"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016528641"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662040268"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016566511"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662055120"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423424651"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016612213"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662066630"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423441438"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662086211"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662086717"
+    },
+    {
+      "partition": "test",
+      "match_id": "KR_8423461106"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662106247"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016752867"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016768040"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662129179"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016810606"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662150793"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662154926"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016859821"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016869264"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016887169"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016912618"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016927579"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662216219"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662231269"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016951400"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016970031"
+    },
+    {
+      "partition": "test",
+      "match_id": "NA1_5662302099"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8016996705"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8017007150"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8017029699"
+    },
+    {
+      "partition": "test",
+      "match_id": "EUW1_8017072957"
+    }
+  ],
+  "panel_tensor_comparisons": 1152,
+  "replay_validation": "deterministic sample, not exhaustive",
+  "hashes_verified": true,
+  "temporal_purges_verified": true,
+  "previous_tests_excluded": true,
+  "test_metrics_computed": false,
+  "dataset_manifest_sha256": "24100e7104ba77b27b28d39b526d26cbeca229c1c2eb01a538c0dcf280247048",
+  "elapsed_seconds": 3206.17
+}

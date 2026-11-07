@@ -1,0 +1,149 @@
+{
+  "status": "completed",
+  "test_status": "reserved",
+  "seed": 42,
+  "completed": {
+    "logistic14": {
+      "path": "runs/prospective_20261023/baseline_logistic14.json",
+      "sha256": "ec9d198038f67c0eeb93cdde74c610d8241808cd4ac52654d2f2c0859a4818b8",
+      "elapsed_seconds": 11.26,
+      "selection": {
+        "partition": "validation",
+        "metric": "log_loss",
+        "chosen_C": 0.0001,
+        "boundary_hit": true,
+        "trials": [
+          {
+            "C": 0.0001,
+            "validation_log_loss": 0.6870003322143572
+          },
+          {
+            "C": 0.0003,
+            "validation_log_loss": 0.6871831636046619
+          },
+          {
+            "C": 0.001,
+            "validation_log_loss": 0.6874649392802932
+          },
+          {
+            "C": 0.003,
+            "validation_log_loss": 0.6876334890777276
+          },
+          {
+            "C": 0.01,
+            "validation_log_loss": 0.6878396654874889
+          },
+          {
+            "C": 0.03,
+            "validation_log_loss": 0.6879633499602467
+          },
+          {
+            "C": 0.1,
+            "validation_log_loss": 0.6880584953143207
+          },
+          {
+            "C": 0.3,
+            "validation_log_loss": 0.6880758798549121
+          },
+          {
+            "C": 1.0,
+            "validation_log_loss": 0.688096581081391
+          }
+        ]
+      },
+      "validation_log_loss_raw": 0.6870003329272051,
+      "temperature": 1.3289834190225358,
+      "validation_log_loss_calibrated": 0.6862782797193433
+    },
+    "lightgbm14": {
+      "path": "runs/prospective_20261023/baseline_lightgbm14.json",
+      "sha256": "afb4c5477a76535ae96acc3e7e0ec2d49104245cffa6a2d9ac48d7fca622941f",
+      "elapsed_seconds": 18.48,
+      "selection": {
+        "partition": "validation",
+        "metric": "binary_logloss",
+        "best_iteration": 323,
+        "max_rounds": 3000,
+        "early_stopping": 100
+      },
+      "validation_log_loss_raw": 0.6861161021679234,
+      "temperature": 1.2732906390241312,
+      "validation_log_loss_calibrated": 0.6855666896808187
+    },
+    "logistic18": {
+      "path": "runs/prospective_20261023/baseline_logistic18.json",
+      "sha256": "c896bd0e48ee43831c96932fc07b26d94ee8c9ae03ed3917c9fa846d46d34836",
+      "elapsed_seconds": 12.72,
+      "selection": {
+        "partition": "validation",
+        "metric": "log_loss",
+        "chosen_C": 0.0003,
+        "boundary_hit": false,
+        "trials": [
+          {
+            "C": 0.0001,
+            "validation_log_loss": 0.6836455357895431
+          },
+          {
+            "C": 0.0003,
+            "validation_log_loss": 0.6835481792910343
+          },
+          {
+            "C": 0.001,
+            "validation_log_loss": 0.6837497115117085
+          },
+          {
+            "C": 0.003,
+            "validation_log_loss": 0.6838908770551371
+          },
+          {
+            "C": 0.01,
+            "validation_log_loss": 0.6840849734746933
+          },
+          {
+            "C": 0.03,
+            "validation_log_loss": 0.6843101314591159
+          },
+          {
+            "C": 0.1,
+            "validation_log_loss": 0.6843862107572686
+          },
+          {
+            "C": 0.3,
+            "validation_log_loss": 0.6844143469399153
+          },
+          {
+            "C": 1.0,
+            "validation_log_loss": 0.684440987156217
+          }
+        ]
+      },
+      "validation_log_loss_raw": 0.6835481795196267,
+      "temperature": 1.280485479817399,
+      "validation_log_loss_calibrated": 0.6827665070512592
+    },
+    "lightgbm18": {
+      "path": "runs/prospective_20261023/baseline_lightgbm18.json",
+      "sha256": "e584753013ced5413b5a73198e071efa67f53b566a56a75a996451b5ad9965ce",
+      "elapsed_seconds": 22.05,
+      "selection": {
+        "partition": "validation",
+        "metric": "binary_logloss",
+        "best_iteration": 275,
+        "max_rounds": 3000,
+        "early_stopping": 100
+      },
+      "validation_log_loss_raw": 0.6853914360220138,
+      "temperature": 1.2789224830103443,
+      "validation_log_loss_calibrated": 0.6847608304921861
+    }
+  },
+  "dataset_manifest_sha256": "24100e7104ba77b27b28d39b526d26cbeca229c1c2eb01a538c0dcf280247048",
+  "sources": {
+    "core/tabular_baselines.py": "46b4218f993a5efbec2af23e9d096a0c2e9ed8a3accf12e805ac44f5bfe272b5",
+    "core/calibration.py": "9abff4151b4751889a47c818f886422a521cc1f152f227314b370f18e8974214",
+    "core/aligned_artifacts.py": "c4c902aead2941e746043b8715ff7e02d40163609e880f894fe7e46a883d0355",
+    "runs/prospective_20261023/baselines.py": "84c18e93432f09f417c6c5a9721fadf0a8c6260610eb89cef12ec7e19b39e733"
+  },
+  "finished_utc": "2026-10-24T13:29:54.250175+00:00"
+}

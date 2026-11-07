@@ -143,3 +143,12 @@ htmlcov/
 /runs/**/sealed_test.json
 /runs/**/dataset.json
 /runs/**/availability.json
+
+# October 2026 prospective and crawl-provenance runs: raw inputs and model dumps stay local
+/runs/prospective_20261023/**/model.split.json
+/runs/prospective_20261023/baseline_lightgbm*.json
+/runs/aligned_dataset_20261023_prospective/model.split.json
+/runs/crawl_provenance_20261025/crawl_provenance.csv
+/runs/crawl_provenance_20261025/registry.json
+/runs/crawl_seed_bias_20261025/input_crawl_provenance.csv
+/runs/**/STOP

@@ -1,0 +1,16 @@
+{
+  "status": "running",
+  "total": 9223372036854775807,
+  "current": 968,
+  "logs": [],
+  "speed_matches_per_min": 11.549446374195792,
+  "eta_minutes": 7.985986287153971e+17,
+  "elapsed_seconds": 5028.812474489212,
+  "error": null,
+  "pid": 3508,
+  "deadline_at": "2026-10-26T09:59:47.113787+00:00",
+  "free_gib": 71.73,
+  "updated_at": "2026-10-25T15:23:36.168486+00:00",
+  "stop_reason": [],
+  "api_calls": 3857
+}

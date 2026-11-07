@@ -1,0 +1,55 @@
+{
+  "outcome": "stopped",
+  "error": null,
+  "auth_failed": false,
+  "stop_reason": [
+    "stop_file"
+  ],
+  "elapsed_seconds": 21484.99,
+  "started_at": "2026-10-26T09:09:32.323750+00:00",
+  "finished_at": "2026-10-26T15:07:37.306372+00:00",
+  "before": {
+    "matches": 968,
+    "training_dataset": 968,
+    "match_participants": 9680,
+    "match_timelines": 968,
+    "crawl_queue": 12385,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 50,
+      "discovery_only": 570,
+      "missing": 9,
+      "rejected": 47,
+      "stored": 968
+    }
+  },
+  "after": {
+    "matches": 5103,
+    "training_dataset": 5103,
+    "match_participants": 51030,
+    "match_timelines": 5103,
+    "crawl_queue": 46192,
+    "anchor_selections": {
+      "random_division_seed": 150
+    },
+    "match_sightings": {
+      "already_stored": 400,
+      "discovery_only": 813,
+      "missing": 9,
+      "rejected": 178,
+      "stored": 5103
+    }
+  },
+  "api_calls": 8920,
+  "service_result": {
+    "matches_saved": 4135,
+    "records_saved": 4135,
+    "timelines_saved": 4135,
+    "embeddings_computed": 4135,
+    "skipped": 724,
+    "errors": 0,
+    "discovery_only": 0
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "blend_weight_lr": 0.4,
+  "new_model": {
+    "n": 5000,
+    "acc": 0.583,
+    "acc_wilson95": [
+      0.5693,
+      0.5966
+    ],
+    "auc": 0.6165,
+    "logloss": 0.67204
+  },
+  "lr_only": {
+    "n": 5000,
+    "acc": 0.5822,
+    "acc_wilson95": [
+      0.5685,
+      0.5958
+    ],
+    "auc": 0.6131,
+    "logloss": 0.67381
+  },
+  "lgb_only": {
+    "n": 5000,
+    "acc": 0.5824,
+    "acc_wilson95": [
+      0.5687,
+      0.596
+    ],
+    "auc": 0.6151,
+    "logloss": 0.67259
+  },
+  "preregistered_lightgbm18": {
+    "n": 5000,
+    "acc": 0.5558,
+    "acc_wilson95": [
+      0.542,
+      0.5695
+    ],
+    "auc": 0.5747,
+    "logloss": 0.68476
+  },
+  "paired_delta_acc": 0.0272,
+  "paired_delta_acc_block_bootstrap95": [
+    0.0102,
+    0.0432
+  ],
+  "mcnemar_fixed_by_new": 812,
+  "mcnemar_broken_by_new": 676,
+  "selective_50pct_threshold_from_dev": 0.07737,
+  "selective": {
+    "coverage": 0.5088,
+    "n": 2544,
+    "acc": 0.6285,
+    "acc_wilson95": [
+      0.6096,
+      0.6471
+    ],
+    "auc": 0.6423,
+    "logloss": 0.65563
+  },
+  "majority_rate": 0.5126
+}

@@ -1,0 +1,21 @@
+{
+  "status": "running",
+  "current": "18_43",
+  "completed": {
+    "18_42": {
+      "elapsed_seconds": 2831.04,
+      "checkpoint_sha256": "04797ed712bf23fd32505822bdab82e02b2395bd7ba0ba72e049f3770eb6d1ff",
+      "metrics_sha256": "acdf8eebb8e97826861a8579d48314cc8684a96a856bc1f0c8c0580958662864",
+      "best_epoch": 1,
+      "best_val_log_loss": 0.6866295708351389
+    },
+    "14_42": {
+      "elapsed_seconds": 2582.79,
+      "checkpoint_sha256": "99963c4c85dbde3734be49dcf5d6d410997e6da64357b28d4886d3dec5fb9e4c",
+      "metrics_sha256": "bac9d39494db82f997268db59e90c292230b3fdfaa42fa94b16ee193d780810b",
+      "best_epoch": 4,
+      "best_val_log_loss": 0.6873201609097754
+    }
+  },
+  "started_utc": "2026-10-24T14:57:24.071395+00:00"
+}
