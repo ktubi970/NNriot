@@ -96,11 +96,13 @@ def test_antisymmetry_under_team_swap():
         seed=123,
     )
 
+    # Red-favoring prior, as measured on this database; the default is side-neutral.
     model = build_equivariant_deepsets_model(
         player_feature_dim=ENRICHED_PLAYER_TIMELINE_TENSOR_DIM,
         include_macro_clash=True,
         macro_feature_dim=MACRO_CLASH_FEATURE_DIM,
         use_cross_attention=False,
+        blue_win_prior=0.475,
     )
 
     # Forward: Team A vs Team B with macro clash diff (B - A)
@@ -115,10 +117,10 @@ def test_antisymmetry_under_team_swap():
     np.testing.assert_allclose(draft_ab[:, 0], draft_ba[:, 1], atol=1e-5)
     np.testing.assert_allclose(draft_ab[:, 1], 1.0 - draft_ba[:, 1], atol=1e-5)
 
-    # 2. Side-aware winner head correctly reflects Blue side advantage: P(A on Blue) > P(A on Red)
+    # 2. Side-aware winner head keeps the side bias under swap: P(A on Red) > P(A on Blue)
     win_ab = preds_ab["winner"].numpy()
     win_ba = preds_ba["winner"].numpy()
-    assert np.all(win_ab[:, 0] > win_ba[:, 1])
+    assert np.all(win_ba[:, 1] > win_ab[:, 0])
 
     # 3. Side-neutral mode (enable_side_bias=False) guarantees exact winner anti-symmetry
     model_neutral = build_equivariant_deepsets_model(

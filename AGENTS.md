@@ -8,10 +8,10 @@
   L'interaction pure des compositions (synergies champion FM, confrontations de lane Sinkhorn, clash macro) est strictement anti-symétrique :
   $$s_{\text{draft}}(\text{Team B}, \text{Team A}) = -s_{\text{draft}}(\text{Team A}, \text{Team B})$$
   Pour un affrontement miroir ou équilibré ($T_A = T_B$), $s_{\text{draft}} = 0$ et la tête dédiée `draft_advantage` garantit $P_{\text{draft}} = [0.50, 0.50]$ par construction.
-- **Découplage de l'Asymétrie de Terrain (Blue Side Advantage)** :
-  L'effet du côté est découplé de l'évaluation pure des compositions via la couche apprenable `DirectionalSideBias`. Son amplitude dépend de la population de matchs et de la période considérées ; elle doit être estimée et documentée :
+- **Découplage de l'Asymétrie de Terrain (Side Advantage)** :
+  L'effet du côté est découplé de l'évaluation pure des compositions via la couche apprenable `DirectionalSideBias`. Son signe et son amplitude dépendent de la population de matchs et de la période considérées ; ils doivent être estimés et documentés :
   $$s_{\text{match}} = s_{\text{draft}} + b_{\text{side}}$$
-  La tête `winner` estime la probabilité de victoire en intégrant le biais de côté appris, tandis que `draft_advantage` conserve la pureté analytique de la draft. Une valeur indicative telle que 52,5 % sur draft neutre n'est pas un invariant numérique ni une garantie après entraînement ou calibration.
+  La tête `winner` estime la probabilité de victoire en intégrant le biais de côté appris, tandis que `draft_advantage` conserve la pureté analytique de la draft. Dans la base actuelle, c'est le côté **Red** qui gagne environ 52,5 % des parties classées ; aucun côté n'est supposé favorisé a priori. L'initialisation est neutre par défaut (`blue_win_prior=0.5`) et les entraîneurs alignés lui passent le taux Blue mesuré sur le train. Aucune valeur n'est un invariant numérique ni une garantie après entraînement ou calibration.
 - **Sémantique du swap d'équipe** :
   Team A correspond au côté Blue et Team B au côté Red. Échanger les compositions en conservant ces emplacements inverse le score de `draft_advantage` et échange ses probabilités, mais conserve le biais de côté de `winner` : la complémentarité de `winner` n'est donc pas exigée pour cette transformation.
   Changer de perspective sur le même match consiste à considérer la victoire de l'autre équipe, sans modifier le match ni l'affectation des côtés ; la probabilité devient alors $1 - P$. Cette opération est distincte d'un échange des compositions entre Blue et Red.
@@ -42,4 +42,5 @@
 ### 3. Règles d'Évolution et Tests de Non-Régression
 - Tout nouveau format de feature ou changement de dimension doit être testé sous permutation intra-équipe et échange des compositions à côtés fixes (`tests/test_deepsets_layers.py`, `tests/test_equivariant_model.py`). Les tests doivent préciser la transformation et la tête concernées : permutation intra-équipe pour les deux têtes ; anti-symétrie et complémentarité pour `draft_advantage` ; maintien du biais de côté pour `winner`, sans lui imposer la complémentarité lorsque ce biais est activé. L'invariance de la conviction sous $P \rightarrow 1 - P$ se vérifie séparément comme changement de perspective sur le même match.
 - Les modifications de schéma SQLite restent soumises au protocole de migration documenté dans `docs/database_merge.md`.
+- La branche spatiale 46D est gelée depuis le 23 octobre 2026 (AUC de test 0,522–0,528 sur 108 703 matchs, sans signal mesurable au-delà du taux de base). Les tests d'invariance existants restent en place, mais aucun nouvel entraînement ni travail de features spatiales ne doit être entrepris tant qu'un modèle 14D/18D n'a pas montré de signal validé.
 <!-- PATTERN-DESIGN-END -->

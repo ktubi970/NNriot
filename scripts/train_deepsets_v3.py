@@ -143,6 +143,7 @@ def train_deepsets_v3(
         macro_feature_dim=MACRO_CLASH_FEATURE_DIM,
         use_cross_attention=False,
         learning_rate=learning_rate,
+        blue_win_prior=1.0 - train_rate,
     )
 
     loss_fns = {

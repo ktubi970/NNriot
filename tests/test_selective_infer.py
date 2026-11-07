@@ -345,8 +345,9 @@ def test_predict_selective_with_real_equivariant_deepsets_model():
         assert res.prediction == "abstain"
         assert res_swapped.prediction == "abstain"
 
-    # 2. Side-aware model (enable_side_bias=True) reflects Summoner's Rift Blue side advantage:
-    model_side = build_equivariant_deepsets_model(player_feature_dim=8, enable_side_bias=True)
+    # 2. Side-aware model (enable_side_bias=True) keeps a nonneutral side prior under swap:
+    model_side = build_equivariant_deepsets_model(
+        player_feature_dim=8, enable_side_bias=True, blue_win_prior=0.525)
     wrapper_side = SelectiveInferWrapper(model_side)
     res_side = wrapper_side.predict(match_dict)
     res_side_swapped = wrapper_side.predict(swapped_match)

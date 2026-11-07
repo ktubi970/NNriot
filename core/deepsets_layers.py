@@ -608,7 +608,7 @@ class AntiSymmetricSoftmax(tf.keras.layers.Layer):
 
 @tf.keras.utils.register_keras_serializable(package="nnriot")
 class DirectionalSideBias(tf.keras.layers.Layer):
-    """Additive scalar bias representing arena side advantage (e.g. Summoner's Rift Blue side).
+    """Additive scalar bias representing arena side advantage (Blue/Red; the sign is learned).
 
     Decouples:
     - Pure draft interaction f_draft(A, B) where f(A, B) == -f(B, A)

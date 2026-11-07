@@ -254,7 +254,8 @@ def build_equivariant_deepsets_model(
     pruned_heads: bool = True,
     use_bilinear: bool = True,
     enable_side_bias: bool = True,
-    blue_win_prior: float = 0.525,
+    # Neutral by default: measured cohorts favor Red, so trainers pass the training Blue rate.
+    blue_win_prior: float = 0.5,
     optimizer_type: str = "adam",
     weight_decay: float = 1e-3,
     spatial_noise_std: float = 0.0,
@@ -342,7 +343,7 @@ def build_equivariant_deepsets_model(
             else:
                 initial_winner_bias = float(0.5 * np.log((1.0 - blue_win_prior) / blue_win_prior))
         else:
-            initial_winner_bias = -0.05
+            initial_winner_bias = 0.0
         s_winner = DirectionalSideBias(initial_bias=initial_winner_bias, name="winner_side_bias")(s_winner_draft)
     else:
         s_winner = s_winner_draft

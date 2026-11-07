@@ -310,9 +310,21 @@ def test_directional_side_bias_layer():
     np.testing.assert_allclose(restored(x).numpy(), out.numpy(), atol=1e-6)
 
 
-def test_blue_side_advantage_mirror_matchup():
+def test_default_side_prior_is_neutral():
+    # No side is favored before training; the trainers pass the measured Blue rate.
     model = build_equivariant_deepsets_model(
         player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True
+    )
+    team_a, _ = _make_teams()
+    win_aa = model({"team_a": team_a, "team_b": team_a})["winner"].numpy()
+    np.testing.assert_allclose(win_aa, 0.50, atol=1e-5)
+
+
+@pytest.mark.parametrize("blue_win_prior", [0.475, 0.525], ids=["red_favored", "blue_favored"])
+def test_side_prior_mirror_matchup(blue_win_prior):
+    model = build_equivariant_deepsets_model(
+        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True,
+        blue_win_prior=blue_win_prior,
     )
     team_a, _ = _make_teams()
     # Mirror matchup: Team A vs Team A
@@ -323,25 +335,25 @@ def test_blue_side_advantage_mirror_matchup():
     np.testing.assert_allclose(draft_aa[:, 0], 0.50, atol=1e-5)
     np.testing.assert_allclose(draft_aa[:, 1], 0.50, atol=1e-5)
 
-    # 2. Match prediction reflects Blue side advantage (> 50.0% for Team A on Blue)
+    # 2. Match prediction starts at the supplied side prior (Team A is Blue)
     win_aa = pred_aa["winner"].numpy()
-    assert np.all(win_aa[:, 0] > 0.50)
-    assert np.all(win_aa[:, 1] < 0.50)
-    np.testing.assert_allclose(win_aa[:, 0], 0.525, atol=1e-2)
+    np.testing.assert_allclose(win_aa[:, 0], blue_win_prior, atol=1e-2)
 
 
-def test_blue_side_advantage_team_swap_asymmetry():
+def test_side_advantage_team_swap_asymmetry():
+    # Measured cohorts favor Red (team B); the bias must follow the supplied prior.
     model = build_equivariant_deepsets_model(
-        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True
+        player_feature_dim=8, embed_dim=16, latent_dim=32, enable_side_bias=True,
+        blue_win_prior=0.475,
     )
     team_a, team_b = _make_teams()
     pred_ab = model({"team_a": team_a, "team_b": team_b})
     pred_ba = model({"team_a": team_b, "team_b": team_a})
 
-    # P(Team A wins on Blue) > P(Team A wins on Red against the same opponent)
+    # P(Team A wins on Red) > P(Team A wins on Blue against the same opponent)
     p_a_on_blue = pred_ab["winner"].numpy()[:, 0]
     p_a_on_red = pred_ba["winner"].numpy()[:, 1]
-    assert np.all(p_a_on_blue > p_a_on_red)
+    assert np.all(p_a_on_red > p_a_on_blue)
 
     # But draft advantage remains strictly anti-symmetric
     draft_ab = pred_ab["draft_advantage"].numpy()

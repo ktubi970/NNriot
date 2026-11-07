@@ -28,6 +28,29 @@ def test_aligned_training_does_not_read_legacy_or_test(tmp_path, monkeypatch, na
         getattr(trainer, name)('unused.db', str(tmp_path / name),
                               dataset_dir=str(directory), epochs=1)
 
+@pytest.mark.parametrize('name', ['train_deepsets_v3', 'train_deepsets_v4_timeline'])
+def test_side_prior_initialization_comes_from_training_labels(tmp_path, monkeypatch, name):
+    """The winner side bias starts from the measured Blue rate, never a hard-coded side."""
+    import importlib
+    from core.aligned_artifacts import read_train_validation
+    trainer = importlib.import_module('scripts.' + name)
+    directory, _ = tiny_bundle(tmp_path, timeline=True)
+    contract = 'nnriot.players14.v1' if name == 'train_deepsets_v3' else 'nnriot.players18.v1'
+    _, records, _ = read_train_validation(directory, contract)
+    red_rate = np.mean([r['labels_json']['winner'] for r in records['train']])
+    captured = {}
+    class Built(Exception):
+        pass
+    def capture(**kwargs):
+        captured.update(kwargs)
+        raise Built
+    monkeypatch.setattr(trainer, 'build_equivariant_deepsets_model', capture)
+    with pytest.raises(Built):
+        getattr(trainer, name)('unused.db', str(tmp_path / name),
+                              dataset_dir=str(directory), epochs=1)
+    assert captured['blue_win_prior'] == pytest.approx(1.0 - red_rate)
+
+
 def test_aligned_and_legacy_cache_are_mutually_exclusive(tmp_path):
     from scripts.train_deepsets_v3 import train_deepsets_v3
     with pytest.raises(ValueError, match='exclusive'):
